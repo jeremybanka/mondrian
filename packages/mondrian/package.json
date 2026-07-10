@@ -1,5 +1,5 @@
 {
-	"name": "mondrian",
+	"name": "mondrian.pdf",
 	"version": "0.0.0",
 	"description": "a low-level TypeScript interface to PDF",
 	"files": [
@@ -22,8 +22,6 @@
 		"test": "vp test"
 	},
 	"engines": {
-		"node": "26.5.0",
-		"pnpm": "11.10.0"
-	},
-	"packageManager": "pnpm@11.10.0"
+		"node": ">=22.0.0"
+	}
 }

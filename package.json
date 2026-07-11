@@ -3,15 +3,15 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vp run -r build",
+		"build": "vp run --filter mondrian.pdf --fail-if-no-match build",
 		"change": "changeset",
-		"check": "vp check --no-fmt && tsc --noEmit && pnpm --filter mondrian.fitter-happier check",
+		"check": "vp check --no-fmt .pnpmfile.mjs vite.config.ts packages/mondrian && tsc --noEmit",
 		"fmt": "dprint fmt",
-		"fmt:check": "dprint check",
+		"fmt:check": "dprint check --excludes \"packages/fitter-happier/**\"",
 		"lint": "vp lint",
 		"release": "pnpm build && changeset publish",
 		"staged": "vp staged",
-		"test": "vp run -r test"
+		"test": "vp run --filter mondrian.pdf --fail-if-no-match test"
 	},
 	"devDependencies": {
 		"@changesets/cli": "2.31.0",

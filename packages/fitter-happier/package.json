@@ -1,0 +1,36 @@
+{
+	"name": "mondrian.fitter-happier",
+	"version": "0.0.0",
+	"private": true,
+	"description": "lower fitter-happier LayoutNodes to mondrian.pdf documents",
+	"files": [
+		"dist/*.d.mts",
+		"dist/*.d.mts.map",
+		"dist/*.mjs",
+		"dist/*.mjs.map",
+		"src"
+	],
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		},
+		"./package.json": "./package.json"
+	},
+	"scripts": {
+		"build": "vp pack",
+		"check": "tsc --noEmit -p tsconfig.json",
+		"examples": "vp test --config examples/vite.config.ts --run",
+		"test": "vp test"
+	},
+	"dependencies": {
+		"mondrian.pdf": "workspace:*"
+	},
+	"peerDependencies": {
+		"fitter-happier": "^0.1.0"
+	},
+	"devDependencies": {
+		"fitter-happier": "file:../../../fitter-happier"
+	}
+}

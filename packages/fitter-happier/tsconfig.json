@@ -1,0 +1,11 @@
+{
+	"extends": "../../tsconfig.json",
+	"compilerOptions": {
+		"paths": {
+			"fitter-happier": ["./src/fitter-happier-types.d.ts"]
+		},
+		"rootDir": "."
+	},
+	"exclude": ["dist", "node_modules"],
+	"include": ["src/**/*.ts", "tests/**/*.ts", "examples/**/*.ts", "*.ts"]
+}

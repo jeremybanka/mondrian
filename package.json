@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vp run -r build",
 		"change": "changeset",
-		"check": "vp check --no-fmt && tsc --noEmit",
+		"check": "vp check --no-fmt && tsc --noEmit && pnpm --filter mondrian.fitter-happier check",
 		"fmt": "dprint fmt",
 		"fmt:check": "dprint check",
 		"lint": "vp lint",

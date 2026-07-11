@@ -3,6 +3,7 @@ packages:
 
 allowBuilds:
   dprint: true
+  skia-canvas: true
 
 blockExoticSubdeps: true
 minimumReleaseAge: 1440

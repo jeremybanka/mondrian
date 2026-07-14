@@ -31,6 +31,6 @@
 		"fitter-happier": "^0.1.0"
 	},
 	"devDependencies": {
-		"fitter-happier": "file:../../../fitter-happier"
+		"fitter-happier": "link:../../../fitter-happier"
 	}
 }

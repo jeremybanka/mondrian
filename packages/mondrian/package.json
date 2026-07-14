@@ -1,6 +1,6 @@
 {
 	"name": "mondrian.pdf",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "a low-level TypeScript interface to PDF",
 	"files": [
 		"dist/*.d.mts",

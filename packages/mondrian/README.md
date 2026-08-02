@@ -203,3 +203,15 @@ contains stable codes, paths, messages, and related locations.
 For inspection or interchange, the underlying `PdfDocument` data format and
 `validatePdf()` are also exported. Constructing that representation manually
 is possible, but `createPdfObjectBuilder()` is the safer low-level entry point.
+
+## License
+
+Mondrian is licensed under the [Mozilla Public License 2.0](https://www.mozilla.org/MPL/2.0/). The MPL is permissive about use and
+integration: you may use Mondrian for any purpose, including in commercial or
+proprietary software, and combine it with code under other licenses. New files
+may remain under terms of your choice.
+
+If you distribute modifications to Mondrian's MPL-covered files, you must make
+the source for those files available under MPL 2.0. Private and internal
+modifications do not need to be published. This is file-level sharing, not
+whole-program copyleft. See [Mozilla's official MPL 2.0 FAQ](https://www.mozilla.org/MPL/2.0/FAQ/) for details.

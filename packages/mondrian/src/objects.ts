@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 declare const objectNumberBrand: unique symbol
 declare const generationNumberBrand: unique symbol
 declare const textStringBrand: unique symbol

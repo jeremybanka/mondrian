@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 import type { PdfLiteralString } from "./objects.ts"
 import { literalString } from "./objects.ts"
 

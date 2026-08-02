@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 import type { PdfDocument, PdfReference } from "./objects.ts"
 
 const referenceOwners = new WeakMap<PdfReference, symbol>()

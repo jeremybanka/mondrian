@@ -41,6 +41,46 @@ pdf.setPages(page)
 await writeFile("hello.pdf", pdf.serialize())
 ```
 
+## Visual artifact testing
+
+Import `mondrian.pdf/vitest` to register a matcher that renders serialized PDF
+bytes and maintains reviewable PNG artifacts:
+
+```ts
+import { expect, it } from "vitest"
+import "mondrian.pdf/vitest"
+
+it("renders the invoice", async () => {
+	const invoice = createInvoice()
+
+	await expect(invoice.serialize()).toMatchPdfArtifact("invoice")
+})
+```
+
+Local test runs update the artifact directory beside the test file and pass once
+the PDF renders successfully. Review the resulting PNG and manifest changes in
+Git, then commit or revert them. When `CI` is truthy, the matcher instead fails
+if those files would be added, changed, or removed. A failure report containing
+the actual PDF, expected and actual page images, pixel diffs, and an HTML contact
+sheet is written under `artifacts/pdf/`.
+
+Set `MONDRIAN_PDF_ARTIFACT_MODE=update` or `verify` to override environment
+detection. Matcher options can also select the mode, resolution, background,
+annotation rendering, and artifact roots explicitly.
+
+The runner-neutral `mondrian.pdf/testing` submodule exports `renderPdf()`,
+`checkPdfArtifact()`, and their associated types for other test runners and
+custom workflows:
+
+```ts
+import { checkPdfArtifact } from "mondrian.pdf/testing"
+
+const result = await checkPdfArtifact(invoice.serialize(), {
+	directory: "test-artifacts/invoice",
+	failureDirectory: "artifacts/pdf/invoice",
+})
+```
+
 For a nested page tree, compose owned nodes explicitly:
 
 ```ts

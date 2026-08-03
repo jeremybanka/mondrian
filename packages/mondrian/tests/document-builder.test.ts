@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vite-plus/test"
 
 import type { PdfGraphicsBuilder, PdfTextBuilder } from "../src/content.ts"
-import { createPdfDocument, pageSizes } from "../src/document-builder.ts"
+import {
+	createPdfDocument,
+	pageSizes,
+	rectangle,
+} from "../src/document-builder.ts"
 import { PdfValidationError } from "../src/diagnostics.ts"
 import type {
 	PdfDictionary,
@@ -14,7 +18,7 @@ import type {
 	PdfValue,
 } from "../src/objects.ts"
 import { literalString } from "../src/objects.ts"
-import { rgbJpeg } from "./fixtures.ts"
+import { grayscaleJpeg, rgbJpeg } from "./fixtures.ts"
 
 describe("PdfDocumentBuilder", () => {
 	it("compiles one-page text with scoped BT/ET and automatic font resources", () => {
@@ -269,6 +273,99 @@ describe("PdfDocumentBuilder", () => {
 			},
 			data: jpegBytes,
 		})
+	})
+
+	it("rejects invalid high-level builder inputs at their source", () => {
+		expect(() => rectangle(0, 0, Number.NaN, 1)).toThrow(
+			"coordinates must be finite",
+		)
+		expect(() => rectangle(0, 0, 0, 1)).toThrow("positive width and height")
+
+		const builder = createPdfDocument()
+		expect(() => builder.standardFont("Comic Sans" as never)).toThrow(
+			"Unknown PDF standard font",
+		)
+		expect(() => builder.text(null as never)).toThrow(
+			"text callback is required",
+		)
+		expect(() => builder.graphics(null as never)).toThrow(
+			"graphics callback is required",
+		)
+		expect(() => builder.page(null as never)).toThrow(
+			"page options are required",
+		)
+		expect(() =>
+			builder.page({ mediaBox: pageSizes.letter, rotation: 45 as never }),
+		).toThrow("rotation must be 0, 90, 180, or 270")
+		expect(() => builder.page({ mediaBox: [0, 0, 1] as never })).toThrow(
+			"mediaBox must be created with rectangle()",
+		)
+
+		const font = builder.standardFont("Helvetica")
+		expect(() => builder.text((text) => text.font(font, 0))).toThrow(
+			"font size must be greater than zero",
+		)
+		expect(() =>
+			builder.text((text) => text.font(font, 12).moveText(Number.NaN, 0)),
+		).toThrow("text position must be finite")
+		expect(() =>
+			builder.text((text) =>
+				text.font(font, 12).show({ kind: "name" } as never),
+			),
+		).toThrow("Expected a PDF literal string")
+		expect(() =>
+			builder.text((text) => text.font(Object.freeze({}) as never, 12)),
+		).toThrow("Unknown PDF font handle")
+		expect(() =>
+			builder.graphics((graphics) => graphics.lineWidth(-1)),
+		).toThrow("line width cannot be negative")
+		expect(() =>
+			builder.graphics((graphics) => graphics.rgbFill(1.1, 0, 0)),
+		).toThrow("RGB components must be from 0 through 1")
+		expect(() =>
+			builder.graphics((graphics) =>
+				graphics.drawImage(Object.freeze({}) as never, 0, 0, 1, 1),
+			),
+		).toThrow("Unknown PDF image handle")
+		expect(() =>
+			builder.page({
+				mediaBox: pageSizes.letter,
+				content: [Object.freeze({}) as never],
+			}),
+		).toThrow("Unknown PDF content handle")
+	})
+
+	it("emits legacy text and image ProcSet resources", () => {
+		const builder = createPdfDocument({
+			version: "1.1",
+			metadata: { title: "Legacy PDF" },
+		})
+		const font = builder.standardFont("Helvetica")
+		const gray = builder.jpeg(grayscaleJpeg())
+		const rgb = builder.jpeg(rgbJpeg())
+		const text = builder.text((value) => value.font(font, 12).show("legacy"))
+		const graphics = builder.graphics((value) =>
+			value
+				.drawImage(gray, 0, 0, 10, 10)
+				.drawImage(rgb, 20, 0, 10, 10)
+				.drawImage(gray, 40, 0, 10, 10),
+		)
+		builder.setPages(
+			builder.page({ mediaBox: pageSizes.letter, content: [text, graphics] }),
+		)
+
+		const document = builder.compile()
+		const resources = directDictionary(firstPage(document).entries.Resources)
+		expect(resources.entries.ProcSet).toMatchObject({
+			kind: "array",
+			items: [
+				{ kind: "name", value: "PDF" },
+				{ kind: "name", value: "Text" },
+				{ kind: "name", value: "ImageB" },
+				{ kind: "name", value: "ImageC" },
+			],
+		})
+		expect(asciiText(builder.serialize())).toContain("/Title (Legacy PDF)")
 	})
 
 	it("serializes deterministically across repeated calls", () => {

@@ -1,6 +1,14 @@
-import { mkdtemp, readFile, readdir, rm } from "node:fs/promises"
+import {
+	mkdir,
+	mkdtemp,
+	readFile,
+	readdir,
+	rm,
+	writeFile,
+} from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 
 import { afterEach, describe, expect, it } from "vite-plus/test"
 
@@ -48,6 +56,28 @@ describe("PDF visual artifacts", () => {
 		expect(rendered.pages[0]!.pixels.some((channel) => channel !== 255)).toBe(
 			true,
 		)
+	})
+
+	it("validates renderer options and honors explicit rendering controls", async () => {
+		await expect(renderPdf("pdf" as never)).rejects.toThrow(
+			"requires a Uint8Array",
+		)
+		for (const resolution of [0, -1, Number.POSITIVE_INFINITY]) {
+			await expect(
+				renderPdf(examplePdf("Invalid"), { resolution }),
+			).rejects.toThrow("resolution must be a positive number")
+		}
+
+		const rendered = await renderPdf(examplePdf("Controls"), {
+			background: "#fef3c7",
+			renderAnnotations: false,
+			resolution: 36,
+		})
+		expect(rendered).toMatchObject({
+			background: "#fef3c7",
+			renderAnnotations: false,
+			resolution: 36,
+		})
 	})
 
 	it("selects update locally and verify in CI with an explicit override", () => {
@@ -172,6 +202,106 @@ describe("PDF visual artifacts", () => {
 		expect(await readdir(directory)).toEqual(["manifest.json", "page-001.png"])
 	})
 
+	it("reports added and missing pages without rewriting baselines", async () => {
+		const root = await temporaryDirectory()
+		const onePage = join(root, "one-page")
+		await checkPdfArtifact(examplePdf("One"), {
+			directory: onePage,
+			mode: "update",
+			resolution: 72,
+		})
+		const added = await checkPdfArtifact(examplePdf("Two", 2), {
+			directory: onePage,
+			mode: "verify",
+			resolution: 72,
+		})
+		expect(added).toMatchObject({ status: "mismatched" })
+		expect(added.failureDirectory).toBeUndefined()
+		expect(added.changes).toContainEqual({
+			kind: "added",
+			path: "page-002.png",
+		})
+		const addedPage = added.pageDifferences.find(
+			({ file }) => file === "page-002.png",
+		)
+		expect(addedPage).toMatchObject({ file: "page-002.png", actualWidth: 612 })
+		expect(addedPage).not.toHaveProperty("expectedWidth")
+
+		const twoPages = join(root, "two-pages")
+		const failures = join(root, "missing-page-failure")
+		await checkPdfArtifact(examplePdf("Two", 2), {
+			directory: twoPages,
+			mode: "update",
+			resolution: 72,
+		})
+		const removed = await checkPdfArtifact(examplePdf("One"), {
+			directory: twoPages,
+			failureDirectory: failures,
+			mode: "verify",
+			resolution: 72,
+		})
+		expect(removed.changes).toContainEqual({
+			kind: "removed",
+			path: "page-002.png",
+		})
+		const removedPage = removed.pageDifferences.find(
+			({ file }) => file === "page-002.png",
+		)
+		expect(removedPage).toMatchObject({
+			file: "page-002.png",
+			expectedWidth: 612,
+		})
+		expect(removedPage).not.toHaveProperty("actualWidth")
+		expect(await readFile(join(failures, "report.html"), "utf8")).toContain(
+			"actual missing",
+		)
+	})
+
+	it("reports corrupt images and nested unexpected artifacts", async () => {
+		const root = await temporaryDirectory()
+		const directory = join(root, "corrupt")
+		const failures = join(root, "corrupt-failure")
+		await checkPdfArtifact(examplePdf("Corrupt"), {
+			directory,
+			mode: "update",
+			resolution: 72,
+		})
+		await writeFile(join(directory, "page-001.png"), Uint8Array.of(1, 2, 3))
+
+		const corrupt = await checkPdfArtifact(examplePdf("Corrupt"), {
+			directory,
+			failureDirectory: failures,
+			mode: "verify",
+			resolution: 72,
+		})
+		expect(corrupt.pageDifferences[0]).toEqual(
+			expect.objectContaining({
+				file: "page-001.png",
+				error: expect.any(String),
+			}),
+		)
+
+		await checkPdfArtifact(examplePdf("Nested"), {
+			directory,
+			mode: "update",
+			resolution: 72,
+		})
+		await mkdir(join(directory, "nested"))
+		await writeFile(
+			join(directory, "nested", "unexpected.bin"),
+			Uint8Array.of(1),
+		)
+		const nested = await checkPdfArtifact(examplePdf("Nested"), {
+			directory,
+			mode: "verify",
+			resolution: 72,
+		})
+		expect(nested.changes).toContainEqual({
+			kind: "removed",
+			path: join("nested", "unexpected.bin"),
+		})
+	})
+
 	it("rejects overlapping tracked and failure directories", async () => {
 		const root = await temporaryDirectory()
 
@@ -211,6 +341,35 @@ describe("PDF visual artifacts", () => {
 				resolution: 72,
 			}),
 		).rejects.toThrow("would be updated")
+	})
+
+	it("validates matcher inputs and supports URL artifact roots", async () => {
+		const artifactRoot = await temporaryDirectory()
+		const failureRoot = await temporaryDirectory()
+		const bytes = examplePdf("Matcher options")
+
+		await expect(
+			expect(bytes).not.toMatchPdfArtifact("negated", {
+				artifactRoot,
+				failureRoot,
+			}),
+		).rejects.toThrow("cannot be used with .not")
+		await expect(
+			expect("not PDF bytes").toMatchPdfArtifact("invalid", {
+				artifactRoot,
+				failureRoot,
+			}),
+		).rejects.toThrow("expects serialized PDF bytes")
+
+		await expect(bytes).toMatchPdfArtifact(undefined, {
+			artifactRoot: pathToFileURL(`${artifactRoot}/`),
+			background: "#ffffff",
+			failureRoot: pathToFileURL(`${failureRoot}/`),
+			mode: "update",
+			renderAnnotations: false,
+			resolution: 36,
+		})
+		expect(await readdir(artifactRoot)).toHaveLength(1)
 	})
 })
 

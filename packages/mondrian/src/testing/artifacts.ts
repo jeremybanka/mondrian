@@ -263,7 +263,7 @@ async function comparePages(
 			const diff = makePageDiff(expectedImage, actualPage)
 			outputs.push({
 				difference: Object.freeze({ file, ...diff.difference }),
-				...(diff.png === undefined ? {} : { png: diff.png }),
+				png: diff.png,
 			})
 		} catch (error) {
 			outputs.push({

@@ -242,15 +242,17 @@ export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
 
 	if (isReference(document.info)) {
 		const info = resolveMatching(document.info, objects)
-		if (info !== undefined && !isDictionary(info.value)) {
-			add(
-				context,
-				"incorrect-reference-target",
-				"info",
-				"Info must reference a dictionary",
-			)
-		} else if (info !== undefined && isDictionary(info.value)) {
-			validateInfoDictionary(info.value, context)
+		if (info !== undefined) {
+			if (isDictionary(info.value)) {
+				validateInfoDictionary(info.value, context)
+			} else {
+				add(
+					context,
+					"incorrect-reference-target",
+					"info",
+					"Info must reference a dictionary",
+				)
+			}
 		}
 	}
 

@@ -123,6 +123,12 @@ describe("PDF values", () => {
 		expect(() => textString(String.fromCharCode(0xdc00))).toThrow(
 			"cannot contain an unpaired surrogate",
 		)
+		expect(() => textString(`${String.fromCharCode(0xd800)}A`)).toThrow(
+			"cannot contain an unpaired surrogate",
+		)
+		expect(() => textString(`A${String.fromCharCode(0xdc00)}`)).toThrow(
+			"cannot contain an unpaired surrogate",
+		)
 		expect(() => dateString(new Date(Number.NaN))).toThrow(
 			"requires a valid Date",
 		)
@@ -170,6 +176,21 @@ describe("PDF values", () => {
 				dictionaryEntry(nameBytes(ascii("Length")), 1),
 			),
 		).toThrow("Stream Length is derived during serialization")
+		expect(() =>
+			stream({}, new Uint8Array(), dictionaryEntry(name("Length"), 1)),
+		).toThrow("Stream Length is derived during serialization")
+
+		expect(
+			asciiText(
+				serializePdfObjectBody(
+					stream(
+						{},
+						Uint8Array.of(0x41),
+						dictionaryEntry(name("Filter"), name("ASCIIHexDecode")),
+					),
+				),
+			),
+		).toBe("<< /Filter /ASCIIHexDecode /Length 1 >>\nstream\nA\nendstream")
 	})
 
 	it("allows streams only as indirect-object values", () => {

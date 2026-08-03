@@ -25,8 +25,8 @@ export function formatPdfNumber(value: number): string {
 		throw new TypeError(`Cannot encode PDF number: ${source}`)
 	}
 
-	const sign = match[1] ?? ""
-	const integer = match[2] ?? ""
+	const sign = match[1]!
+	const integer = match[2]!
 	const fraction = match[3] ?? ""
 	const exponent = Number(match[4])
 	const digits = `${integer}${fraction}`

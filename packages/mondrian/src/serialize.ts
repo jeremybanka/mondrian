@@ -241,7 +241,7 @@ function writeCrossReferenceTable(
 	for (let number = 1; number <= highestObjectNumber; number += 1) {
 		const object = byNumber.get(number)
 		if (object !== undefined) {
-			writeXrefEntry(writer, offsets.get(number) ?? 0, object.generation, true)
+			writeXrefEntry(writer, offsets.get(number)!, object.generation, true)
 			continue
 		}
 

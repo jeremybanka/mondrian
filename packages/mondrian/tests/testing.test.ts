@@ -132,6 +132,34 @@ describe("PDF visual artifacts", () => {
 		})
 	})
 
+	it("accepts URL directories and detects same-length manifest changes", async () => {
+		const root = await temporaryDirectory()
+		const directory = join(root, "url-artifact")
+		const directoryUrl = pathToFileURL(directory)
+		await checkPdfArtifact(examplePdf("URL"), {
+			directory: directoryUrl,
+			mode: "update",
+			resolution: 72,
+		})
+
+		const manifestPath = join(directory, "manifest.json")
+		const manifest = await readFile(manifestPath, "utf8")
+		await writeFile(
+			manifestPath,
+			manifest.replace('"formatVersion": 1', '"formatVersion": 2'),
+		)
+
+		const result = await checkPdfArtifact(examplePdf("URL"), {
+			directory: directoryUrl,
+			mode: "verify",
+			resolution: 72,
+		})
+		expect(result.changes).toContainEqual({
+			kind: "changed",
+			path: "manifest.json",
+		})
+	})
+
 	it("reports image differences without changing the tracked artifact", async () => {
 		const root = await temporaryDirectory()
 		const directory = join(root, "invoice")
@@ -370,6 +398,13 @@ describe("PDF visual artifacts", () => {
 			resolution: 36,
 		})
 		expect(await readdir(artifactRoot)).toHaveLength(1)
+
+		await expect(bytes).toMatchPdfArtifact("***", {
+			artifactRoot,
+			failureRoot,
+			mode: "update",
+		})
+		expect(await readdir(artifactRoot)).toContain("pdf")
 	})
 })
 

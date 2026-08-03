@@ -388,6 +388,7 @@ describe("PdfDocumentBuilder", () => {
 			metadata: {
 				title: "AΩ",
 				author: "Mondrian",
+				creationDate: new Date("2026-07-09T03:00:00Z"),
 				modificationDate: new Date("2026-07-10T04:00:00Z"),
 			},
 		})
@@ -409,11 +410,18 @@ describe("PdfDocumentBuilder", () => {
 			Uint8Array.of(0xfe, 0xff, 0x00, 0x41, 0x03, 0xa9),
 		)
 		expect(info.entries.Author).toMatchObject({ kind: "hex-string" })
+		expect(info.entries.CreationDate).toMatchObject({ kind: "literal-string" })
 		expect(info.entries.ModDate).toMatchObject({ kind: "literal-string" })
 		const serialized = asciiText(builder.serialize())
 		expect(serialized).toContain("/Title <FEFF004103A9>")
+		expect(serialized).toContain("/CreationDate (D:20260709030000Z)")
 		expect(serialized).toContain("/ModDate (D:20260710040000Z)")
 		expect(serialized).toMatch(/\/Info \d+ 0 R/)
+
+		const empty = createPdfDocument({ metadata: {} })
+		empty.setPages(empty.page({ mediaBox: pageSizes.letter }))
+		expect(empty.compile().info).toBeUndefined()
+
 		expect(() =>
 			createPdfDocument({
 				metadata: { creationDate: new Date(Number.NaN) },

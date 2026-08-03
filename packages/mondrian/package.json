@@ -20,6 +20,7 @@
 	},
 	"scripts": {
 		"build": "vp pack",
+		"coverage": "vp test run --coverage",
 		"test": "vp test"
 	},
 	"engines": {

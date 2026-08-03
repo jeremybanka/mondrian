@@ -24,6 +24,11 @@ export default defineConfig({
 		},
 	],
 	test: {
+		coverage: {
+			include: ["src/**/*.ts"],
+			provider: "v8",
+			reporter: ["text", "html"],
+		},
 		include: ["tests/**/*.test.ts"],
 		passWithNoTests: true,
 	},

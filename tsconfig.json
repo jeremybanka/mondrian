@@ -16,6 +16,5 @@
 		"target": "ES2024",
 		"types": []
 	},
-	"exclude": ["packages/fitter-happier"],
 	"include": ["**/*.ts", "*.d.ts"]
 }

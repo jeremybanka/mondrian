@@ -47,16 +47,6 @@ importers:
         specifier: 0.2.7
         version: 0.2.7(vite@8.1.3)
 
-  packages/fitter-happier:
-    dependencies:
-      mondrian.pdf:
-        specifier: workspace:*
-        version: link:../mondrian
-    devDependencies:
-      fitter-happier:
-        specifier: link:../../../fitter-happier
-        version: link:../../../fitter-happier
-
   packages/mondrian: {}
 
 packages:

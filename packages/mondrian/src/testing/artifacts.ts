@@ -207,7 +207,7 @@ function artifactFiles(rendered: RenderedPdf): ReadonlyMap<string, Uint8Array> {
 	const files = new Map<string, Uint8Array>([
 		[
 			"manifest.json",
-			textEncoder.encode(`${JSON.stringify(manifest, null, 2)}\n`),
+			textEncoder.encode(`${JSON.stringify(manifest, null, "\t")}\n`),
 		],
 	])
 	for (const [index, page] of rendered.pages.entries()) {

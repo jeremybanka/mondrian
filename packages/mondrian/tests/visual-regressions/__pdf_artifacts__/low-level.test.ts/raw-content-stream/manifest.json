@@ -1,0 +1,18 @@
+{
+	"formatVersion": 1,
+	"renderer": {
+		"canvas": "@napi-rs/canvas@1.0.2",
+		"name": "pdfjs",
+		"version": "6.1.200"
+	},
+	"resolution": 96,
+	"background": "#ffffff",
+	"renderAnnotations": true,
+	"pages": [
+		{
+			"file": "page-001.png",
+			"width": 800,
+			"height": 534
+		}
+	]
+}

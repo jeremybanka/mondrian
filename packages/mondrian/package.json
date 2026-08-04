@@ -4,6 +4,7 @@
 	"description": "a low-level TypeScript interface to PDF",
 	"license": "MPL-2.0",
 	"files": [
+		"AGENTS.md",
 		"dist/*.d.mts",
 		"dist/*.d.mts.map",
 		"dist/*.mjs",

@@ -3,6 +3,7 @@
 	"version": "0.1.0",
 	"description": "a low-level TypeScript interface to PDF",
 	"license": "MPL-2.0",
+	"type": "module",
 	"files": [
 		"AGENTS.md",
 		"dist/*.d.mts",
@@ -11,7 +12,14 @@
 		"dist/*.mjs.map",
 		"src"
 	],
-	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/jeremybanka/mondrian.git",
+		"directory": "packages/mondrian"
+	},
 	"exports": {
 		".": {
 			"import": "./dist/index.mjs",

@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vp run --filter mondrian.pdf --fail-if-no-match build",
 		"change": "changeset",
-		"check": "vp check --no-fmt .pnpmfile.mjs vite.config.ts packages/mondrian && tsc --noEmit",
+		"check": "vp check --no-fmt",
 		"coverage": "vp run --filter mondrian.pdf --fail-if-no-match coverage",
 		"fmt": "dprint fmt",
 		"fmt:check": "dprint check",

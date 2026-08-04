@@ -129,7 +129,8 @@ export async function checkPdfArtifact(
 	const rendered = await renderPdf(bytes, options)
 	const candidate = artifactFiles(rendered)
 	const existing = await readDirectoryFiles(directory)
-	const changes = compareFileSets(existing, candidate)
+	const comparison = await compareArtifacts(existing, candidate, rendered)
+	const { changes } = comparison
 
 	if (changes.length === 0) {
 		await removeFailureDirectory(failureDirectory)
@@ -156,7 +157,12 @@ export async function checkPdfArtifact(
 		})
 	}
 
-	const pageDiffOutputs = await comparePages(existing, rendered)
+	const changedPages = new Set(
+		changes.filter(({ path }) => isPageFile(path)).map(({ path }) => path),
+	)
+	const pageDiffOutputs = comparison.pageDiffOutputs.filter(({ difference }) =>
+		changedPages.has(difference.file),
+	)
 	if (failureDirectory !== undefined) {
 		await writeFailureDirectory(
 			failureDirectory,
@@ -220,10 +226,18 @@ function pageFile(pageNumber: number, digits: number): string {
 	return `page-${String(pageNumber).padStart(digits, "0")}.png`
 }
 
-function compareFileSets(
+async function compareArtifacts(
 	expected: ReadonlyMap<string, Uint8Array>,
 	actual: ReadonlyMap<string, Uint8Array>,
-): PdfArtifactChange[] {
+	rendered: RenderedPdf,
+): Promise<{
+	readonly changes: PdfArtifactChange[]
+	readonly pageDiffOutputs: PageDiffOutput[]
+}> {
+	const pageDiffOutputs = await comparePages(expected, rendered)
+	const pageDifferences = new Map(
+		pageDiffOutputs.map(({ difference }) => [difference.file, difference]),
+	)
 	const paths = new Set([...expected.keys(), ...actual.keys()])
 	const changes: PdfArtifactChange[] = []
 	for (const path of [...paths].sort()) {
@@ -233,11 +247,25 @@ function compareFileSets(
 			changes.push(Object.freeze({ kind: "added", path }))
 		} else if (actualBytes === undefined) {
 			changes.push(Object.freeze({ kind: "removed", path }))
-		} else if (!equalBytes(expectedBytes, actualBytes)) {
+		} else if (
+			isPageFile(path)
+				? pageIsDifferent(pageDifferences.get(path))
+				: !equalBytes(expectedBytes, actualBytes)
+		) {
 			changes.push(Object.freeze({ kind: "changed", path }))
 		}
 	}
-	return changes
+	return { changes, pageDiffOutputs }
+}
+
+function pageIsDifferent(difference: PdfPageDifference | undefined): boolean {
+	return (
+		difference === undefined ||
+		difference.error !== undefined ||
+		difference.expectedWidth !== difference.actualWidth ||
+		difference.expectedHeight !== difference.actualHeight ||
+		difference.differingPixels !== 0
+	)
 }
 
 async function comparePages(

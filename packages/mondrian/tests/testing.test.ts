@@ -6,6 +6,7 @@ import {
 	rm,
 	writeFile,
 } from "node:fs/promises"
+import { createHash } from "node:crypto"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -38,9 +39,10 @@ describe("PDF visual artifacts", () => {
 			background: "#ffffff",
 			renderAnnotations: true,
 			renderer: {
-				canvas: "@napi-rs/canvas@1.0.2",
-				name: "pdfjs",
-				version: "6.1.200",
+				name: "pdfium",
+				version: "2.14.4",
+				wasmSha256:
+					"c0af5a6aca30d7e54a149c3a68e317116ca906d6edc28fd3318b12c7d9478ac8",
 			},
 			resolution: 72,
 		})
@@ -56,6 +58,9 @@ describe("PDF visual artifacts", () => {
 		expect(rendered.pages[0]!.pixels.some((channel) => channel !== 255)).toBe(
 			true,
 		)
+		expect(
+			createHash("sha256").update(rendered.pages[0]!.pixels).digest("hex"),
+		).toBe("41b05214e46a4eb48dc6dcd17d7aeb3c1683d9737b968e112db040829793022a")
 	})
 
 	it("validates renderer options and honors explicit rendering controls", async () => {
@@ -67,17 +72,26 @@ describe("PDF visual artifacts", () => {
 				renderPdf(examplePdf("Invalid"), { resolution }),
 			).rejects.toThrow("resolution must be a positive number")
 		}
+		await expect(
+			renderPdf(examplePdf("Invalid"), { background: "white" }),
+		).rejects.toThrow("background must be #RGB or #RRGGBB")
+		await expect(renderPdf(new Uint8Array())).rejects.toThrow(
+			"PDFium could not load the PDF",
+		)
 
 		const rendered = await renderPdf(examplePdf("Controls"), {
-			background: "#fef3c7",
+			background: "#fc7",
 			renderAnnotations: false,
 			resolution: 36,
 		})
 		expect(rendered).toMatchObject({
-			background: "#fef3c7",
+			background: "#fc7",
 			renderAnnotations: false,
 			resolution: 36,
 		})
+		expect(rendered.pages[0]!.pixels.slice(0, 4)).toEqual(
+			Uint8ClampedArray.of(255, 204, 119, 255),
+		)
 	})
 
 	it("selects update locally and verify in CI with an explicit override", () => {
@@ -158,6 +172,30 @@ describe("PDF visual artifacts", () => {
 			kind: "changed",
 			path: "manifest.json",
 		})
+	})
+
+	it("compares decoded pixels rather than PNG file bytes", async () => {
+		const root = await temporaryDirectory()
+		const directory = join(root, "png-encoding")
+		await checkPdfArtifact(examplePdf("Pixels"), {
+			directory,
+			mode: "update",
+			resolution: 72,
+		})
+
+		const pagePath = join(directory, "page-001.png")
+		const original = await readFile(pagePath)
+		const alternateEncoding = new Uint8Array(original.length + 1)
+		alternateEncoding.set(original)
+		await writeFile(pagePath, alternateEncoding)
+
+		const result = await checkPdfArtifact(examplePdf("Pixels"), {
+			directory,
+			mode: "update",
+			resolution: 72,
+		})
+		expect(result).toMatchObject({ status: "matched", changes: [] })
+		expect(Uint8Array.from(await readFile(pagePath))).toEqual(alternateEncoding)
 	})
 
 	it("reports image differences without changing the tracked artifact", async () => {

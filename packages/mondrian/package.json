@@ -35,8 +35,8 @@
 		"node": ">=22.13.0"
 	},
 	"dependencies": {
-		"@napi-rs/canvas": "1.0.2",
-		"pdfjs-dist": "6.1.200"
+		"@embedpdf/pdfium": "2.14.4",
+		"@napi-rs/canvas": "1.0.2"
 	},
 	"peerDependencies": {
 		"vitest": ">=4.1.3"

@@ -1,8 +1,8 @@
-import { createCanvas } from "@napi-rs/canvas"
 import { describe, expect, it } from "vite-plus/test"
 
 import type { PdfDocumentBuilder, PdfRectangle } from "../../src/index.ts"
 import { createPdfDocument, pageSizes, rectangle } from "../../src/index.ts"
+import { colorBarsJpeg } from "../fixtures.ts"
 import { visualArtifactOptions } from "./setup.ts"
 
 describe("images and pages visual regressions", () => {
@@ -85,30 +85,4 @@ function geometryPage(
 			),
 		],
 	})
-}
-
-function colorBarsJpeg(): Uint8Array {
-	const canvas = createCanvas(120, 80)
-	const context = canvas.getContext("2d")
-	context.fillStyle = "#f8fafc"
-	context.fillRect(0, 0, 120, 80)
-	const colors = [
-		"#ef4444",
-		"#f59e0b",
-		"#22c55e",
-		"#06b6d4",
-		"#3b82f6",
-		"#8b5cf6",
-	]
-	for (const [index, color] of colors.entries()) {
-		context.fillStyle = color
-		context.fillRect(index * 20, 0, 20, 48)
-	}
-	context.fillStyle = "#18181b"
-	context.fillRect(0, 48, 120, 32)
-	context.fillStyle = "#ffffff"
-	for (let index = 0; index < 6; index += 1) {
-		context.fillRect(5 + index * 20, 56 + (index % 2) * 8, 10, 10)
-	}
-	return Uint8Array.from(canvas.toBuffer("image/jpeg", 92))
 }

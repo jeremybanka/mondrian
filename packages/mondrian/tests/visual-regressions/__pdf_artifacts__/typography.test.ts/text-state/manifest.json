@@ -1,9 +1,9 @@
 {
 	"formatVersion": 1,
 	"renderer": {
-		"canvas": "@napi-rs/canvas@1.0.2",
-		"name": "pdfjs",
-		"version": "6.1.200"
+		"name": "pdfium",
+		"version": "2.14.4",
+		"wasmSha256": "c0af5a6aca30d7e54a149c3a68e317116ca906d6edc28fd3318b12c7d9478ac8"
 	},
 	"resolution": 96,
 	"background": "#ffffff",

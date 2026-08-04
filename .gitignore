@@ -1,6 +1,7 @@
 node_modules/
 dist/
 artifacts/
+coverage/
 .mise/
 .pnpm-home/
 .pnpm-store/
@@ -8,4 +9,3 @@ artifacts/
 .mise.local.toml
 .env
 *.log
-

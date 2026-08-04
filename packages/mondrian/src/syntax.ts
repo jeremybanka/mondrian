@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-import type {
-	PdfDictionaryEntries,
-	PdfLiteralString,
-	PdfName,
-} from "./objects.ts"
+import type { PdfLiteralString, PdfName } from "./objects.ts"
 
 const nameDelimiters = new Set([
 	0x28, 0x29, 0x3c, 0x3e, 0x5b, 0x5d, 0x7b, 0x7d, 0x2f, 0x25, 0x23,
@@ -29,8 +25,8 @@ export function formatPdfNumber(value: number): string {
 		throw new TypeError(`Cannot encode PDF number: ${source}`)
 	}
 
-	const sign = match[1] ?? ""
-	const integer = match[2] ?? ""
+	const sign = match[1]!
+	const integer = match[2]!
 	const fraction = match[3] ?? ""
 	const exponent = Number(match[4])
 	const digits = `${integer}${fraction}`
@@ -113,18 +109,6 @@ export function encodePdfHexString(bytes: Uint8Array): string {
 	}
 
 	return `${result}>`
-}
-
-export function assertDictionaryKeys(entries: PdfDictionaryEntries): void {
-	for (const key of Object.keys(entries)) {
-		if (key.length === 0) {
-			throw new TypeError("A PDF dictionary key cannot be empty")
-		}
-
-		if (key.includes("\0")) {
-			throw new TypeError("A PDF dictionary key cannot contain NUL")
-		}
-	}
 }
 
 export function isPdfName<TName extends string>(

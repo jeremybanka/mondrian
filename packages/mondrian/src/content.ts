@@ -1006,10 +1006,7 @@ function createContentHandle(record: PdfContentRecord): PdfContent {
 function encodeWinAnsi(value: string): Uint8Array {
 	const bytes: number[] = []
 	for (const character of value) {
-		const codePoint = character.codePointAt(0)
-		if (codePoint === undefined) {
-			continue
-		}
+		const codePoint = character.codePointAt(0)!
 
 		if (codePoint <= 0x7f || (codePoint >= 0xa0 && codePoint <= 0xff)) {
 			bytes.push(codePoint)

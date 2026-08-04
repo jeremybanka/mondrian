@@ -1,0 +1,33 @@
+{
+	"formatVersion": 1,
+	"renderer": {
+		"name": "pdfium",
+		"version": "2.14.4",
+		"wasmSha256": "c0af5a6aca30d7e54a149c3a68e317116ca906d6edc28fd3318b12c7d9478ac8"
+	},
+	"resolution": 96,
+	"background": "#ffffff",
+	"renderAnnotations": true,
+	"pages": [
+		{
+			"file": "page-001.png",
+			"width": 816,
+			"height": 1056
+		},
+		{
+			"file": "page-002.png",
+			"width": 1056,
+			"height": 816
+		},
+		{
+			"file": "page-003.png",
+			"width": 794,
+			"height": 1123
+		},
+		{
+			"file": "page-004.png",
+			"width": 534,
+			"height": 320
+		}
+	]
+}

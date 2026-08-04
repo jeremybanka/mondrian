@@ -13,15 +13,20 @@ import type {
 import {
 	array,
 	ascii,
+	asciiTextString,
+	dateString,
 	dictionary,
 	dictionaryEntry,
+	generationNumber,
 	hexString,
 	indirectObject,
 	literalString,
 	name,
 	nameBytes,
+	objectNumber,
 	reference,
 	stream,
+	textString,
 } from "../src/objects.ts"
 import { serializePdf, serializePdfObjectBody } from "../src/serialize.ts"
 import { validatePdf } from "../src/validate.ts"
@@ -97,6 +102,61 @@ describe("PDF values", () => {
 		)
 	})
 
+	it("rejects invalid primitive constructor inputs", () => {
+		for (const value of [0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1]) {
+			expect(() => objectNumber(value)).toThrow("object number")
+		}
+		for (const value of [-1, 1.5, 65_535, Number.NaN]) {
+			expect(() => generationNumber(value)).toThrow("generation number")
+		}
+
+		expect(() => name("")).toThrow("cannot be empty")
+		expect(() => name("a\0b")).toThrow("cannot contain NUL")
+		expect(() => nameBytes(new Uint8Array())).toThrow("at least one byte")
+		expect(() => nameBytes(Uint8Array.of(0x41, 0))).toThrow(
+			"cannot contain NUL",
+		)
+		expect(() => ascii("café")).toThrow("Expected ASCII text")
+		expect(() => textString(String.fromCharCode(0xd800))).toThrow(
+			"cannot contain an unpaired surrogate",
+		)
+		expect(() => textString(String.fromCharCode(0xdc00))).toThrow(
+			"cannot contain an unpaired surrogate",
+		)
+		expect(() => textString(`${String.fromCharCode(0xd800)}A`)).toThrow(
+			"cannot contain an unpaired surrogate",
+		)
+		expect(() => textString(`A${String.fromCharCode(0xdc00)}`)).toThrow(
+			"cannot contain an unpaired surrogate",
+		)
+		expect(() => dateString(new Date(Number.NaN))).toThrow(
+			"requires a valid Date",
+		)
+
+		const distant = new Date(0)
+		distant.setUTCFullYear(10_000)
+		expect(() => dateString(distant)).toThrow("year must fit four digits")
+		expect(() => stream({ Length: 0 } as never, new Uint8Array())).toThrow(
+			"Stream Length is derived",
+		)
+	})
+
+	it("serializes every literal escape and multibyte name width", () => {
+		expect(
+			asciiText(
+				serializePdfObjectBody(
+					literalString(Uint8Array.of(0x08, 0x09, 0x0c, 0x0d)),
+				),
+			),
+		).toBe("(\\b\\t\\f\\r)")
+		expect(asciiText(serializePdfObjectBody(name("€😀")))).toBe(
+			"/#E2#82#AC#F0#9F#98#80",
+		)
+		expect(asciiText(serializePdfObjectBody(asciiTextString("legacy")))).toBe(
+			"(legacy)",
+		)
+	})
+
 	it("writes binary stream bytes verbatim and derives Length", () => {
 		const source = Uint8Array.of(0x00, 0xff, 0x0a, 0x0d)
 		const value = stream({ Subtype: name("Data") }, source)
@@ -116,6 +176,21 @@ describe("PDF values", () => {
 				dictionaryEntry(nameBytes(ascii("Length")), 1),
 			),
 		).toThrow("Stream Length is derived during serialization")
+		expect(() =>
+			stream({}, new Uint8Array(), dictionaryEntry(name("Length"), 1)),
+		).toThrow("Stream Length is derived during serialization")
+
+		expect(
+			asciiText(
+				serializePdfObjectBody(
+					stream(
+						{},
+						Uint8Array.of(0x41),
+						dictionaryEntry(name("Filter"), name("ASCIIHexDecode")),
+					),
+				),
+			),
+		).toBe("<< /Filter /ASCIIHexDecode /Length 1 >>\nstream\nA\nendstream")
 	})
 
 	it("allows streams only as indirect-object values", () => {
@@ -127,6 +202,20 @@ describe("PDF values", () => {
 		} as unknown as PdfDictionary
 		expect(() => serializePdfObjectBody(invalid)).toThrow(
 			"A PDF stream must be an indirect object",
+		)
+	})
+
+	it("rejects non-finite numbers and direct-object cycles during serialization", () => {
+		expect(() => serializePdfObjectBody(Number.POSITIVE_INFINITY)).toThrow(
+			"PDF numbers must be finite",
+		)
+		const cycle = { kind: "array", items: [] } as unknown as {
+			kind: "array"
+			items: PdfValue[]
+		}
+		cycle.items.push(cycle as unknown as PdfValue)
+		expect(() => serializePdfObjectBody(cycle as never)).toThrow(
+			"Direct PDF objects cannot contain cycles",
 		)
 	})
 })
@@ -243,6 +332,27 @@ describe("PDF documents", () => {
 			]),
 		)
 		expect(() => serializePdf(document)).toThrow(PdfValidationError)
+	})
+
+	it("serializes document IDs and sparse cross-reference tables", () => {
+		const document = minimalDocument()
+		const identified: PdfDocument = {
+			...document,
+			id: [
+				hexString(Uint8Array.of(0x01, 0x02)),
+				hexString(Uint8Array.of(0xab)),
+			],
+			objects: [
+				...document.objects,
+				indirectObject(6, dictionary({ Unreachable: true })),
+			],
+		}
+		const serialized = asciiText(serializePdf(identified))
+
+		expect(serialized).toContain("/ID [<0102> <AB>]")
+		expect(serialized).toContain("xref\n0 7\n")
+		expect(serialized).toContain("0000000005 65535 f")
+		expect(serialized).toContain("0000000000 00000 f")
 	})
 })
 

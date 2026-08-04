@@ -12,11 +12,13 @@ export default defineConfig({
 				skipNodeModulesBundle: true,
 			},
 			dts: {
-				entry: ["src/index.ts"],
+				entry: ["src/index.ts", "src/testing.ts", "src/vitest.ts"],
 				sourcemap: true,
 			},
 			entry: {
 				index: "src/index.ts",
+				testing: "src/testing.ts",
+				vitest: "src/vitest.ts",
 			},
 			format: "esm",
 			outDir: "dist",
@@ -24,6 +26,11 @@ export default defineConfig({
 		},
 	],
 	test: {
+		coverage: {
+			include: ["src/**/*.ts"],
+			provider: "v8",
+			reporter: ["text", "html"],
+		},
 		include: ["tests/**/*.test.ts"],
 		passWithNoTests: true,
 	},

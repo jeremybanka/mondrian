@@ -4,6 +4,7 @@
 	"description": "a low-level TypeScript interface to PDF",
 	"license": "MPL-2.0",
 	"files": [
+		"AGENTS.md",
 		"dist/*.d.mts",
 		"dist/*.d.mts.map",
 		"dist/*.mjs",
@@ -16,13 +17,34 @@
 			"import": "./dist/index.mjs",
 			"types": "./dist/index.d.mts"
 		},
+		"./testing": {
+			"import": "./dist/testing.mjs",
+			"types": "./dist/testing.d.mts"
+		},
+		"./vitest": {
+			"import": "./dist/vitest.mjs",
+			"types": "./dist/vitest.d.mts"
+		},
 		"./package.json": "./package.json"
 	},
 	"scripts": {
 		"build": "vp pack",
+		"coverage": "vp test run --coverage",
 		"test": "vp test"
 	},
 	"engines": {
-		"node": ">=22.0.0"
+		"node": ">=22.13.0"
+	},
+	"dependencies": {
+		"@embedpdf/pdfium": "2.14.4",
+		"@napi-rs/canvas": "1.0.2"
+	},
+	"peerDependencies": {
+		"vitest": ">=4.1.3"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
 	}
 }

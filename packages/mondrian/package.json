@@ -44,7 +44,7 @@
 		"node": ">=22.13.0"
 	},
 	"dependencies": {
-		"@embedpdf/pdfium": "2.14.4",
+		"@embedpdf/pdfium": "2.15.0",
 		"@napi-rs/canvas": "1.0.3"
 	},
 	"peerDependencies": {

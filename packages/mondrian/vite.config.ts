@@ -8,8 +8,8 @@ export default defineConfig({
 				dts: {
 					neverBundle: [/^[\w@]/],
 				},
+				neverBundle: true,
 				onlyBundle: [],
-				skipNodeModulesBundle: true,
 			},
 			dts: {
 				entry: ["src/index.ts", "src/testing.ts", "src/vitest.ts"],

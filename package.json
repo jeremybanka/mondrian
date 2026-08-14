@@ -12,7 +12,8 @@
 		"lint": "vp lint",
 		"release": "pnpm build && changeset publish",
 		"staged": "vp staged",
-		"test": "vp run --filter mondrian.pdf --fail-if-no-match test"
+		"test": "vp run --filter mondrian.pdf --fail-if-no-match test",
+		"workflows": "node scripts/update-workflows.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.0",

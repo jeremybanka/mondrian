@@ -22,7 +22,7 @@
 		"@dprint/markdown": "0.23.2",
 		"@dprint/oxc": "0.38.0",
 		"@dprint/toml": "0.8.0",
-		"@types/node": "26.4.0",
+		"@types/node": "26.4.1",
 		"@vitest/coverage-v8": "4.1.11",
 		"dprint": "0.57.0",
 		"dprint-plugin-malva": "0.16.0",

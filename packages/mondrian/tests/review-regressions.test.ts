@@ -24,6 +24,7 @@ import {
 	nameBytes,
 	rectangle,
 	spot,
+	stream,
 	separation,
 	paintState,
 	serializePdf,
@@ -138,6 +139,28 @@ describe("independent review regressions", () => {
 			).toEqual(
 				serializePdf(buildPage(fresh, baseline.stream, baseline.resources)),
 			)
+		},
+	)
+	it.each(["1.0", "1.3"] as const)(
+		"ignores discarded color bindings when building PDF %s",
+		(version) => {
+			const objects = createPdfObjectBuilder()
+			const unused = bindColorContent(objects, [
+				colorContent([
+					fillColor(spot(orangeInk, 1)),
+					paintState({
+						fillOverprint: false,
+						strokeOverprint: false,
+						overprintMode: 0,
+					}),
+				]),
+			])
+			expect(() =>
+				buildPage(objects, stream({}, ascii("")), dictionary({}), version),
+			).not.toThrow()
+			expect(() =>
+				buildPage(objects, unused.stream, unused.resources, version),
+			).toThrow()
 		},
 	)
 })

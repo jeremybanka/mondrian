@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { colorResourceVersion } from "./color.ts"
+
 import type {
 	PdfArray,
 	PdfDictionary,
@@ -291,6 +293,19 @@ function validateValue(
 	if (typeof value !== "object") {
 		add(context, "invalid-object", path, "Value is not a PDF object")
 		return
+	}
+
+	const minimumVersion = colorResourceVersion(value)
+	if (
+		minimumVersion !== undefined &&
+		Number(context.version) < minimumVersion
+	) {
+		add(
+			context,
+			"unsupported-version-feature",
+			path,
+			`PDF color resource requires PDF ${minimumVersion} or later`,
+		)
 	}
 
 	if (value.kind === "reference") {

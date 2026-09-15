@@ -20,7 +20,6 @@ import {
 } from "./ownership.ts"
 import { throwForPdfErrors } from "./diagnostics.ts"
 import { validateBoundColorContent } from "./color-content.ts"
-import { validateColorVersion } from "./color.ts"
 import { validatePdf } from "./validate.ts"
 
 export interface PdfObjectHandle<TValue extends PdfIndirectValue> {
@@ -84,7 +83,6 @@ class ObjectBuilder implements PdfObjectBuilder {
 	}
 
 	build(options: PdfObjectBuilderBuildOptions): PdfDocument {
-		validateColorVersion(this, options.version ?? "1.7")
 		const reachable = this.#findReachable([
 			options.root,
 			...(options.info === undefined ? [] : [options.info]),

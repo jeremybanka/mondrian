@@ -127,7 +127,8 @@ remain the caller's responsibility.
 Process colors work with all supported PDF versions. Exponential Separation
 resources require PDF 1.3 or later; explicit opaque paint states require PDF
 1.4 or later. Both builder workflows reject earlier output versions when
-these resources have been authored.
+these resources are reachable in the output graph. Discarded bindings do not
+constrain the output version.
 
 The encoding follows the [Adobe PDF Reference 1.6](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/pdfreference1.6.pdf),
 sections 3.9.2 (exponential functions), 4.3.4 (graphics state parameters),

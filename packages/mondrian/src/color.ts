@@ -5,7 +5,7 @@ import type {
 	PdfDictionary,
 	PdfReference,
 	PdfValue,
-	PdfVersion,
+	PdfArray,
 } from "./objects.ts"
 import { array, dictionary, name } from "./objects.ts"
 import { encodePdfName, formatPdfNumber } from "./syntax.ts"
@@ -273,14 +273,13 @@ export function colorBuilder<T>(
 interface Registry {
 	readonly inks: Map<string, { key: string; ref: PdfReference }>
 	readonly states: Map<string, PdfReference>
-	minimumVersion: number
 }
 const registries = new WeakMap<PdfObjectBuilder, Registry>()
 
 function registry(objects: PdfObjectBuilder): Registry {
 	let value = registries.get(objects)
 	if (value === undefined) {
-		value = { inks: new Map(), states: new Map(), minimumVersion: 1 }
+		value = { inks: new Map(), states: new Map() }
 		registries.set(objects, value)
 	}
 	return value
@@ -306,15 +305,18 @@ export function preflightColors(
 	}
 }
 
-export function validateColorVersion(
-	objects: PdfObjectBuilder,
-	version: PdfVersion,
-): void {
-	const minimum = registries.get(objects)?.minimumVersion ?? 1
-	if (Number(version) < minimum)
-		throw new TypeError(
-			`Authored PDF color resources require PDF ${minimum} or later`,
-		)
+const resourceVersions = new WeakMap<object, number>()
+
+export function colorResourceVersion(value: object): number | undefined {
+	return resourceVersions.get(value)
+}
+
+function colorResource<T extends PdfArray | PdfDictionary>(
+	value: T,
+	minimumVersion: number,
+): T {
+	resourceVersions.set(value, minimumVersion)
+	return value
 }
 
 /** One page/stream resource scope; ink consistency and references are document-wide. */
@@ -335,20 +337,22 @@ export class ColorScope {
 			const state = validated.state
 			const key = JSON.stringify(state)
 			const resources = registry(this.#objects)
-			resources.minimumVersion = Math.max(resources.minimumVersion, 1.4)
 			let ref = resources.states.get(key)
 			if (ref === undefined) {
 				ref = this.#objects.add(
-					dictionary({
-						Type: name("ExtGState"),
-						op: state.fillOverprint,
-						OP: state.strokeOverprint,
-						OPM: state.overprintMode,
-						ca: 1,
-						CA: 1,
-						BM: name("Normal"),
-						SMask: name("None"),
-					}),
+					colorResource(
+						dictionary({
+							Type: name("ExtGState"),
+							op: state.fillOverprint,
+							OP: state.strokeOverprint,
+							OPM: state.overprintMode,
+							ca: 1,
+							CA: 1,
+							BM: name("Normal"),
+							SMask: name("None"),
+						}),
+						1.4,
+					),
 				)
 				resources.states.set(key, ref)
 			}
@@ -374,7 +378,6 @@ export class ColorScope {
 		const existing = resources.inks.get(ink.name)
 		if (existing !== undefined && existing.key !== key)
 			throw new TypeError(`Conflicting definitions for separation ${ink.name}`)
-		resources.minimumVersion = Math.max(resources.minimumVersion, 1.3)
 		let ref = existing?.ref
 		if (ref === undefined) {
 			const { zero, full, exponent } = ink.tintTransform
@@ -387,7 +390,10 @@ export class ColorScope {
 				N: exponent,
 			})
 			ref = this.#objects.add(
-				array(name("Separation"), name(ink.name), name(zero.space), fn),
+				colorResource(
+					array(name("Separation"), name(ink.name), name(zero.space), fn),
+					1.3,
+				),
 			)
 			resources.inks.set(ink.name, { key, ref })
 		}

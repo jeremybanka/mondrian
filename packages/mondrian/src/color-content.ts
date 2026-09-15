@@ -2,7 +2,13 @@
 
 import { dictionaryValue } from "./dictionary-lookup.ts"
 import type { PdfColorOperation } from "./color.ts"
-import { ColorScope, fillColor, paintState, strokeColor } from "./color.ts"
+import {
+	ColorScope,
+	fillColor,
+	paintState,
+	preflightColors,
+	strokeColor,
+} from "./color.ts"
 import type { PdfObjectBuilder } from "./object-builder.ts"
 import type {
 	PdfDictionary,
@@ -70,12 +76,23 @@ export function bindColorContent(
 	objects: PdfObjectBuilder,
 	contents: readonly PdfColorContent[],
 ): PdfBoundColorContent {
-	const scope = new ColorScope(objects)
-	let commands = ""
-	for (const content of contents) {
+	const fragments = contents.map((content) => {
 		const parts = records.get(content)
 		if (parts === undefined)
 			throw new TypeError("Unknown PDF color content fragment")
+		return parts
+	})
+	preflightColors(
+		objects,
+		fragments.flatMap((parts) =>
+			parts.filter(
+				(part): part is PdfColorOperation => typeof part !== "string",
+			),
+		),
+	)
+	const scope = new ColorScope(objects)
+	let commands = ""
+	for (const parts of fragments) {
 		commands += "q\n"
 		for (const part of parts)
 			commands += typeof part === "string" ? `${part}\n` : scope.encode(part)

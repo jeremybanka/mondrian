@@ -82,6 +82,8 @@ positioned-glyph, or image commands. Call `bindColorContent(objects, fragments)`
 for **all fragments that share a page or Form resource dictionary**. It
 returns a content stream and its ColorSpace/ExtGState resource dictionaries.
 Install both, and add your existing Font/XObject dictionaries alongside them.
+Binding preflights every fragment and ink definition before allocating resources;
+a failed binding leaves the registry and object numbering unchanged for retry.
 Do not merge independently bound color scopes: their local names may collide.
 
 Cache the unbound fragment, not the binding's document-owned resources. Bind

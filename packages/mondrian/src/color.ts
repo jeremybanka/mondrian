@@ -286,6 +286,26 @@ function registry(objects: PdfObjectBuilder): Registry {
 	return value
 }
 
+/** Validate an entire binding before resource allocation or registry mutation. */
+export function preflightColors(
+	objects: PdfObjectBuilder,
+	operations: readonly PdfColorOperation[],
+): void {
+	const definitions = new Map(
+		[...registry(objects).inks].map(([inkName, value]) => [inkName, value.key]),
+	)
+	for (const operation of operations) {
+		if (operation.op === "paintState" || operation.color.space !== "Separation")
+			continue
+		const ink = operation.color.ink
+		const key = JSON.stringify(ink)
+		const existing = definitions.get(ink.name)
+		if (existing !== undefined && existing !== key)
+			throw new TypeError(`Conflicting definitions for separation ${ink.name}`)
+		definitions.set(ink.name, key)
+	}
+}
+
 export function validateColorVersion(
 	objects: PdfObjectBuilder,
 	version: PdfVersion,

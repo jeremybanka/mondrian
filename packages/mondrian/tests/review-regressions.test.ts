@@ -24,6 +24,9 @@ import {
 	nameBytes,
 	rectangle,
 	spot,
+	separation,
+	paintState,
+	serializePdf,
 } from "../src/index.ts"
 
 describe("independent review regressions", () => {
@@ -102,6 +105,39 @@ describe("independent review regressions", () => {
 							),
 						)
 			expect(() => buildPage(objects, bound.stream, resources)).not.toThrow()
+		},
+	)
+	it.each(["conflict", "unknown-fragment"])(
+		"allows clean retry after a failed %s binding",
+		(failure) => {
+			const first = colorContent([
+				paintState({
+					fillOverprint: true,
+					strokeOverprint: false,
+					overprintMode: 1,
+				}),
+				fillColor(spot(orangeInk, 1)),
+			])
+			const correctedInk = separation(orangeInk.name, {
+				...orangeInk.tintTransform,
+				exponent: 2,
+			})
+			const corrected = colorContent([fillColor(spot(correctedInk, 1))])
+			const objects = createPdfObjectBuilder()
+			expect(() =>
+				bindColorContent(objects, [
+					first,
+					failure === "conflict" ? corrected : ({} as never),
+				]),
+			).toThrow()
+			const retry = bindColorContent(objects, [corrected])
+			const fresh = createPdfObjectBuilder()
+			const baseline = bindColorContent(fresh, [corrected])
+			expect(
+				serializePdf(buildPage(objects, retry.stream, retry.resources)),
+			).toEqual(
+				serializePdf(buildPage(fresh, baseline.stream, baseline.resources)),
+			)
 		},
 	)
 })

@@ -10,8 +10,4 @@ runs:
 
     - name: Install Dependencies
       shell: bash
-      run: >-
-        pnpm install
-        --frozen-lockfile
-        --filter mondrian-workspace
-        --filter mondrian.pdf
+      run: pnpm install --frozen-lockfile

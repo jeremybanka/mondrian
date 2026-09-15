@@ -57,6 +57,7 @@
 		}
 	},
 	"devDependencies": {
-		"recoverage": "0.1.16"
+		"recoverage": "0.1.16",
+		"vitest": "4.1.11"
 	}
 }

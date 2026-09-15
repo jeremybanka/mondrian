@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test"
 
-import { createPdfDocument, pageSizes } from "../../src/index.ts"
+import { createPdfDocument, pageSizes } from "../../../src/index.ts"
 import { visualArtifactOptions } from "./setup.ts"
 
 describe("graphics visual regressions", () => {

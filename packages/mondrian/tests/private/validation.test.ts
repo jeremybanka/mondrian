@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vite-plus/test"
 
-import { PdfValidationError } from "../src/diagnostics.ts"
+import { PdfValidationError } from "../../src/diagnostics.ts"
 import type {
 	PdfCatalogDictionary,
 	PdfDateString,
@@ -12,7 +12,7 @@ import type {
 	PdfPagesDictionary,
 	PdfStream,
 	PdfTextString,
-} from "../src/objects.ts"
+} from "../../src/objects.ts"
 import {
 	array,
 	ascii,
@@ -26,9 +26,9 @@ import {
 	literalString,
 	reference,
 	stream,
-} from "../src/objects.ts"
-import { serializePdf } from "../src/serialize.ts"
-import { validatePdf } from "../src/validate.ts"
+} from "../../src/objects.ts"
+import { serializePdf } from "../../src/serialize.ts"
+import { validatePdf } from "../../src/validate.ts"
 
 describe("semantic PDF validation", () => {
 	it("accepts MediaBox and Resources inherited from a Pages ancestor", () => {

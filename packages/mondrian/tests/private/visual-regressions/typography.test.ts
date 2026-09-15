@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vite-plus/test"
 
-import type { StandardFontName } from "../../src/index.ts"
-import { createPdfDocument, literalString, pageSizes } from "../../src/index.ts"
+import type { StandardFontName } from "../../../src/index.ts"
+import {
+	createPdfDocument,
+	literalString,
+	pageSizes,
+} from "../../../src/index.ts"
 import { visualArtifactOptions } from "./setup.ts"
 
 const winAnsiFonts: readonly StandardFontName[] = [

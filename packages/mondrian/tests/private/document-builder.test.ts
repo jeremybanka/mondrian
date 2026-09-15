@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vite-plus/test"
 
-import type { PdfGraphicsBuilder, PdfTextBuilder } from "../src/content.ts"
+import type { PdfGraphicsBuilder, PdfTextBuilder } from "../../src/content.ts"
 import {
 	createPdfDocument,
 	pageSizes,
 	rectangle,
-} from "../src/document-builder.ts"
-import { PdfValidationError } from "../src/diagnostics.ts"
+} from "../../src/document-builder.ts"
+import { PdfValidationError } from "../../src/diagnostics.ts"
 import type {
 	PdfDictionary,
 	PdfDocument,
@@ -16,8 +16,8 @@ import type {
 	PdfReference,
 	PdfStream,
 	PdfValue,
-} from "../src/objects.ts"
-import { literalString } from "../src/objects.ts"
+} from "../../src/objects.ts"
+import { literalString } from "../../src/objects.ts"
 import { grayscaleJpeg, rgbJpeg } from "./fixtures.ts"
 
 describe("PdfDocumentBuilder", () => {

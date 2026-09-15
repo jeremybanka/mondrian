@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test"
 
-import type { PdfDocumentBuilder, PdfRectangle } from "../../src/index.ts"
-import { createPdfDocument, pageSizes, rectangle } from "../../src/index.ts"
+import type { PdfDocumentBuilder, PdfRectangle } from "../../../src/index.ts"
+import { createPdfDocument, pageSizes, rectangle } from "../../../src/index.ts"
 import { colorBarsJpeg } from "../fixtures.ts"
 import { visualArtifactOptions } from "./setup.ts"
 

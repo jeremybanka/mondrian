@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test"
 
-import { createPdfDocument } from "../src/document-builder.ts"
+import { createPdfDocument } from "../../src/document-builder.ts"
 import { grayscaleJpeg, rgbJpeg } from "./fixtures.ts"
 
 describe("JPEG validation", () => {

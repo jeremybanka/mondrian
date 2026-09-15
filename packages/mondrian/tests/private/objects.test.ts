@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vite-plus/test"
 
-import { PdfValidationError } from "../src/diagnostics.ts"
+import { PdfValidationError } from "../../src/diagnostics.ts"
 import type {
 	PdfCatalogDictionary,
 	PdfDictionary,
@@ -9,7 +9,7 @@ import type {
 	PdfPagesDictionary,
 	PdfStream,
 	PdfValue,
-} from "../src/objects.ts"
+} from "../../src/objects.ts"
 import {
 	array,
 	ascii,
@@ -27,9 +27,9 @@ import {
 	reference,
 	stream,
 	textString,
-} from "../src/objects.ts"
-import { serializePdf, serializePdfObjectBody } from "../src/serialize.ts"
-import { validatePdf } from "../src/validate.ts"
+} from "../../src/objects.ts"
+import { serializePdf, serializePdfObjectBody } from "../../src/serialize.ts"
+import { validatePdf } from "../../src/validate.ts"
 
 describe("PDF values", () => {
 	it.each([

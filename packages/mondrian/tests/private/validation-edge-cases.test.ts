@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test"
 
-import type { PdfDiagnosticCode } from "../src/diagnostics.ts"
+import type { PdfDiagnosticCode } from "../../src/diagnostics.ts"
 import type {
 	PdfCatalogDictionary,
 	PdfDocument,
@@ -8,7 +8,7 @@ import type {
 	PdfPageDictionary,
 	PdfPagesDictionary,
 	PdfValue,
-} from "../src/objects.ts"
+} from "../../src/objects.ts"
 import {
 	array,
 	dictionary,
@@ -17,8 +17,8 @@ import {
 	literalString,
 	name,
 	reference,
-} from "../src/objects.ts"
-import { validatePdf } from "../src/validate.ts"
+} from "../../src/objects.ts"
+import { validatePdf } from "../../src/validate.ts"
 
 describe("low-level validation edge cases", () => {
 	it("diagnoses malformed document envelopes", () => {

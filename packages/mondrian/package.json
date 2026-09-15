@@ -40,8 +40,8 @@
 		"coverage": "vp test run --coverage",
 		"coverage:track": "recoverage",
 		"test": "vp test",
-		"test:once:public": "vp test run tests/public-api.test.ts --passWithNoTests=false",
-		"test:semver": "break-check"
+		"test:once:public": "tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
+		"test:semver": "pnpm test:once:public && node scripts/check-compatibility.ts"
 	},
 	"engines": {
 		"node": ">=22.13.0"

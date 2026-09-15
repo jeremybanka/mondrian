@@ -4,7 +4,7 @@ import type {
 	PdfCatalogDictionary,
 	PdfPageDictionary,
 	PdfPagesDictionary,
-} from "../../src/index.ts"
+} from "../../../src/index.ts"
 import {
 	array,
 	ascii,
@@ -13,7 +13,7 @@ import {
 	name,
 	serializePdf,
 	stream,
-} from "../../src/index.ts"
+} from "../../../src/index.ts"
 import { visualArtifactOptions } from "./setup.ts"
 
 describe("low-level PDF visual regressions", () => {

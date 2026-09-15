@@ -5,7 +5,7 @@ import type {
 	PdfDocument,
 	PdfPageDictionary,
 	PdfPagesDictionary,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 import {
 	array,
 	createPdfDocument,
@@ -14,10 +14,10 @@ import {
 	name,
 	pageSizes,
 	serializePdf,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 
-describe("public API", () => {
-	it("supports the semantic quick start through the package entrypoint", () => {
+describe("source entrypoint smoke tests", () => {
+	it("supports the semantic quick start through the source entrypoint", () => {
 		const pdf = createPdfDocument({ metadata: { title: "Hello" } })
 		const helvetica = pdf.standardFont("Helvetica")
 		const page = pdf.page({
@@ -36,7 +36,7 @@ describe("public API", () => {
 		expectTypeOf(pdf.compile()).toEqualTypeOf<PdfDocument>()
 	})
 
-	it("supports a cyclic low-level page tree through the package entrypoint", () => {
+	it("supports a cyclic low-level page tree through the source entrypoint", () => {
 		const objects = createPdfObjectBuilder()
 		const pages = objects.reserve<PdfPagesDictionary>()
 		const page = objects.add(

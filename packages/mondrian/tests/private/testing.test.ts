@@ -13,13 +13,13 @@ import { pathToFileURL } from "node:url"
 
 import { afterEach, describe, expect, it } from "vite-plus/test"
 
-import { createPdfDocument, pageSizes } from "../src/index.ts"
+import { createPdfDocument, pageSizes } from "../../src/index.ts"
 import {
 	checkPdfArtifact,
 	defaultPdfArtifactMode,
 	renderPdf,
-} from "../src/testing.ts"
-import "../src/vitest.ts"
+} from "../../src/testing.ts"
+import "../../src/vitest.ts"
 
 const temporaryDirectories: string[] = []
 

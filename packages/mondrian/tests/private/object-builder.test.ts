@@ -1,11 +1,11 @@
 import { describe, expect, expectTypeOf, it } from "vite-plus/test"
 
-import { PdfValidationError } from "../src/diagnostics.ts"
+import { PdfValidationError } from "../../src/diagnostics.ts"
 import {
 	createPdfObjectBuilder,
 	type PdfObjectBuilder,
 	type PdfObjectHandle,
-} from "../src/object-builder.ts"
+} from "../../src/object-builder.ts"
 import type {
 	PdfCatalogDictionary,
 	PdfDictionary,
@@ -13,7 +13,7 @@ import type {
 	PdfPageDictionary,
 	PdfPagesDictionary,
 	PdfReference,
-} from "../src/objects.ts"
+} from "../../src/objects.ts"
 import {
 	array,
 	ascii,
@@ -22,9 +22,9 @@ import {
 	name,
 	nameBytes,
 	stream,
-} from "../src/objects.ts"
-import { serializePdf } from "../src/serialize.ts"
-import { validatePdf } from "../src/validate.ts"
+} from "../../src/objects.ts"
+import { serializePdf } from "../../src/serialize.ts"
+import { validatePdf } from "../../src/validate.ts"
 
 describe("PdfObjectBuilder", () => {
 	it("reserves typed references so cyclic page trees can be filled later", () => {

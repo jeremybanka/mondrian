@@ -31,20 +31,23 @@ artifact, retained for seven days.
 
 ## Release compatibility
 
-Run `pnpm test:semver` from a clean checkout to run the public API tests from
-the latest `mondrian.pdf@` release tag against the current implementation.
+Run `pnpm test:semver` from a clean checkout to run the current public tests and
+then the public tests from the latest `mondrian.pdf@` release tag against the
+current implementation.
 The Break Check CI job runs this command alongside Vitest and Coverage. The
 command discovers workspace packages with a `test:semver` script automatically.
 Checks need access to the Git remote named `origin` and explicitly disable
 task caching because remote release tags can change independently of the
 checkout.
 
-The compatibility contract lives in
-`packages/mondrian/tests/public-api.test.ts`; run it directly with
-`pnpm --filter mondrian.pdf test:once:public`. Keep public API compatibility
-assertions there. Break Check restores that file after checking the released
-tests. While `mondrian.pdf` is pre-1.0, intentional breaking changes require a
-minor or major changeset for `mondrian.pdf` to certify them.
+The compatibility contract lives in `packages/mondrian/tests/public/`; run it
+directly with `pnpm --filter mondrian.pdf test:once:public`. Break Check restores
+released tests and helpers, type-checks and runs them, then restores the checkout.
+Implementation and visual regression tests live in `tests/private/`. See the
+[test guide](packages/mondrian/tests/README.md) for the boundary and the explicit
+bootstrap policy for release 0.1.0, which predates the public suite. While
+`mondrian.pdf` is pre-1.0, intentional breaking changes require a minor or major
+changeset for `mondrian.pdf` to certify them.
 
 ## License
 

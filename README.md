@@ -24,8 +24,7 @@ The Coverage CI job runs on pull requests and pushes to `main`. Set the
 under the report name `mondrian`. Main-branch runs publish the baseline;
 pull requests compare against it and fail if statement coverage decreases.
 The first main-branch coverage run must publish a baseline before pull-request
-comparisons can succeed. Fork pull requests run coverage and upload reports
-without accessing the cloud secret.
+comparisons can succeed.
 
 CI uploads coverage reports and available PDF diagnostics as the `Coverage`
 artifact, retained for seven days.

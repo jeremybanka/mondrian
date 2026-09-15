@@ -7,6 +7,7 @@
 		"change": "changeset",
 		"check": "vp check --no-fmt",
 		"coverage": "vp run --filter mondrian.pdf --fail-if-no-match coverage",
+		"coverage:track": "vp run --filter mondrian.pdf --fail-if-no-match coverage:track",
 		"fmt": "dprint fmt",
 		"fmt:check": "dprint check",
 		"lint": "vp lint",

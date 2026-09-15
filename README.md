@@ -8,6 +8,28 @@ Workspace for typed PDF compilation targets.
 The `fitter-happier` integration is maintained in the `fitter-happier`
 repository and consumes the published `mondrian.pdf` package.
 
+## Coverage
+
+Run `MONDRIAN_PDF_ARTIFACT_MODE=verify pnpm coverage` to run the test suite with
+coverage. Reports are written to `packages/mondrian/coverage` in text, HTML,
+and Istanbul JSON formats.
+
+Run `pnpm coverage:track` after generating coverage to capture and compare it
+with the main-branch baseline using [Recoverage](https://recoverage.cloud).
+Bun is installed through `mise.toml`. The local `coverage.sqlite` database is
+ignored by Git.
+
+The Coverage CI job runs on pull requests and pushes to `main`. Set the
+`RECOVERAGE_CLOUD_TOKEN` GitHub Actions secret to enable persistent tracking
+under the report name `mondrian`. Main-branch runs publish the baseline;
+pull requests compare against it and fail if statement coverage decreases.
+The first main-branch coverage run must publish a baseline before pull-request
+comparisons can succeed. Fork pull requests run coverage and upload reports
+without accessing the cloud secret.
+
+CI uploads coverage reports and available PDF diagnostics as the `Coverage`
+artifact, retained for seven days.
+
 ## License
 
 Mondrian is licensed under the [Mozilla Public License 2.0](LICENSE). The MPL

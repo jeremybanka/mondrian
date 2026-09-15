@@ -2,6 +2,7 @@ node_modules/
 dist/
 artifacts/
 coverage/
+coverage.sqlite*
 .mise/
 .pnpm-home/
 .pnpm-store/

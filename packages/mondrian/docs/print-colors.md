@@ -39,6 +39,26 @@ when explicitly authoring that scope.
 
 ## Named inks
 
+### Why `separation()`?
+
+Mondrian uses the name of PDF's `Separation` color space. In print production,
+a separation is a monochrome rendition of the artwork for an individual
+colorant. A CMYK-plus-orange press job can produce five such renditions, one
+for each ink. The PDF abstraction also applies to devices that do not create
+physical plates; the name reflects its printing history.
+[PDF Reference, §4.5.5](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/pdfreference1.6.pdf#page=256)
+
+A Separation space has one coordinate: the tint of its named colorant.
+`separation()` defines that reusable space; `spot()` selects a tint within it.
+It does not convert existing RGB artwork into printing separations. This naming
+keeps Mondrian's authoring model directly recognizable in the emitted PDF.
+
+| API                            | Description                                            |
+| ------------------------------ | ------------------------------------------------------ |
+| `separation(name, transform)`  | A reusable named ink space and its fallback appearance |
+| `spot(ink, tint)`              | A color value within that space                        |
+| `graphics.spotFill(ink, tint)` | Select that color for subsequent fills                 |
+
 ```ts
 import { cmyk, separation, spot } from "mondrian.pdf"
 
@@ -50,6 +70,26 @@ const orange = separation("Brand Orange", {
 })
 const halfOrange = spot(orange, 0.5)
 ```
+
+### Tint and fallback appearance
+
+Here, `halfOrange` requests a 50% tint of the named orange ink. The `zero` and
+`full` CMYK values describe the alternate appearance used when that colorant
+is unavailable, such as for a screen preview. They do not specify a recipe for
+mixing the physical spot ink. A device supporting the requested colorant can
+apply it directly using the paint's tint.
+[PDF Reference, alternate spaces](https://opensource.adobe.com/dc-acrobat-sdk-docs/pdfstandards/pdfreference1.6.pdf#page=257)
+
+The supported transform computes each alternate component as:
+
+```text
+fallback(tint) = zero + tint^exponent × (full - zero)
+```
+
+With `exponent: 1`, the example's fallback at 50% tint is
+`cmyk(0, 0.33, 0.5, 0)`. Changing the exponent changes the fallback curve; the
+paint operation still requests its original spot tint. Tint is independent of
+opacity and overprint.
 
 The reusable ink and each paint's tint are distinct. The supported tint
 transform is PDF FunctionType 2: one input in `[0, 1]`, endpoints in the same
@@ -69,6 +109,22 @@ name with any different alternate definition or exponent is an error, even
 across pages or separate object-builder binding calls. Unused application
 swatches do not register resources. Registration order follows first use;
 fixed descriptions, ordering, metadata, and IDs produce deterministic bytes.
+
+### From the PDF to the physical ink
+
+For a conventional press job, the printer's RIP (raster image processor)
+prepares the named channel for output, and the print shop supplies the agreed
+ink for its plate. The physical appearance depends on the ink, substrate, and
+printing conditions. Agree on the ink specification and channel name with the
+printer; a name such as `Brand Orange` alone does not identify a mixing recipe.
+[Adobe: spot and process colors](https://helpx.adobe.com/creative-cloud/apps/colors/spot-and-process-colors.html)
+
+Mondrian preserves the requested ink identity and tint. The output workflow
+must preserve that intent too: prepress software can alias ink names or convert
+spots to process colors. Two differently named inks may have identical fallback
+previews while requesting distinct channels. Applications own those identities;
+Mondrian does not merge inks based on their appearance.
+[Adobe Ink Manager](https://helpx.adobe.com/acrobat/using/color-conversion-ink-management-acrobat.html)
 
 ## Resource lifecycle and cached streams
 

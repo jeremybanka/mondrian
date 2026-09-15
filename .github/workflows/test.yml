@@ -21,3 +21,27 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - run: pnpm run test
+
+  Coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    env:
+      MONDRIAN_PDF_ARTIFACT_MODE: verify
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - name: Run tests with coverage
+        run: pnpm run coverage
+      - name: Track coverage with Recoverage
+        run: pnpm run coverage:track
+        env:
+          RECOVERAGE_CLOUD_TOKEN: ${{ secrets.RECOVERAGE_CLOUD_TOKEN }}
+      - name: Upload coverage and PDF diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: Coverage
+          path: |
+            packages/mondrian/coverage
+            packages/mondrian/artifacts/pdf
+          retention-days: 7

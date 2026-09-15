@@ -38,6 +38,7 @@
 	"scripts": {
 		"build": "vp pack",
 		"coverage": "vp test run --coverage",
+		"coverage:track": "recoverage",
 		"test": "vp test"
 	},
 	"engines": {
@@ -54,5 +55,9 @@
 		"vitest": {
 			"optional": true
 		}
+	},
+	"devDependencies": {
+		"recoverage": "0.1.16",
+		"vitest": "4.1.11"
 	}
 }

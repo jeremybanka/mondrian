@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { dictionaryValue } from "./dictionary-lookup.ts"
 import type { PdfColorOperation } from "./color.ts"
 import { ColorScope, fillColor, paintState, strokeColor } from "./color.ts"
 import type { PdfObjectBuilder } from "./object-builder.ts"
@@ -165,11 +166,11 @@ export function validateBoundColorContent(
 					expected.kind !== "dictionary"
 				)
 					continue
-				const actual = asDictionary(resources?.entries[category])
+				const actual = asDictionary(dictionaryValue(resources, category))
 				for (const [resourceName, reference] of Object.entries(
 					expected.entries,
 				)) {
-					if (actual?.entries[resourceName] !== reference)
+					if (dictionaryValue(actual, resourceName) !== reference)
 						throw new TypeError(
 							`Missing or mismatched bound PDF color resource: ${category}.${resourceName}`,
 						)

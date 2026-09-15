@@ -1,8 +1,30 @@
 import { describe, expect, it } from "vite-plus/test"
 import { createHash } from "node:crypto"
 import { renderPdf } from "../src/testing.ts"
-import type { PdfTextBuilder } from "../src/index.ts"
-import { createPdfDocument, rectangle } from "../src/index.ts"
+import { orangeInk } from "../examples/print-colors.ts"
+import type {
+	PdfDictionary,
+	PdfObjectBuilder,
+	PdfPagesDictionary,
+	PdfStream,
+	PdfVersion,
+	PdfTextBuilder,
+} from "../src/index.ts"
+import {
+	array,
+	ascii,
+	bindColorContent,
+	colorContent,
+	createPdfDocument,
+	createPdfObjectBuilder,
+	dictionary,
+	dictionaryEntry,
+	fillColor,
+	name,
+	nameBytes,
+	rectangle,
+	spot,
+} from "../src/index.ts"
 
 describe("independent review regressions", () => {
 	it.each([4, 5, 6, 7])(
@@ -54,4 +76,55 @@ describe("independent review regressions", () => {
 		for (const paint of ["none", "black", "mode"] as const)
 			expect(await render(paint, false), paint).toBe(expected)
 	})
+	it.each(["resource", "category", "both"])(
+		"accepts byte-entry %s keys in bound color resources",
+		(mode) => {
+			const objects = createPdfObjectBuilder()
+			const bound = bindColorContent(objects, [
+				colorContent([fillColor(spot(orangeInk, 1))]),
+			])
+			const original = bound.resources.entries.ColorSpace as PdfDictionary
+			const space =
+				mode === "category"
+					? original
+					: dictionary(
+							{},
+							dictionaryEntry(nameBytes(ascii("CS0")), original.entries.CS0!),
+						)
+			const resources =
+				mode === "resource"
+					? dictionary({ ColorSpace: space })
+					: dictionary(
+							{},
+							dictionaryEntry(
+								nameBytes(ascii("ColorSpace")),
+								objects.add(space),
+							),
+						)
+			expect(() => buildPage(objects, bound.stream, resources)).not.toThrow()
+		},
+	)
 })
+
+function buildPage(
+	objects: PdfObjectBuilder,
+	content: PdfStream,
+	resources: PdfDictionary,
+	version: PdfVersion = "1.7",
+) {
+	const pages = objects.reserve<PdfPagesDictionary>()
+	const page = objects.add(
+		dictionary({
+			Type: name("Page"),
+			Parent: pages.ref,
+			MediaBox: array(0, 0, 100, 100),
+			Resources: resources,
+			Contents: objects.add(content),
+		}),
+	)
+	pages.set(dictionary({ Type: name("Pages"), Count: 1, Kids: array(page) }))
+	const root = objects.add(
+		dictionary({ Type: name("Catalog"), Pages: pages.ref }),
+	)
+	return objects.build({ root, version })
+}

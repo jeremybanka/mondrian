@@ -39,7 +39,9 @@
 		"build": "vp pack",
 		"coverage": "vp test run --coverage",
 		"coverage:track": "recoverage",
-		"test": "vp test"
+		"test": "vp test",
+		"test:once:public": "vp test run tests/public-api.test.ts --passWithNoTests=false",
+		"test:semver": "break-check"
 	},
 	"engines": {
 		"node": ">=22.13.0"
@@ -57,6 +59,7 @@
 		}
 	},
 	"devDependencies": {
+		"break-check": "0.7.1",
 		"recoverage": "0.1.16",
 		"vitest": "4.1.11"
 	}

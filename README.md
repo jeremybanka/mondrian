@@ -29,6 +29,23 @@ comparisons can succeed.
 CI uploads coverage reports and available PDF diagnostics as the `Coverage`
 artifact, retained for seven days.
 
+## Release compatibility
+
+Run `pnpm test:semver` from a clean checkout to run the public API tests from
+the latest `mondrian.pdf@` release tag against the current implementation.
+The Break Check CI job runs this command alongside Vitest and Coverage. The
+command discovers workspace packages with a `test:semver` script automatically.
+Checks need access to the Git remote named `origin` and explicitly disable
+task caching because remote release tags can change independently of the
+checkout.
+
+The compatibility contract lives in
+`packages/mondrian/tests/public-api.test.ts`; run it directly with
+`pnpm --filter mondrian.pdf test:once:public`. Keep public API compatibility
+assertions there. Break Check restores that file after checking the released
+tests. While `mondrian.pdf` is pre-1.0, intentional breaking changes require a
+minor or major changeset for `mondrian.pdf` to certify them.
+
 ## License
 
 Mondrian is licensed under the [Mozilla Public License 2.0](LICENSE). The MPL

@@ -1,0 +1,6 @@
+{
+	"tagPattern": "refs/tags/mondrian.pdf@",
+	"testPattern": "tests/public-api.test.ts",
+	"testCommand": "pnpm test:once:public",
+	"certifyCommand": "grep -q -E '^\"mondrian\\.pdf\": (minor|major)$' ../../.changeset/*.md"
+}

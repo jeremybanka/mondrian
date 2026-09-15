@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { boundColorResources } from "./color-content.ts"
+import { dictionaryValue } from "./dictionary-lookup.ts"
 import { colorResourceVersion } from "./color.ts"
 
 import type {
@@ -706,7 +708,7 @@ function validateRootAndPageTree(
 		active,
 		parents,
 		false,
-		false,
+		undefined,
 	)
 }
 
@@ -902,7 +904,7 @@ function validatePageTreeNode(
 	active: Set<number>,
 	parents: Map<number, string>,
 	inheritedMediaBox: boolean,
-	inheritedResources: boolean,
+	inheritedResources: PdfDictionary | undefined,
 ): number | undefined {
 	const existingPath = parents.get(reference.objectNumber)
 	if (existingPath !== undefined) {
@@ -1067,7 +1069,7 @@ function validateLeafPage(
 	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
 	inheritedMediaBox: boolean,
-	inheritedResources: boolean,
+	inheritedResources: PdfDictionary | undefined,
 ): void {
 	if (entries.MediaBox === undefined) {
 		if (!inheritedMediaBox) {
@@ -1087,6 +1089,7 @@ function validateLeafPage(
 		)
 	}
 
+	let resources = inheritedResources
 	if (entries.Resources === undefined) {
 		if (!inheritedResources) {
 			add(
@@ -1097,7 +1100,7 @@ function validateLeafPage(
 			)
 		}
 	} else {
-		validateResourceDictionary(
+		resources = validateResourceDictionary(
 			entries.Resources,
 			`${path}.Resources`,
 			objects,
@@ -1108,7 +1111,13 @@ function validateLeafPage(
 	const contents = entries.Contents
 	if (contents !== undefined) {
 		if (isReference(contents)) {
-			validateStreamReference(contents, `${path}.Contents`, objects, context)
+			validateStreamReference(
+				contents,
+				`${path}.Contents`,
+				objects,
+				context,
+				resources,
+			)
 		} else if (isPdfArray(contents)) {
 			for (let index = 0; index < contents.items.length; index += 1) {
 				const item = contents.items[index]
@@ -1125,6 +1134,7 @@ function validateLeafPage(
 						`${path}.Contents[${index}]`,
 						objects,
 						context,
+						resources,
 					)
 				}
 			}
@@ -1189,8 +1199,8 @@ function validateInheritedResources(
 	path: string,
 	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
-	inherited: boolean,
-): boolean {
+	inherited: PdfDictionary | undefined,
+): PdfDictionary | undefined {
 	if (value === undefined) {
 		return inherited
 	}
@@ -1203,19 +1213,19 @@ function validateResourceDictionary(
 	path: string,
 	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
-): boolean {
+): PdfDictionary | undefined {
 	if (isDictionary(value)) {
-		return true
+		return value
 	}
 
 	if (isReference(value)) {
 		const target = resolveMatching(value, objects)
 		if (target === undefined) {
-			return false
+			return undefined
 		}
 
 		if (isDictionary(target.value)) {
-			return true
+			return target.value
 		}
 
 		add(
@@ -1224,7 +1234,7 @@ function validateResourceDictionary(
 			path,
 			"Resources must reference a dictionary",
 		)
-		return false
+		return undefined
 	}
 
 	add(
@@ -1233,7 +1243,7 @@ function validateResourceDictionary(
 		path,
 		"Resources must be a dictionary or an indirect dictionary reference",
 	)
-	return false
+	return undefined
 }
 
 function validateStreamReference(
@@ -1241,6 +1251,7 @@ function validateStreamReference(
 	path: string,
 	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
+	resources: PdfDictionary | undefined,
 ): void {
 	const target = resolveMatching(reference, objects)
 	if (target !== undefined && !isStream(target.value)) {
@@ -1250,6 +1261,9 @@ function validateStreamReference(
 			path,
 			"Page Contents must reference a stream",
 		)
+	}
+	if (target !== undefined && isStream(target.value)) {
+		validateBoundResources(target.value, resources, path, objects, context)
 	}
 }
 
@@ -1445,4 +1459,56 @@ function add(
 		message,
 		...(related === undefined ? {} : { related }),
 	})
+}
+
+function resolvedDictionary(
+	value: PdfValue | undefined,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
+): PdfDictionary | undefined {
+	const resolved = isReference(value)
+		? resolveMatching(value, objects)?.value
+		: value
+	return isDictionary(resolved) ? resolved : undefined
+}
+
+function validateBoundResources(
+	content: PdfStream,
+	resources: PdfDictionary | undefined,
+	path: string,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
+	context: ValidationContext,
+): void {
+	const required = boundColorResources(content)
+	if (required === undefined) return
+	for (const [category, expected] of Object.entries(required.entries)) {
+		if (!isDictionary(expected)) continue
+		const actual = resolvedDictionary(
+			dictionaryValue(resources, category),
+			objects,
+		)
+		for (const [resourceName, reference] of Object.entries(expected.entries)) {
+			if (
+				isReference(reference) &&
+				context.owner !== undefined &&
+				referenceOwner(reference) !== context.owner
+			) {
+				add(
+					context,
+					"foreign-source",
+					path,
+					"Bound PDF color content belongs to another object builder; bind the cached fragment again",
+				)
+				return
+			}
+			if (dictionaryValue(actual, resourceName) !== reference) {
+				add(
+					context,
+					"invalid-color-resource",
+					path,
+					`Missing or mismatched bound PDF color resource: ${category}.${resourceName}`,
+				)
+				return
+			}
+		}
+	}
 }

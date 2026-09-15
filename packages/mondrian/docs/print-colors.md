@@ -91,8 +91,10 @@ again in every new graph. Changing a swatch requires a new fragment; include
 the entire ink definition and tint in the application's cache invalidation
 key. Old fragments intentionally retain their old immutable intent. Foreign
 or unresolved references fail normal object-builder validation. For bound page
-streams, building also checks that their derived resource entries are installed
-in the direct or inherited page scope; missing or replaced entries fail. A bound
+streams, the shared validator checks that their derived resource entries are installed
+in the direct or inherited page scope. Missing or replaced entries produce
+`invalid-color-resource` diagnostics identifying the affected page/content in
+`validatePdf()`, building, and serialization. A bound
 spot/state stream cannot be moved into another builder even if local resource
 names happen to match. Rebind the cached fragment instead.
 

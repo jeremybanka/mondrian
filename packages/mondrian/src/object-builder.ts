@@ -19,7 +19,6 @@ import {
 	registerReferenceOwner,
 } from "./ownership.ts"
 import { throwForPdfErrors } from "./diagnostics.ts"
-import { validateBoundColorContent } from "./color-content.ts"
 import { validatePdf } from "./validate.ts"
 
 export interface PdfObjectHandle<TValue extends PdfIndirectValue> {
@@ -113,7 +112,6 @@ class ObjectBuilder implements PdfObjectBuilder {
 		})
 		registerDocumentOwner(document, this.#owner)
 		throwForPdfErrors(validatePdf(document))
-		validateBoundColorContent(this, document)
 		return document
 	}
 

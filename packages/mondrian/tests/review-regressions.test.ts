@@ -28,6 +28,7 @@ import {
 	separation,
 	paintState,
 	serializePdf,
+	validatePdf,
 } from "../src/index.ts"
 
 describe("independent review regressions", () => {
@@ -163,6 +164,39 @@ describe("independent review regressions", () => {
 			).toThrow()
 		},
 	)
+	it("reports bound-resource failures through validatePdf with the affected page path", () => {
+		const objects = createPdfObjectBuilder()
+		const bound = bindColorContent(objects, [
+			colorContent([fillColor(spot(orangeInk, 1))]),
+		])
+		const valid = buildPage(objects, bound.stream, bound.resources)
+		const broken = {
+			...valid,
+			objects: valid.objects.map((object) => {
+				const value = object.value
+				if (
+					value !== null &&
+					typeof value === "object" &&
+					value.kind === "dictionary" &&
+					value.entries.Contents !== undefined
+				)
+					return {
+						...object,
+						value: dictionary({ ...value.entries, Resources: dictionary({}) }),
+					}
+				return object
+			}),
+		}
+		expect(validatePdf(broken)).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					code: "invalid-color-resource",
+					path: "pages.Kids[0].Contents",
+				}),
+			]),
+		)
+		expect(() => serializePdf(broken)).toThrow("bound PDF color resource")
+	})
 })
 
 function buildPage(

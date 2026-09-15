@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { ColorScope } from "./color.ts"
+import type { PdfObjectBuilder } from "./object-builder.ts"
+import type { PdfDictionary } from "./objects.ts"
+
 import type {
 	PdfContent,
 	PdfContentRecord,
@@ -15,6 +19,7 @@ import {
 } from "./syntax.ts"
 
 export interface EncodedPageContent {
+	readonly colorResources: PdfDictionary
 	readonly bytes: Uint8Array
 	readonly fonts: ReadonlyMap<PdfFont, string>
 	readonly images: ReadonlyMap<PdfImage, string>
@@ -23,6 +28,7 @@ export interface EncodedPageContent {
 export function encodePageContent(
 	owner: symbol,
 	contents: readonly PdfContent[],
+	objects: PdfObjectBuilder,
 ): EncodedPageContent {
 	const records = contents.map((content) => getContentRecord(content))
 	const fonts = new Map<PdfFont, string>()
@@ -42,8 +48,11 @@ export function encodePageContent(
 		}
 	}
 
+	const colors = new ColorScope(objects)
+	const bytes = ascii(encodeRecords(records, fonts, images, colors))
 	return {
-		bytes: ascii(encodeRecords(records, fonts, images)),
+		bytes,
+		colorResources: colors.resources(),
 		fonts,
 		images,
 	}
@@ -53,14 +62,28 @@ function encodeRecords(
 	records: readonly PdfContentRecord[],
 	fonts: ReadonlyMap<PdfFont, string>,
 	images: ReadonlyMap<PdfImage, string>,
+	colors: ColorScope,
 ): string {
 	let result = ""
 
 	for (const record of records) {
 		if (record.kind === "text") {
-			result += "BT\n"
+			const scoped = record.operations.some((operation) =>
+				["fillColor", "strokeColor", "paintState", "renderingMode"].includes(
+					operation.op,
+				),
+			)
+			result += scoped ? "q\nBT\n" : "BT\n"
 			for (const operation of record.operations) {
 				switch (operation.op) {
+					case "fillColor":
+					case "strokeColor":
+					case "paintState":
+						result += colors.encode(operation)
+						break
+					case "renderingMode":
+						result += `${operation.mode} Tr\n`
+						break
 					case "font":
 						result += `${encodePdfName(requireResourceName(fonts, operation.font))} ${number(operation.size)} Tf\n`
 						break
@@ -93,24 +116,23 @@ function encodeRecords(
 						break
 				}
 			}
-			result += "ET\n"
+			result += scoped ? "ET\nQ\n" : "ET\n"
 			continue
 		}
 
 		result += "q\n"
 		for (const operation of record.operations) {
 			switch (operation.op) {
+				case "fillColor":
+				case "strokeColor":
+				case "paintState":
+					result += colors.encode(operation)
+					break
 				case "concatMatrix":
 					result += `${matrix(operation)} cm\n`
 					break
 				case "lineWidth":
 					result += `${number(operation.width)} w\n`
-					break
-				case "rgbFill":
-					result += `${rgb(operation)} rg\n`
-					break
-				case "rgbStroke":
-					result += `${rgb(operation)} RG\n`
 					break
 				case "moveTo":
 					result += `${number(operation.x)} ${number(operation.y)} m\n`
@@ -160,14 +182,6 @@ function matrix(value: {
 	return [value.a, value.b, value.c, value.d, value.e, value.f]
 		.map(number)
 		.join(" ")
-}
-
-function rgb(value: {
-	readonly red: number
-	readonly green: number
-	readonly blue: number
-}): string {
-	return [value.red, value.green, value.blue].map(number).join(" ")
 }
 
 function requireResourceName<TResource>(

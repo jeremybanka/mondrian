@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import type { PdfColorBuilder, PdfColorOperation } from "./color.ts"
+import { colorBuilder } from "./color.ts"
+
 import type { PdfLiteralString } from "./objects.ts"
 import { literalString } from "./objects.ts"
 
@@ -42,7 +45,9 @@ export type PdfImageBitsPerComponent = 8
 
 export type PdfImageColorSpace = "DeviceGray" | "DeviceRGB"
 
-export interface PdfTextBuilder {
+export interface PdfTextBuilder extends PdfColorBuilder<PdfTextBuilder> {
+	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both; 3–7 include invisible/clipping modes. */
+	renderingMode(mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7): PdfTextBuilder
 	font(font: PdfFont, size: number): PdfTextBuilder
 	moveText(x: number, y: number): PdfTextBuilder
 	setTextMatrix(
@@ -62,7 +67,7 @@ export interface PdfTextBuilder {
 	rise(value: number): PdfTextBuilder
 }
 
-export interface PdfGraphicsBuilder {
+export interface PdfGraphicsBuilder extends PdfColorBuilder<PdfGraphicsBuilder> {
 	concatMatrix(
 		a: number,
 		b: number,
@@ -72,8 +77,6 @@ export interface PdfGraphicsBuilder {
 		f: number,
 	): PdfGraphicsBuilder
 	lineWidth(width: number): PdfGraphicsBuilder
-	rgbFill(red: number, green: number, blue: number): PdfGraphicsBuilder
-	rgbStroke(red: number, green: number, blue: number): PdfGraphicsBuilder
 	moveTo(x: number, y: number): PdfGraphicsBuilder
 	lineTo(x: number, y: number): PdfGraphicsBuilder
 	rectangle(
@@ -96,6 +99,8 @@ export interface PdfGraphicsBuilder {
 }
 
 export type PdfTextOperation =
+	| PdfColorOperation
+	| Readonly<{ op: "renderingMode"; mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 }>
 	| Readonly<{
 			op: "font"
 			font: PdfFont
@@ -144,6 +149,7 @@ export type PdfTextOperation =
 	  }>
 
 export type PdfGraphicsOperation =
+	| PdfColorOperation
 	| Readonly<{
 			op: "concatMatrix"
 			a: number
@@ -156,18 +162,6 @@ export type PdfGraphicsOperation =
 	| Readonly<{
 			op: "lineWidth"
 			width: number
-	  }>
-	| Readonly<{
-			op: "rgbFill"
-			red: number
-			green: number
-			blue: number
-	  }>
-	| Readonly<{
-			op: "rgbStroke"
-			red: number
-			green: number
-			blue: number
 	  }>
 	| Readonly<{
 			op: "moveTo"
@@ -698,6 +692,20 @@ export function createTextContent(
 	}
 
 	builder = Object.freeze({
+		...colorBuilder(
+			use,
+			(operation) => operations.push(operation),
+			() => builder,
+		),
+		renderingMode(mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7): PdfTextBuilder {
+			use()
+			if (!Number.isInteger(mode) || mode < 0 || mode > 7)
+				throw new RangeError(
+					"PDF text rendering mode must be an integer from 0 through 7",
+				)
+			operations.push(Object.freeze({ op: "renderingMode", mode }))
+			return builder
+		},
 		font(font: PdfFont, size: number): PdfTextBuilder {
 			use()
 			const record = getFontRecord(font)
@@ -832,6 +840,11 @@ export function createGraphicsContent(
 	}
 
 	builder = Object.freeze({
+		...colorBuilder(
+			use,
+			(operation) => operations.push(operation),
+			() => builder,
+		),
 		concatMatrix(
 			a: number,
 			b: number,
@@ -863,18 +876,6 @@ export function createGraphicsContent(
 			}
 
 			operations.push(Object.freeze({ op: "lineWidth", width }))
-			return builder
-		},
-		rgbFill(red: number, green: number, blue: number): PdfGraphicsBuilder {
-			use()
-			assertRgb(red, green, blue)
-			operations.push(Object.freeze({ op: "rgbFill", red, green, blue }))
-			return builder
-		},
-		rgbStroke(red: number, green: number, blue: number): PdfGraphicsBuilder {
-			use()
-			assertRgb(red, green, blue)
-			operations.push(Object.freeze({ op: "rgbStroke", red, green, blue }))
 			return builder
 		},
 		moveTo(x: number, y: number): PdfGraphicsBuilder {
@@ -1073,14 +1074,5 @@ function assertPositiveFinite(value: number, description: string): void {
 	assertFinite(value, description)
 	if (value <= 0) {
 		throw new RangeError(`${description} must be greater than zero`)
-	}
-}
-
-function assertRgb(red: number, green: number, blue: number): void {
-	for (const value of [red, green, blue]) {
-		assertFinite(value, "A PDF RGB component")
-		if (value < 0 || value > 1) {
-			throw new RangeError("PDF RGB components must be from 0 through 1")
-		}
 	}
 }

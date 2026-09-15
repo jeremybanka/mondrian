@@ -46,8 +46,8 @@ export type PdfImageBitsPerComponent = 8
 export type PdfImageColorSpace = "DeviceGray" | "DeviceRGB"
 
 export interface PdfTextBuilder extends PdfColorBuilder<PdfTextBuilder> {
-	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both; 3–7 include invisible/clipping modes. */
-	renderingMode(mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7): PdfTextBuilder
+	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both, 3 invisible. Clipping is unsupported. */
+	renderingMode(mode: 0 | 1 | 2 | 3): PdfTextBuilder
 	font(font: PdfFont, size: number): PdfTextBuilder
 	moveText(x: number, y: number): PdfTextBuilder
 	setTextMatrix(
@@ -100,7 +100,7 @@ export interface PdfGraphicsBuilder extends PdfColorBuilder<PdfGraphicsBuilder> 
 
 export type PdfTextOperation =
 	| PdfColorOperation
-	| Readonly<{ op: "renderingMode"; mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 }>
+	| Readonly<{ op: "renderingMode"; mode: 0 | 1 | 2 | 3 }>
 	| Readonly<{
 			op: "font"
 			font: PdfFont
@@ -697,11 +697,11 @@ export function createTextContent(
 			(operation) => operations.push(operation),
 			() => builder,
 		),
-		renderingMode(mode: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7): PdfTextBuilder {
+		renderingMode(mode: 0 | 1 | 2 | 3): PdfTextBuilder {
 			use()
-			if (!Number.isInteger(mode) || mode < 0 || mode > 7)
+			if (!Number.isInteger(mode) || mode < 0 || mode > 3)
 				throw new RangeError(
-					"PDF text rendering mode must be an integer from 0 through 7",
+					"PDF text rendering mode must be an integer from 0 through 3; clipping modes are unsupported",
 				)
 			operations.push(Object.freeze({ op: "renderingMode", mode }))
 			return builder

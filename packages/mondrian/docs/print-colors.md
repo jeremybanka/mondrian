@@ -32,7 +32,10 @@ colors through `.fillColor(color)` and `.strokeColor(color)`, with
 `.rgbFill/Stroke`, `.grayFill/Stroke`, `.cmykFill/Stroke`, and
 `.spotFill/Stroke` conveniences. Existing graphics RGB methods retain their
 operators and rendered output. Text `.renderingMode(1)` strokes glyphs;
-`.renderingMode(2)` fills and strokes them without outlining text.
+`.renderingMode(2)` fills and strokes them without outlining text. Mode 3 is
+invisible text. Clipping modes 4–7 are rejected: a semantic text fragment cannot
+share a clipping scope with subsequent artwork. Use the object-layer workflow
+when explicitly authoring that scope.
 
 ## Named inks
 

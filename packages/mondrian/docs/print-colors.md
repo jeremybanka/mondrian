@@ -99,8 +99,9 @@ own their syntax, balanced `q/Q` and `BT/ET`, and font/image resource names.
 They must not inject manual color resources or transparency settings into the
 typed painting scope. Mondrian does not parse or certify arbitrary raw PDF
 content strings. Generated fragments are wrapped in `q/Q`; graphics fragments
-are already scoped, and semantic text using paint or rendering-mode methods
-is now scoped too. Bindings are intended for ordinary page/Form content, not
+are already scoped, and every semantic text fragment scopes paint and rendering mode consistently.
+Text layout parameters (font, spacing, scaling, leading, and rise) retain their
+legacy persistence across text fragments, regardless of whether paint is set. Bindings are intended for ordinary page/Form content, not
 for insertion inside an open text object.
 
 ## Overprint and transparency

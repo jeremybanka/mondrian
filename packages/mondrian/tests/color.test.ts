@@ -199,7 +199,7 @@ describe("shared print colors", () => {
 		)
 		const value = decode(pdf.serialize())
 		expect(value).toContain(
-			"q\nBT\n/F0 12 Tf\n0 0 0 1 k\n/CS0 CS\n0.5 SCN\n2 Tr\n(Native text) Tj\nET\nQ\nBT",
+			"q\nBT\n/F0 12 Tf\n0 0 0 1 k\n/CS0 CS\n0.5 SCN\n2 Tr\n(Native text) Tj\nET\nQ\n/F0 12 Tf\nq\nBT",
 		)
 	})
 

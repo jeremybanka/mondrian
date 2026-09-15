@@ -49,7 +49,7 @@ describe("PdfDocumentBuilder", () => {
 			},
 		})
 		expect(asciiText(contents.data)).toBe(
-			"BT\n/F0 12 Tf\n72 720 Td\n(Hello \\(PDF\\)) Tj\nET\n",
+			"q\nBT\n/F0 12 Tf\n72 720 Td\n(Hello \\(PDF\\)) Tj\nET\nQ\n/F0 12 Tf\n",
 		)
 	})
 

@@ -9,6 +9,7 @@ import type {
 	PdfContentRecord,
 	PdfFont,
 	PdfImage,
+	PdfTextOperation,
 } from "./content.ts"
 import { getContentRecord } from "./content.ts"
 import { ascii } from "./objects.ts"
@@ -68,13 +69,15 @@ function encodeRecords(
 
 	for (const record of records) {
 		if (record.kind === "text") {
-			const scoped = record.operations.some((operation) =>
-				["fillColor", "strokeColor", "paintState", "renderingMode"].includes(
-					operation.op,
-				),
-			)
-			result += scoped ? "q\nBT\n" : "BT\n"
+			const layout = new Map<string, string>()
+			result += "q\nBT\n"
 			for (const operation of record.operations) {
+				const state = encodeTextLayout(operation, fonts)
+				if (state !== undefined) {
+					result += state
+					layout.set(operation.op, state)
+					continue
+				}
 				switch (operation.op) {
 					case "fillColor":
 					case "strokeColor":
@@ -84,17 +87,11 @@ function encodeRecords(
 					case "renderingMode":
 						result += `${operation.mode} Tr\n`
 						break
-					case "font":
-						result += `${encodePdfName(requireResourceName(fonts, operation.font))} ${number(operation.size)} Tf\n`
-						break
 					case "moveText":
 						result += `${number(operation.x)} ${number(operation.y)} Td\n`
 						break
 					case "setTextMatrix":
 						result += `${matrix(operation)} Tm\n`
-						break
-					case "leading":
-						result += `${number(operation.value)} TL\n`
 						break
 					case "nextLine":
 						result += "T*\n"
@@ -102,21 +99,11 @@ function encodeRecords(
 					case "show":
 						result += `${encodePdfLiteralString(operation.text)} Tj\n`
 						break
-					case "characterSpacing":
-						result += `${number(operation.value)} Tc\n`
-						break
-					case "wordSpacing":
-						result += `${number(operation.value)} Tw\n`
-						break
-					case "horizontalScale":
-						result += `${number(operation.value)} Tz\n`
-						break
-					case "rise":
-						result += `${number(operation.value)} Ts\n`
-						break
 				}
 			}
-			result += scoped ? "ET\nQ\n" : "ET\n"
+			// Preserve legacy text layout across fragments, independently of paint.
+			// PDF text-state operators may appear outside BT/ET (PDF 1.6 §5.2).
+			result += "ET\nQ\n" + [...layout.values()].join("")
 			continue
 		}
 
@@ -194,4 +181,26 @@ function requireResourceName<TResource>(
 	}
 
 	return name
+}
+
+function encodeTextLayout(
+	operation: PdfTextOperation,
+	fonts: ReadonlyMap<PdfFont, string>,
+): string | undefined {
+	switch (operation.op) {
+		case "font":
+			return `${encodePdfName(requireResourceName(fonts, operation.font))} ${number(operation.size)} Tf\n`
+		case "leading":
+			return `${number(operation.value)} TL\n`
+		case "characterSpacing":
+			return `${number(operation.value)} Tc\n`
+		case "wordSpacing":
+			return `${number(operation.value)} Tw\n`
+		case "horizontalScale":
+			return `${number(operation.value)} Tz\n`
+		case "rise":
+			return `${number(operation.value)} Ts\n`
+		default:
+			return undefined
+	}
 }

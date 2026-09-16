@@ -80,6 +80,11 @@ export async function readPdf(bytes: Uint8Array) {
 				pdfium.FPDF_ClosePage(page)
 			}
 		}
+		// A lenient reader can reconstruct a broken startxref/xref. That is not
+		// evidence of valid serialization; require PDFium to parse the original table.
+		if (!pdfium.FPDF_DocumentHasValidCrossReferenceTable(document)) {
+			throw new Error("The serialized PDF required cross-reference repair")
+		}
 		return {
 			pages,
 			pageCharacters,

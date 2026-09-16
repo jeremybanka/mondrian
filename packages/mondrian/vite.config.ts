@@ -27,7 +27,8 @@ export default defineConfig({
 	],
 	test: {
 		coverage: {
-			include: ["src/**/*.ts"],
+			// Public contracts execute the built package; remap that coverage to source too.
+			include: ["src/**/*.ts", "dist/**/*.mjs"],
 			provider: "v8",
 			reporter: ["text", "html", "json"],
 		},

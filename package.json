@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vp run -r build",
 		"change": "changeset",
-		"check": "vp check --no-fmt",
+		"check": "pnpm build && vp check --no-fmt",
 		"coverage": "vp run -r coverage",
 		"coverage:track": "vp run -r coverage:track",
 		"fmt": "dprint fmt",
@@ -14,6 +14,7 @@
 		"release": "pnpm build && changeset publish",
 		"staged": "vp staged",
 		"test": "vp run -r test",
+		"test:semver": "vp run -r --no-cache test:semver",
 		"workflows": "node scripts/update-workflows.ts"
 	},
 	"devDependencies": {

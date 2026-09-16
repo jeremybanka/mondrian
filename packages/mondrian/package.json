@@ -37,16 +37,19 @@
 	},
 	"scripts": {
 		"build": "vp pack",
-		"coverage": "vp test run --coverage",
+		"coverage": "pnpm build && vp test run --coverage",
 		"coverage:track": "recoverage",
-		"test": "vp test"
+		"test": "pnpm build && vp test",
+		"test:once:public": "pnpm build && tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
+		"test:semver": "pnpm test:once:public && break-check"
 	},
 	"engines": {
 		"node": ">=22.13.0"
 	},
 	"dependencies": {
 		"@embedpdf/pdfium": "2.15.0",
-		"@napi-rs/canvas": "1.0.9"
+		"@napi-rs/canvas": "1.0.9",
+		"pdf-lib": "1.17.1"
 	},
 	"peerDependencies": {
 		"vitest": ">=4.1.3"
@@ -57,6 +60,7 @@
 		}
 	},
 	"devDependencies": {
+		"break-check": "0.7.1",
 		"recoverage": "0.1.16",
 		"vitest": "4.1.11"
 	}

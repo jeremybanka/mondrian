@@ -224,7 +224,8 @@ a complete document preserves this declaration. Preserve it when transforming a
 stream; constructing a new raw `stream({}, bytes)` intentionally describes raw
 content and does not recover requirements by parsing those bytes.
 
-Use `compressColorContent(bound)` for Flate compression and
+Use `compressColorContent(bound)` for synchronous Flate compression in browsers
+and Node without Node built-in polyfills, and
 `formColorContent(bound, [xMin, yMin, xMax, yMax])` for a Form XObject. The latter
 installs the binding's resources and keeps its validation declaration. These
 helpers preserve the declaration while copying the stream data and entries.

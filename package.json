@@ -12,6 +12,7 @@
 		"fmt:check": "dprint check",
 		"lint": "vp lint",
 		"release": "pnpm build && changeset publish",
+		"release:version": "changeset version && pnpm install --no-frozen-lockfile && pnpm fmt",
 		"staged": "vp staged",
 		"test": "vp run -r test",
 		"test:semver": "vp run -r --no-cache test:semver",

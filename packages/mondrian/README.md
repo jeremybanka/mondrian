@@ -1,5 +1,30 @@
 # mondrian.pdf
 
+<a aria-label="NPM version" href="https://www.npmjs.com/package/mondrian.pdf">
+	<img
+		alt="NPM Version"
+		src="https://img.shields.io/npm/v/mondrian.pdf?style=for-the-badge"
+	>
+</a>
+<a
+	aria-label="Dependencies 3"
+	href="https://github.com/jeremybanka/mondrian/blob/main/packages/mondrian/package.json"
+>
+	<img
+		alt="Dependencies 3"
+		src="https://img.shields.io/badge/dependencies-3-blue?style=for-the-badge"
+	>
+</a>
+<a
+	aria-label="Tests"
+	href="https://github.com/jeremybanka/mondrian/actions/workflows/test.yml"
+>
+	<img
+		alt="Tests"
+		src="https://img.shields.io/github/actions/workflow/status/jeremybanka/mondrian/test.yml?branch=main&amp;label=tests&amp;style=for-the-badge"
+	>
+</a>
+
 A strongly typed TypeScript interface for constructing PDF files.
 
 Use the semantic document builder for normal authoring. It owns the page tree,

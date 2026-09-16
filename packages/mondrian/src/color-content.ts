@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
-import { deflateSync } from "node:zlib"
+import { zlibSync } from "fflate"
 import { dictionaryValue } from "./dictionary-lookup.ts"
 import type { PdfColorOperation } from "./color.ts"
 import {
@@ -105,7 +105,7 @@ export function boundColorResources(
 	return content.requiredResources
 }
 
-/** Compress bound content without discarding its resource requirements. */
+/** Synchronously compress bound content in browsers and Node, retaining resource requirements. */
 export function compressColorContent(
 	content: PdfBoundColorContent,
 ): PdfBoundColorContent {
@@ -121,7 +121,7 @@ export function compressColorContent(
 		...content.stream,
 		...stream(
 			{ ...content.stream.entries, Filter: name("FlateDecode") },
-			deflateSync(content.stream.data),
+			zlibSync(content.stream.data),
 			...(content.stream.byteEntries ?? []),
 		),
 	})

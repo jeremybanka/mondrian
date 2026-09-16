@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 import { init } from "@embedpdf/pdfium"
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
@@ -5,7 +7,7 @@ import { createRequire } from "node:module"
 const require = createRequire(import.meta.url)
 const wasmBinary = readFileSync(require.resolve("@embedpdf/pdfium/pdfium.wasm"))
 
-/** Inspect output with the reader version locked alongside these contracts. */
+/** Read page geometry, text, fonts, and identifiers; reject repaired cross references. */
 export async function readPdf(bytes: Uint8Array) {
 	const pdfium = await init({ wasmBinary })
 	pdfium.PDFiumExt_Init()
@@ -122,7 +124,7 @@ export async function readPdf(bytes: Uint8Array) {
 			pages,
 			pageCharacters,
 			pageFonts,
-			fileIds: [fileId(0), fileId(1)],
+			fileIds: [fileId(0), fileId(1)] as const,
 			title: metadata("Title"),
 			author: metadata("Author"),
 		}

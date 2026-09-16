@@ -81,6 +81,38 @@ const result = await checkPdfArtifact(invoice.serialize(), {
 })
 ```
 
+## Inspect serialized PDFs
+
+Use the independent readers from `mondrian.pdf/testing` to assert what a PDF
+contains, alongside visual artifact tests:
+
+```ts
+import { readPdf, readPdfMetadata, readPdfObject } from "mondrian.pdf/testing"
+
+const observed = await readPdf(invoice.serialize())
+expect(observed.pages[0]).toMatchObject({ width: 612, height: 792 })
+expect(observed.pageFonts[0]).toContainEqual({ text: "I", font: "Helvetica" })
+
+const metadata = await readPdfMetadata(invoice.serialize())
+expect(metadata.title).toBe("Invoice")
+
+// A standalone PDF object body; equivalent encodings decode to the same values.
+const value = readPdfObject(new TextEncoder().encode("[true 17 2 R <00FF>]"))
+expect(value).toEqual([true, { reference: [17, 2] }, { bytes: [0, 255] }])
+```
+
+- `readPdf()` returns page sizes, rotation, extracted text, character origins,
+  font names, both document IDs, title, and author. Coordinates use PDF page
+  space, in points. It rejects files requiring cross-reference repair; this is
+  an inspection aid rather than a complete PDF conformance validator.
+- `readPdfMetadata()` reads the Info fields, including UTC ISO date strings.
+  Absent fields are `undefined`.
+- `readPdfObject()` decodes a standalone primitive, array, or dictionary body.
+  Names and strings retain their bytes; references retain object and generation
+  numbers. Dictionaries are maps keyed by hexadecimal name bytes, preserving
+  arbitrary keys without a Unicode conversion. The exported `DecodedPdfObject`
+  type describes these values. Streams are outside this reader's scope.
+
 For a nested page tree, compose owned nodes explicitly:
 
 ```ts

@@ -1,5 +1,5 @@
 import { expect, it } from "vite-plus/test"
-import { readObject } from "./harness/read-object.ts"
+import { readPdfObject } from "mondrian.pdf/testing"
 import {
 	array,
 	ascii,
@@ -87,7 +87,7 @@ it("serializes arbitrary names, binary strings, scalars, and generation-qualifie
 			),
 		),
 	)
-	expect(readObject(serializePdfObjectBody(body))).toEqual(
+	expect(readPdfObject(serializePdfObjectBody(body))).toEqual(
 		new Map([
 			[
 				"7370206163652f23c3a9",

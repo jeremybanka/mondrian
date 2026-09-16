@@ -19,3 +19,8 @@ export type {
 	RenderedPdfPage,
 } from "./testing/render.ts"
 export { pdfArtifactRenderer, renderPdf } from "./testing/render.ts"
+
+export { readPdf } from "./testing/inspection/read-pdf.ts"
+export { readPdfMetadata } from "./testing/inspection/read-metadata.ts"
+export { readPdfObject } from "./testing/inspection/read-object.ts"
+export type { DecodedPdfObject } from "./testing/inspection/read-object.ts"

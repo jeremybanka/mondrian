@@ -1,18 +1,19 @@
 # Test contracts
 
 `public/` defines behavior consumers can depend on across releases. Break Check
-restores this entire directory from the latest release, including the independent
-PDFium and object readers and TypeScript configuration. The public command
-type-checks those tests before running them. Add assertions here only when a
-failure means an existing consumer capability has broken.
+restores both the released tests and the inspection source used to read their
+output. Its pattern is `{tests/public,src/testing/inspection}/**/*`. The public
+command builds the package, type-checks consumer imports, then runs the tests.
+Add assertions here only when a failure means an existing consumer capability
+has broken.
 
-The independent readers live in `public/harness/`, with their own pinned dependency
-manifest and lockfile. Test commands install that isolated dependency graph with
-`--ignore-workspace --frozen-lockfile --ignore-scripts`, including after Break
-Check restores a released suite. PDFium, its WASM and compatible types, and the pdf-lib object decoder
-therefore travel with the historical tests rather than tracking Mondrian's
-production renderer dependency. Keep observation helpers and their dependencies
-inside this restored boundary.
+The independent readers ship through `mondrian.pdf/testing` and live in
+`src/testing/inspection/`. Break Check restores that source alongside historical
+assertions and rebuilds it, so changing today's reader does not silently change
+yesterday's observations. Rendering and artifact comparison remain current
+implementations under test. All dependencies use the package's ordinary manifest
+and workspace lockfile; there is no separate harness installation. Dependency
+upgrades must keep the restored inspection source runnable.
 
 Keep document setup inline in each public test and limited to the behavior it
 asserts. If a test needs repeated construction, use a local helper named for that

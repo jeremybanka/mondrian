@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vp run -r build",
 		"change": "changeset",
-		"check": "pnpm build && pnpm -r test:prepare && vp check --no-fmt",
+		"check": "pnpm build && vp check --no-fmt",
 		"coverage": "vp run -r coverage",
 		"coverage:track": "vp run -r coverage:track",
 		"fmt": "dprint fmt",

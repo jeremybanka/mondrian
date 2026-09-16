@@ -5,8 +5,7 @@ import {
 	literalString,
 	rectangle,
 } from "mondrian.pdf"
-import { renderPdf } from "mondrian.pdf/testing"
-import { readPdf } from "./harness/read-pdf.ts"
+import { readPdf, renderPdf } from "mondrian.pdf/testing"
 
 it("places text using its matrix, spacing, horizontal scale, leading, and rise", async () => {
 	const pdf = createPdfDocument()

@@ -23,8 +23,7 @@ import type {
 	PdfReference,
 	PdfVersion,
 } from "mondrian.pdf"
-import { readMetadata } from "./harness/read-metadata.ts"
-import { readPdf } from "./harness/read-pdf.ts"
+import { readPdf, readPdfMetadata } from "mondrian.pdf/testing"
 
 describe("document compatibility", () => {
 	it("preserves nested page order, dimensions, rotation, text, and metadata", async () => {
@@ -254,6 +253,8 @@ describe("document compatibility", () => {
 
 it("preserves explicitly supplied descriptive metadata and timestamps", async () => {
 	const metadata: PdfMetadata = {
+		title: "Quarterly statement",
+		author: "Accounting",
 		subject: "Quarterly résumé",
 		keywords: "invoice, café",
 		creator: "Invoice authoring tool",
@@ -263,7 +264,9 @@ it("preserves explicitly supplied descriptive metadata and timestamps", async ()
 	}
 	const pdf = createPdfDocument({ metadata })
 	pdf.setPages(pdf.page({ mediaBox: pageSizes.letter }))
-	expect(await readMetadata(pdf.serialize())).toEqual({
+	expect(await readPdfMetadata(pdf.serialize())).toEqual({
+		title: "Quarterly statement",
+		author: "Accounting",
 		subject: "Quarterly résumé",
 		keywords: "invoice, café",
 		creator: "Invoice authoring tool",

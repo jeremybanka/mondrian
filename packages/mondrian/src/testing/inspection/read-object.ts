@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MPL-2.0
+
 import { createRequire } from "node:module"
 import {
 	PDFArray,
@@ -14,21 +16,21 @@ import {
 } from "pdf-lib"
 import type { PDFObject } from "pdf-lib"
 
-type Decoded =
+export type DecodedPdfObject =
 	| null
 	| boolean
 	| number
 	| { name: number[] }
 	| { bytes: number[] }
 	| { reference: [number, number] }
-	| Decoded[]
-	| Map<string, Decoded>
+	| DecodedPdfObject[]
+	| Map<string, DecodedPdfObject>
 
-/** Decode primitive bodies with the independent parser pinned in this harness.
+/** Decode primitive bodies with an independent parser.
  * Names and strings retain bytes; dictionary order and lexical choices do not.
  * The name adapter accepts lowercase as well as uppercase name escapes.
  */
-export function readObject(bytes: Uint8Array): Decoded {
+export function readPdfObject(bytes: Uint8Array): DecodedPdfObject {
 	return decode(
 		new NameCompatibleParser(
 			ByteStream.of(bytes),
@@ -37,7 +39,7 @@ export function readObject(bytes: Uint8Array): Decoded {
 	)
 }
 
-function decode(value: PDFObject): Decoded {
+function decode(value: PDFObject): DecodedPdfObject {
 	if (value === PDFNull) return null
 	if (value instanceof PDFBool) return value.asBoolean()
 	if (value instanceof PDFNumber) return value.asNumber()
@@ -57,7 +59,7 @@ function decode(value: PDFObject): Decoded {
 				]),
 		)
 	throw new Error(
-		`Unsupported primitive in contract reader: ${value.constructor.name}`,
+		`Unsupported primitive in PDF object reader: ${value.constructor.name}`,
 	)
 }
 

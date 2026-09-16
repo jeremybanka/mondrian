@@ -1,6 +1,6 @@
 import { expect, it } from "vite-plus/test"
 import { createPdfDocument, pageSizes } from "mondrian.pdf"
-import { readPdf } from "../public/harness/read-pdf.ts"
+import { readPdf } from "mondrian.pdf/testing"
 
 it("rejects cross-reference repair even when a reader can recover the page", async () => {
 	const pdf = createPdfDocument()

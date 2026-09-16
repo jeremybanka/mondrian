@@ -1,9 +1,0 @@
-{
-	"name": "mondrian-public-test-reader",
-	"private": true,
-	"type": "module",
-	"dependencies": {
-		"@embedpdf/pdfium": "2.15.0",
-		"pdf-lib": "1.17.1"
-	}
-}

@@ -19,7 +19,7 @@ import type {
 	PdfPagesDictionary,
 	PdfVersion,
 } from "mondrian.pdf"
-import { readPdf } from "./read-pdf.ts"
+import { readPdf } from "./harness/read-pdf.ts"
 
 describe("document compatibility", () => {
 	it("preserves nested page order, dimensions, rotation, text, and metadata", async () => {

@@ -37,10 +37,11 @@
 	},
 	"scripts": {
 		"build": "vp pack",
-		"coverage": "pnpm build && vp test run --coverage",
+		"coverage": "pnpm test:prepare && pnpm build && vp test run --coverage",
 		"coverage:track": "recoverage",
-		"test": "pnpm build && vp test",
-		"test:once:public": "pnpm build && tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
+		"test": "pnpm test:prepare && pnpm build && vp test",
+		"test:once:public": "pnpm test:prepare && pnpm build && tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
+		"test:prepare": "pnpm --dir tests/public/harness install --ignore-workspace --frozen-lockfile --ignore-scripts",
 		"test:semver": "pnpm test:once:public && break-check"
 	},
 	"engines": {

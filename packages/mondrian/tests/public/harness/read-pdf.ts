@@ -5,7 +5,7 @@ import { createRequire } from "node:module"
 const require = createRequire(import.meta.url)
 const wasmBinary = readFileSync(require.resolve("@embedpdf/pdfium/pdfium.wasm"))
 
-/** Inspect serialized output independently of Mondrian's object model. */
+/** Inspect output with the reader version locked alongside these contracts. */
 export async function readPdf(bytes: Uint8Array) {
 	const pdfium = await init({ wasmBinary })
 	pdfium.PDFiumExt_Init()

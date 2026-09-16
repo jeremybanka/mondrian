@@ -28,9 +28,8 @@ Run `pnpm --filter mondrian.pdf test:once:public` for the public suite. Normal
 test and coverage commands run both directories. Run `pnpm test:semver` from a
 clean checkout for current public tests followed by release compatibility.
 
-Release `mondrian.pdf@0.1.0` predates this directory. For that release only,
-missing public tests produce an explicit bootstrap notice after the current
-suite passes. Later releases without a public suite fail, as do other
-inconclusive checks. Once the next release contains this directory, its tests
-become the compatibility baseline automatically. Remove the bootstrap exception
-after that release.
+The command invokes the `break-check` CLI directly and preserves its failure
+behavior for missing tests and other inconclusive checks. Release
+`mondrian.pdf@0.1.0` predates this directory, so the release comparison fails
+until a release includes the public suite. The current public tests run before
+the release comparison.

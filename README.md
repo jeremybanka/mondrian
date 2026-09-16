@@ -44,8 +44,9 @@ The compatibility contract lives in `packages/mondrian/tests/public/`; run it
 directly with `pnpm --filter mondrian.pdf test:once:public`. Break Check restores
 released tests and helpers, type-checks and runs them, then restores the checkout.
 Implementation and visual regression tests live in `tests/private/`. See the
-[test guide](packages/mondrian/tests/README.md) for the boundary and the explicit
-bootstrap policy for release 0.1.0, which predates the public suite. While
+[test guide](packages/mondrian/tests/README.md) for the boundary and the release
+baseline requirement. Release 0.1.0 predates the public suite, so Break Check
+will fail until a release contains it. While
 `mondrian.pdf` is pre-1.0, intentional breaking changes require a minor or major
 changeset for `mondrian.pdf` to certify them.
 

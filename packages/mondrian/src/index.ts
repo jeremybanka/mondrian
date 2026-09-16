@@ -84,3 +84,30 @@ export {
 } from "./objects.ts"
 export { serializePdf, serializePdfObjectBody } from "./serialize.ts"
 export { validatePdf } from "./validate.ts"
+
+export type {
+	PdfColor,
+	PdfProcessColor,
+	PdfSpotColor,
+	PdfTintTransform,
+	PdfPaintState,
+	PdfColorOperation,
+	PdfColorBuilder,
+} from "./color.ts"
+export {
+	rgb,
+	gray,
+	cmyk,
+	separation,
+	spot,
+	fillColor,
+	strokeColor,
+	paintState,
+} from "./color.ts"
+export type { PdfColorContent, PdfBoundColorContent } from "./color-content.ts"
+export {
+	colorContent,
+	bindColorContent,
+	compressColorContent,
+	formColorContent,
+} from "./color-content.ts"

@@ -12,6 +12,7 @@ export type PdfDiagnosticCode =
 	| "incorrect-page-count"
 	| "incorrect-page-parent"
 	| "incorrect-reference-target"
+	| "invalid-color-resource"
 	| "invalid-byte-string"
 	| "invalid-dictionary"
 	| "invalid-dictionary-key"

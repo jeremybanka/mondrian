@@ -312,9 +312,11 @@ class DocumentBuilder implements PdfDocumentBuilder {
 		): PdfReference<PdfPageDictionary> => {
 			const record = requirePageRecord(node)
 			const page = objects.reserve<PdfPageDictionary>()
-			const encoded = encodePageContent(this.#owner, record.content)
+			const encoded = encodePageContent(this.#owner, record.content, objects)
 			const contents = objects.add(stream({}, encoded.bytes))
-			const resourceEntries: Record<string, PdfValue> = Object.create(null)
+			const resourceEntries: Record<string, PdfValue | undefined> = {
+				...encoded.colorResources.entries,
+			}
 
 			if (encoded.fonts.size > 0) {
 				const entries: Record<string, PdfValue> = Object.create(null)

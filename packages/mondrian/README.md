@@ -309,3 +309,10 @@ If you distribute modifications to Mondrian's MPL-covered files, you must make
 the source for those files available under MPL 2.0. Private and internal
 modifications do not need to be published. This is file-level sharing, not
 whole-program copyleft. See [Mozilla's official MPL 2.0 FAQ](https://www.mozilla.org/MPL/2.0/FAQ/) for details.
+
+## Process and named spot colors
+
+Use typed gray/RGB/CMYK and Separation paint in graphics, live text, or cached
+object-builder content. See the [color API and migration guide](docs/print-colors.md)
+and [executable examples](examples/print-colors.ts) for units, resource binding,
+overprint, and supported transparency boundaries.

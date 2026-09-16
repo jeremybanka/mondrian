@@ -15,13 +15,10 @@
 		src="https://img.shields.io/badge/dependencies-3-blue?style=for-the-badge"
 	>
 </a>
-<a
-	aria-label="Tests"
-	href="https://github.com/jeremybanka/mondrian/actions/workflows/test.yml"
->
+<a aria-label="Coverage" href="https://recoverage.cloud/">
 	<img
-		alt="Tests"
-		src="https://img.shields.io/github/actions/workflow/status/jeremybanka/mondrian/test.yml?branch=main&amp;label=tests&amp;style=for-the-badge"
+		alt="Coverage"
+		src="https://img.shields.io/endpoint?url=https%3A%2F%2Frecoverage.cloud%2Fshields%2F7SNBWB_Aesq2QClC7jZrL%2Fmondrian"
 	>
 </a>
 

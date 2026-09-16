@@ -5,7 +5,9 @@ import {
 	createPdfDocument,
 	createPdfObjectBuilder,
 	dictionary,
+	generationNumber,
 	name,
+	objectNumber,
 	pageSizes,
 	PdfValidationError,
 	rectangle,
@@ -17,6 +19,7 @@ import type {
 	PdfDocument,
 	PdfPageDictionary,
 	PdfPagesDictionary,
+	PdfReference,
 	PdfVersion,
 } from "mondrian.pdf"
 import { readPdf } from "./harness/read-pdf.ts"
@@ -69,6 +72,12 @@ describe("document compatibility", () => {
 			{ width: 240, height: 180, rotation: 90, text: "Appendix" },
 			{ width: 120, height: 120, rotation: 0, text: "End" },
 		])
+		// Baselines are page-space coordinates, independent of glyph outlines or pixels.
+		expect(result.pageCharacters.map((characters) => characters[0])).toEqual([
+			{ text: "I", x: 20, y: 140 },
+			{ text: "A", x: 20, y: 200 },
+			{ text: "E", x: 20, y: 80 },
+		])
 	})
 
 	it("allows compiled documents to be validated and serialized independently", async () => {
@@ -76,9 +85,13 @@ describe("document compatibility", () => {
 		builder.setPages(builder.page({ mediaBox: pageSizes.letter }))
 		const document: PdfDocument = builder.compile()
 		expect(validatePdf(document)).toEqual([])
-		expect(await readPdf(serializePdf(document))).toEqual(
-			await readPdf(builder.serialize()),
-		)
+		const expected = {
+			pages: [{ width: 612, height: 792, rotation: 0, text: "" }],
+			title: "",
+			author: "",
+		}
+		expect(await readPdf(serializePdf(document))).toMatchObject(expected)
+		expect(await readPdf(builder.serialize())).toMatchObject(expected)
 	})
 
 	it("serializes a letter page with fixed metadata deterministically", () => {
@@ -96,7 +109,7 @@ describe("document compatibility", () => {
 
 	it.each<PdfVersion>(["1.4", "1.7", "2.0"])(
 		"honors an explicitly requested PDF %s version",
-		(version) => {
+		async (version) => {
 			const pdf = createPdfDocument({
 				version,
 				id: [new Uint8Array(16).fill(1), new Uint8Array(16).fill(2)],
@@ -105,8 +118,69 @@ describe("document compatibility", () => {
 			expect(new TextDecoder().decode(pdf.serialize().slice(0, 8))).toBe(
 				`%PDF-${version}`,
 			)
+			expect((await readPdf(pdf.serialize())).fileIds).toEqual([
+				new Uint8Array(16).fill(1),
+				new Uint8Array(16).fill(2),
+			])
 		},
 	)
+
+	it("accepts a manually described object graph with inherited page geometry", async () => {
+		const rootNumber = objectNumber(19)
+		const pagesNumber = objectNumber(5)
+		const pageNumber = objectNumber(41)
+		const generation = generationNumber(0)
+		const pages: PdfReference<PdfPagesDictionary> = {
+			kind: "reference",
+			objectNumber: pagesNumber,
+			generation,
+		}
+		const document: PdfDocument = {
+			version: "1.4",
+			root: { kind: "reference", objectNumber: rootNumber, generation },
+			objects: [
+				{
+					objectNumber: pageNumber,
+					generation,
+					value: {
+						kind: "dictionary",
+						entries: { Type: { kind: "name", value: "Page" }, Parent: pages },
+					},
+				},
+				{
+					objectNumber: rootNumber,
+					generation,
+					value: {
+						kind: "dictionary",
+						entries: { Type: { kind: "name", value: "Catalog" }, Pages: pages },
+					},
+				},
+				{
+					objectNumber: pagesNumber,
+					generation,
+					value: {
+						kind: "dictionary",
+						entries: {
+							Type: { kind: "name", value: "Pages" },
+							Kids: {
+								kind: "array",
+								items: [
+									{ kind: "reference", objectNumber: pageNumber, generation },
+								],
+							},
+							Count: 1,
+							MediaBox: { kind: "array", items: [0, 0, 300, 200] },
+							Resources: { kind: "dictionary", entries: {} },
+						},
+					},
+				},
+			],
+		}
+		expect(validatePdf(document)).toEqual([])
+		expect((await readPdf(serializePdf(document))).pages).toEqual([
+			{ width: 300, height: 200, rotation: 0, text: "" },
+		])
+	})
 
 	it("serializes a low-level page tree constructed with reserved references", async () => {
 		const objects = createPdfObjectBuilder()

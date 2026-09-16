@@ -25,6 +25,7 @@ export async function readPdf(bytes: Uint8Array) {
 			rotation: number
 			text: string
 		}[] = []
+		const pageCharacters: { text: string; x: number; y: number }[][] = []
 		for (let index = 0; index < pdfium.FPDF_GetPageCount(document); index++) {
 			const page = pdfium.FPDF_LoadPage(document, index)
 			if (!page) throw new Error(`PDFium could not open page ${index + 1}`)
@@ -33,6 +34,35 @@ export async function readPdf(bytes: Uint8Array) {
 				if (!textPage) throw new Error("PDFium could not read page text")
 				try {
 					const count = pdfium.FPDFText_CountChars(textPage)
+					const characters: { text: string; x: number; y: number }[] = []
+					const coordinates = memory.malloc(16)
+					if (!coordinates)
+						throw new Error("Could not allocate text coordinates")
+					try {
+						for (let character = 0; character < count; character++) {
+							if (
+								!pdfium.FPDFText_GetCharOrigin(
+									textPage,
+									character,
+									coordinates,
+									coordinates + 8,
+								)
+							) {
+								throw new Error("Could not read character origin")
+							}
+							const values = new DataView(heap().buffer, coordinates, 16)
+							characters.push({
+								text: String.fromCodePoint(
+									pdfium.FPDFText_GetUnicode(textPage, character),
+								),
+								x: values.getFloat64(0, true),
+								y: values.getFloat64(8, true),
+							})
+						}
+					} finally {
+						memory.free(coordinates)
+					}
+					pageCharacters.push(characters)
 					pages.push({
 						width: pdfium.FPDF_GetPageWidthF(page),
 						height: pdfium.FPDF_GetPageHeightF(page),
@@ -50,11 +80,31 @@ export async function readPdf(bytes: Uint8Array) {
 				pdfium.FPDF_ClosePage(page)
 			}
 		}
-		return { pages, title: metadata("Title"), author: metadata("Author") }
+		return {
+			pages,
+			pageCharacters,
+			fileIds: [fileId(0), fileId(1)],
+			title: metadata("Title"),
+			author: metadata("Author"),
+		}
 	} finally {
 		if (document) pdfium.FPDF_CloseDocument(document)
 		memory.free(input)
 		pdfium.FPDF_DestroyLibrary()
+	}
+
+	function fileId(type: number): Uint8Array | null {
+		const length = pdfium.FPDF_GetFileIdentifier(document, type, 0, 0)
+		if (!length) return null
+		const pointer = memory.malloc(length)
+		if (!pointer) throw new Error("Could not allocate file identifier")
+		try {
+			pdfium.FPDF_GetFileIdentifier(document, type, pointer, length)
+			// PDFium adds one NUL terminator, even when the identifier contains NUL bytes.
+			return heap().slice(pointer, pointer + length - 1)
+		} finally {
+			memory.free(pointer)
+		}
 	}
 
 	function metadata(key: string): string {

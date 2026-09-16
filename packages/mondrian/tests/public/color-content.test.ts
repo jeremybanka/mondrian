@@ -21,7 +21,7 @@ it.each([
 	["empty", new Uint8Array()],
 	["short", ascii("q\n1 0 0 rg\n0 0 100 100 re f\nQ\n")],
 	["all byte values", Uint8Array.from({ length: 256 }, (_, i) => i)],
-	["multiple blocks", ascii("0 0 100 100 re f\n".repeat(10_000))],
+	["large repetitive", ascii("0 0 100 100 re f\n".repeat(10_000))],
 ] as const)(
 	"round-trips %s content through zlib-compatible Flate compression",
 	(_label, data) => {

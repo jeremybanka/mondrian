@@ -2,24 +2,13 @@
 	"name": "mondrian.pdf",
 	"version": "0.1.3",
 	"description": "a low-level TypeScript interface to PDF",
-	"license": "MPL-2.0",
-	"type": "module",
-	"files": [
-		"AGENTS.md",
-		"dist/*.d.mts",
-		"dist/*.d.mts.map",
-		"dist/*.mjs",
-		"dist/*.mjs.map",
-		"src"
-	],
-	"publishConfig": {
-		"access": "public"
-	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/jeremybanka/mondrian.git",
 		"directory": "packages/mondrian"
 	},
+	"license": "MPL-2.0",
+	"type": "module",
 	"exports": {
 		".": {
 			"import": "./dist/index.mjs",
@@ -35,6 +24,14 @@
 		},
 		"./package.json": "./package.json"
 	},
+	"files": [
+		"AGENTS.md",
+		"dist/*.d.mts",
+		"dist/*.d.mts.map",
+		"dist/*.mjs",
+		"dist/*.mjs.map",
+		"src"
+	],
 	"scripts": {
 		"build": "vp pack",
 		"coverage": "pnpm build && vp test run --coverage",
@@ -43,14 +40,16 @@
 		"test:once:public": "pnpm build && tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
 		"test:semver": "pnpm test:once:public && break-check"
 	},
-	"engines": {
-		"node": ">=22.13.0"
-	},
 	"dependencies": {
 		"@embedpdf/pdfium": "2.15.0",
 		"@napi-rs/canvas": "1.0.9",
 		"fflate": "0.8.3",
 		"pdf-lib": "1.17.1"
+	},
+	"devDependencies": {
+		"break-check": "0.7.2",
+		"recoverage": "0.1.16",
+		"vitest": "4.1.11"
 	},
 	"peerDependencies": {
 		"vitest": ">=4.1.3"
@@ -60,9 +59,10 @@
 			"optional": true
 		}
 	},
-	"devDependencies": {
-		"break-check": "0.7.2",
-		"recoverage": "0.1.16",
-		"vitest": "4.1.11"
+	"engines": {
+		"node": ">=22.13.0"
+	},
+	"publishConfig": {
+		"access": "public"
 	}
 }

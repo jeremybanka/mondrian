@@ -57,14 +57,21 @@ it("updates artifacts explicitly and verifies changes without overwriting the ba
 		expect(
 			(await checkPdfArtifact(bytes, { ...options, mode: "update" })).status,
 		).toBe("updated")
-		async function baselineFiles() {
-			const paths = (await readdir(directory)).sort()
-			return Promise.all(
-				paths.map(async (path) => [
-					path,
-					await readFile(join(directory, path)),
-				]),
+		async function baselineFiles(
+			relativeDirectory = "",
+		): Promise<readonly (readonly [string, Buffer])[]> {
+			const entries = await readdir(join(directory, relativeDirectory), {
+				withFileTypes: true,
+			})
+			const files = await Promise.all(
+				entries.map(async (entry) => {
+					const path = join(relativeDirectory, entry.name)
+					return entry.isDirectory()
+						? baselineFiles(path)
+						: [[path, await readFile(join(directory, path))] as const]
+				}),
 			)
+			return files.flat().sort(([left], [right]) => left.localeCompare(right))
 		}
 		const baseline = await baselineFiles()
 		expect(

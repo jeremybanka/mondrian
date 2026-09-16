@@ -1518,7 +1518,10 @@ function validateBoundResources(
 				)
 				return
 			}
-			if (dictionaryValue(actual, resourceName) !== reference) {
+			if (
+				!isReference(reference) ||
+				!sameReference(dictionaryValue(actual, resourceName), reference)
+			) {
 				add(
 					context,
 					"invalid-color-resource",

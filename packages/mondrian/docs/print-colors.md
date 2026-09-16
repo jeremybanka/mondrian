@@ -242,3 +242,7 @@ with no Resources dictionary uses the page's resources; a Form with its own
 Resources dictionary must supply its required entries there. Compression does
 not weaken these checks. Requirements are declarations, not a parser or audit of
 arbitrary raw content syntax.
+
+Resource equivalence uses PDF object number and generation, not JavaScript object
+identity. Manual document transformations may reconstruct equivalent references;
+object-builder ownership checks still reject foreign or unowned handles.

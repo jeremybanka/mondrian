@@ -4,6 +4,7 @@ import { deflateSync } from "node:zlib"
 import type {
 	PdfDictionary,
 	PdfObjectBuilder,
+	PdfReference,
 	PdfPagesDictionary,
 	PdfStream,
 	PdfVersion,
@@ -24,6 +25,9 @@ import {
 	serializePdf,
 	spot,
 	stream,
+	reference,
+	generationNumber,
+	validatePdf,
 } from "../src/index.ts"
 import { renderPdf } from "../src/testing.ts"
 
@@ -204,6 +208,51 @@ describe("second independent review regressions", () => {
 			}),
 		}
 		expect(() => serializePdf(missing)).toThrow("bound PDF color resource")
+	})
+	it("accepts equivalent reconstructed references in a manual document", () => {
+		const objects = createPdfObjectBuilder()
+		const bound = bindColorContent(objects, [rectangle])
+		const valid = page(objects, bound.stream, bound.resources)
+		const spaces = bound.resources.entries.ColorSpace as PdfDictionary
+		const original = spaces.entries.CS0 as PdfReference
+		const replace = (replacement: PdfReference) => ({
+			...valid,
+			objects: valid.objects.map((object) => {
+				const value = object.value
+				return value !== null &&
+					typeof value === "object" &&
+					value.kind === "dictionary" &&
+					value.entries.Contents !== undefined
+					? {
+							...object,
+							value: dictionary({
+								...value.entries,
+								Resources: dictionary({
+									ColorSpace: dictionary({ CS0: replacement }),
+								}),
+							}),
+						}
+					: object
+			}),
+		})
+		const equivalent = replace(
+			reference(original.objectNumber, original.generation),
+		)
+		expect(serializePdf(equivalent)).toEqual(serializePdf(valid))
+		const wrongGeneration = replace(
+			reference(original.objectNumber, generationNumber(1)),
+		)
+		expect(
+			validatePdf(wrongGeneration).some(
+				(d) => d.code === "invalid-color-resource",
+			),
+		).toBe(true)
+		const unowned = dictionary({
+			ColorSpace: dictionary({
+				CS0: reference(original.objectNumber, original.generation),
+			}),
+		})
+		expect(() => page(objects, bound.stream, unowned)).toThrow()
 	})
 })
 

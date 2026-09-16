@@ -14,9 +14,11 @@ should not inherit an arbitrary document's shape as part of their contract.
 The initial contracts cover page order, geometry, rotation, text and metadata
 preservation; explicit PDF versions; deterministic output; interoperability
 between the builders, validator, and serializer; reserved references; and
-rejection of invalid page ownership and reuse. They exercise the exported source
-entry point, not the installed package's export map. Package installation and
-declaration packaging are not covered by this suite.
+rejection of invalid page ownership and reuse. Public tests import `mondrian.pdf`
+through its package exports, using the built JavaScript and declarations. Build,
+type-check, and test commands prepare those artifacts before resolving consumer
+imports. Moving source files without changing package imports does not change
+these contracts.
 
 `private/` contains implementation tests, source-entrypoint smoke tests, and
 visual regressions. These can evolve without certifying a breaking change. The

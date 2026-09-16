@@ -11,14 +11,14 @@ import {
 	rectangle,
 	serializePdf,
 	validatePdf,
-} from "../../src/index.ts"
+} from "mondrian.pdf"
 import type {
 	PdfCatalogDictionary,
 	PdfDocument,
 	PdfPageDictionary,
 	PdfPagesDictionary,
 	PdfVersion,
-} from "../../src/index.ts"
+} from "mondrian.pdf"
 import { readPdf } from "./read-pdf.ts"
 
 describe("document compatibility", () => {

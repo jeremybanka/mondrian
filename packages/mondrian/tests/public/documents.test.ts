@@ -8,6 +8,7 @@ import {
 	name,
 	pageSizes,
 	PdfValidationError,
+	rectangle,
 	serializePdf,
 	validatePdf,
 } from "../../src/index.ts"
@@ -18,12 +19,43 @@ import type {
 	PdfPagesDictionary,
 	PdfVersion,
 } from "../../src/index.ts"
-import { exampleDocument } from "./fixtures.ts"
 import { readPdf } from "./read-pdf.ts"
 
 describe("document compatibility", () => {
 	it("preserves nested page order, dimensions, rotation, text, and metadata", async () => {
-		const result = await readPdf(exampleDocument().serialize())
+		const pdf = createPdfDocument({
+			metadata: { title: "Résumé — 2026", author: "M. Example" },
+		})
+		const font = pdf.standardFont("Helvetica")
+		const cover = pdf.page({
+			mediaBox: rectangle(0, 0, 240, 180),
+			content: [
+				pdf.text((text) =>
+					text
+						.font(font, 12)
+						.moveText(20, 140)
+						.show("Invoice (paid) \\ café €"),
+				),
+			],
+		})
+		const appendix = pdf.page({
+			mediaBox: rectangle(0, 0, 180, 240),
+			rotation: 90,
+			content: [
+				pdf.text((text) =>
+					text.font(font, 12).moveText(20, 200).show("Appendix"),
+				),
+			],
+		})
+		const end = pdf.page({
+			mediaBox: rectangle(0, 0, 120, 120),
+			content: [
+				pdf.text((text) => text.font(font, 12).moveText(20, 80).show("End")),
+			],
+		})
+		pdf.setPages(cover, pdf.pages(appendix, end))
+
+		const result = await readPdf(pdf.serialize())
 
 		expect(result.title).toBe("Résumé — 2026")
 		expect(result.author).toBe("M. Example")
@@ -40,7 +72,8 @@ describe("document compatibility", () => {
 	})
 
 	it("allows compiled documents to be validated and serialized independently", async () => {
-		const builder = exampleDocument()
+		const builder = createPdfDocument()
+		builder.setPages(builder.page({ mediaBox: pageSizes.letter }))
 		const document: PdfDocument = builder.compile()
 		expect(validatePdf(document)).toEqual([])
 		expect(await readPdf(serializePdf(document))).toEqual(
@@ -48,11 +81,17 @@ describe("document compatibility", () => {
 		)
 	})
 
-	it("produces identical bytes for repeated serialization and equivalent descriptions", () => {
-		const builder = exampleDocument()
+	it("serializes a letter page with fixed metadata deterministically", () => {
+		function createLetterPageWithFixedMetadata() {
+			const pdf = createPdfDocument({ metadata: { title: "Letter page" } })
+			pdf.setPages(pdf.page({ mediaBox: pageSizes.letter }))
+			return pdf
+		}
+
+		const builder = createLetterPageWithFixedMetadata()
 		const first = builder.serialize()
 		expect(builder.serialize()).toEqual(first)
-		expect(exampleDocument().serialize()).toEqual(first)
+		expect(createLetterPageWithFixedMetadata().serialize()).toEqual(first)
 	})
 
 	it.each<PdfVersion>(["1.4", "1.7", "2.0"])(
@@ -118,7 +157,7 @@ describe("document compatibility", () => {
 	})
 
 	it("rejects pages and content owned by a different document", () => {
-		const source = exampleDocument()
+		const source = createPdfDocument()
 		const destination = createPdfDocument()
 		expect(() =>
 			destination.setPages(source.page({ mediaBox: pageSizes.letter })),

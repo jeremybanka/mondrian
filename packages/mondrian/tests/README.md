@@ -1,10 +1,15 @@
 # Test contracts
 
 `public/` defines behavior consumers can depend on across releases. Break Check
-restores this entire directory from the latest release, including fixtures,
-the independent PDFium reader, and TypeScript configuration. The public command
+restores this entire directory from the latest release, including the independent
+PDFium reader and TypeScript configuration. The public command
 type-checks those tests before running them. Add assertions here only when a
 failure means an existing consumer capability has broken.
+
+Keep document setup inline in each public test and limited to the behavior it
+asserts. If a test needs repeated construction, use a local helper named for that
+specific scenario. Avoid shared, generic example documents: unrelated tests
+should not inherit an arbitrary document's shape as part of their contract.
 
 The initial contracts cover page order, geometry, rotation, text and metadata
 preservation; explicit PDF versions; deterministic output; interoperability
@@ -15,8 +20,9 @@ declaration packaging are not covered by this suite.
 
 `private/` contains implementation tests, source-entrypoint smoke tests, and
 visual regressions. These can evolve without certifying a breaking change. The
-visual proof of the public document fixture lives here so renderer versions and
-exact pixel baselines do not become API compatibility promises.
+visual proof for nested pages and escaped text has its own inline setup here so
+renderer versions and exact pixel baselines do not become API compatibility
+promises.
 
 Run `pnpm --filter mondrian.pdf test:once:public` for the public suite. Normal
 test and coverage commands run both directories. Run `pnpm test:semver` from a

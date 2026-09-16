@@ -1,6 +1,8 @@
-import { createPdfDocument, rectangle } from "../../src/index.ts"
+import { expect, it } from "vite-plus/test"
+import { createPdfDocument, rectangle } from "../../../src/index.ts"
+import { visualArtifactOptions } from "./setup.ts"
 
-export function exampleDocument() {
+it("renders escaped text and rotated pages in a nested page tree", async () => {
 	const pdf = createPdfDocument({
 		metadata: { title: "Résumé — 2026", author: "M. Example" },
 	})
@@ -29,5 +31,9 @@ export function exampleDocument() {
 		],
 	})
 	pdf.setPages(cover, pdf.pages(appendix, end))
-	return pdf
-}
+
+	await expect(pdf.serialize()).toMatchPdfArtifact(
+		"nested-pages-and-escaped-text",
+		visualArtifactOptions,
+	)
+})

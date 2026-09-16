@@ -28,6 +28,9 @@ import {
 	reference,
 	generationNumber,
 	validatePdf,
+	paintState,
+	nameBytes,
+	dictionaryEntry,
 } from "../src/index.ts"
 import { renderPdf } from "../src/testing.ts"
 
@@ -254,6 +257,85 @@ describe("second independent review regressions", () => {
 		})
 		expect(() => page(objects, bound.stream, unowned)).toThrow()
 	})
+
+	it.each([
+		{
+			label: "spot tint function",
+			fragment: rectangle,
+			unsupported: "1.2",
+			supported: "1.3",
+		},
+		{
+			label: "explicit paint state",
+			fragment: colorContent([
+				paintState({
+					fillOverprint: false,
+					strokeOverprint: false,
+					overprintMode: 0,
+				}),
+			]),
+			unsupported: "1.3",
+			supported: "1.4",
+		},
+	] as const)(
+		"validates $label versions after structuredClone",
+		({ fragment, unsupported, supported }) => {
+			const objects = createPdfObjectBuilder()
+			const bound = bindColorContent(objects, [fragment])
+			const original = page(objects, bound.stream, bound.resources, supported)
+			const cloned = structuredClone(original)
+			expect(serializePdf(cloned)).toEqual(serializePdf(original))
+			const downgraded = { ...cloned, version: unsupported }
+			expect(
+				validatePdf(downgraded).some(
+					(d) => d.code === "unsupported-version-feature",
+				),
+			).toBe(true)
+			expect(() => serializePdf(downgraded)).toThrow(
+				`requires PDF ${supported}`,
+			)
+		},
+	)
+
+	it.each([false, true])(
+		"derives manually authored tint function requirements from PDF entries, byte keys=%s",
+		(byteKeys) => {
+			const objects = createPdfObjectBuilder()
+			const fn = dictionary(
+				{
+					Domain: array(0, 1),
+					C0: array(1, 1, 1),
+					C1: array(1, 0, 0),
+					N: 1,
+					...(byteKeys ? {} : { FunctionType: 2 }),
+				},
+				...(byteKeys
+					? [dictionaryEntry(nameBytes(ascii("FunctionType")), 2)]
+					: []),
+			)
+			const resources = dictionary({
+				ColorSpace: dictionary({
+					Red: objects.add(
+						array(
+							name("Separation"),
+							name("Manual Red"),
+							name("DeviceRGB"),
+							fn,
+						),
+					),
+				}),
+			})
+			const doc = page(
+				objects,
+				stream({}, ascii("/Red cs 1 scn 0 0 100 100 re f")),
+				resources,
+				"1.3",
+			)
+			expect(() => serializePdf({ ...doc, version: "1.2" })).toThrow(
+				"requires PDF 1.3",
+			)
+		},
+	)
 })
 
 function page(

@@ -2,7 +2,6 @@
 
 import { boundColorResources } from "./color-content.ts"
 import { dictionaryValue } from "./dictionary-lookup.ts"
-import { colorResourceVersion } from "./color.ts"
 
 import type {
 	PdfArray,
@@ -1397,6 +1396,24 @@ function isGenerationNumber(value: unknown): value is number {
 	return (
 		Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 65_534
 	)
+}
+
+/** Derive feature requirements from the emitted object, including cloned descriptions. */
+function colorResourceVersion(value: unknown): number | undefined {
+	if (!isDictionary(value)) return undefined
+	if (dictionaryValue(value, "FunctionType") === 2) return 1.3
+	if (isPdfName(dictionaryValue(value, "Type"), "ExtGState")) {
+		if (
+			["ca", "CA", "BM", "SMask"].some(
+				(key) => dictionaryValue(value, key) !== undefined,
+			)
+		)
+			return 1.4
+		if (["op", "OPM"].some((key) => dictionaryValue(value, key) !== undefined))
+			return 1.3
+		return 1.2
+	}
+	return undefined
 }
 
 function isRecord(value: unknown): value is PdfDictionaryEntries {

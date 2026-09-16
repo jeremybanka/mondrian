@@ -9,4 +9,6 @@ overprint/knockout states. Bind immutable cached color fragments into fresh
 document resources. Add text rendering modes, conformance proofs, and migration
 examples; document the supported print-color boundaries. Preserve explicit
 resource requirements through compression, Form construction, and document
-cloning, including validation of nested Form scopes.
+cloning, including validation of nested Form scopes. Compare resource references
+by object number and generation, and derive color-resource version requirements
+from emitted dictionaries so manual copies retain validation.

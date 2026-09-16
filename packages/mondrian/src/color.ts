@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import type { PdfObjectBuilder } from "./object-builder.ts"
-import type {
-	PdfDictionary,
-	PdfReference,
-	PdfValue,
-	PdfArray,
-} from "./objects.ts"
+import type { PdfDictionary, PdfReference, PdfValue } from "./objects.ts"
 import { array, dictionary, name } from "./objects.ts"
 import { encodePdfName, formatPdfNumber } from "./syntax.ts"
 
@@ -305,20 +300,6 @@ export function preflightColors(
 	}
 }
 
-const resourceVersions = new WeakMap<object, number>()
-
-export function colorResourceVersion(value: object): number | undefined {
-	return resourceVersions.get(value)
-}
-
-function colorResource<T extends PdfArray | PdfDictionary>(
-	value: T,
-	minimumVersion: number,
-): T {
-	resourceVersions.set(value, minimumVersion)
-	return value
-}
-
 /** One page/stream resource scope; ink consistency and references are document-wide. */
 export class ColorScope {
 	readonly #objects: PdfObjectBuilder
@@ -340,19 +321,16 @@ export class ColorScope {
 			let ref = resources.states.get(key)
 			if (ref === undefined) {
 				ref = this.#objects.add(
-					colorResource(
-						dictionary({
-							Type: name("ExtGState"),
-							op: state.fillOverprint,
-							OP: state.strokeOverprint,
-							OPM: state.overprintMode,
-							ca: 1,
-							CA: 1,
-							BM: name("Normal"),
-							SMask: name("None"),
-						}),
-						1.4,
-					),
+					dictionary({
+						Type: name("ExtGState"),
+						op: state.fillOverprint,
+						OP: state.strokeOverprint,
+						OPM: state.overprintMode,
+						ca: 1,
+						CA: 1,
+						BM: name("Normal"),
+						SMask: name("None"),
+					}),
 				)
 				resources.states.set(key, ref)
 			}
@@ -390,10 +368,7 @@ export class ColorScope {
 				N: exponent,
 			})
 			ref = this.#objects.add(
-				colorResource(
-					array(name("Separation"), name(ink.name), name(zero.space), fn),
-					1.3,
-				),
+				array(name("Separation"), name(ink.name), name(zero.space), fn),
 			)
 			resources.inks.set(ink.name, { key, ref })
 		}

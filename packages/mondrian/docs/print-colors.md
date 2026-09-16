@@ -246,3 +246,7 @@ arbitrary raw content syntax.
 Resource equivalence uses PDF object number and generation, not JavaScript object
 identity. Manual document transformations may reconstruct equivalent references;
 object-builder ownership checks still reject foreign or unowned handles.
+
+Color-resource version checks derive from the emitted dictionaries (including
+FunctionType 2 and ExtGState entries), so copying or `structuredClone` does not
+remove the minimum-version requirement.

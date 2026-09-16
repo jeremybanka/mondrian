@@ -1,4 +1,4 @@
-import "../src/vitest.ts"
+import "../../src/vitest.ts"
 import { describe, expect, it } from "vite-plus/test"
 import { deflateSync } from "node:zlib"
 import type {
@@ -8,7 +8,7 @@ import type {
 	PdfPagesDictionary,
 	PdfStream,
 	PdfVersion,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 import {
 	array,
 	ascii,
@@ -31,8 +31,8 @@ import {
 	paintState,
 	nameBytes,
 	dictionaryEntry,
-} from "../src/index.ts"
-import { renderPdf } from "../src/testing.ts"
+} from "../../src/index.ts"
+import { renderPdf } from "../../src/testing.ts"
 
 const redInk = separation("Review Red", {
 	type: "exponential",

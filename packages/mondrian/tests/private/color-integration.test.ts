@@ -5,8 +5,8 @@ import {
 	objectPrintExample,
 	orangeInk,
 	packOsFragment,
-} from "../examples/print-colors.ts"
-import { cmyk, separation, serializePdf, validatePdf } from "../src/index.ts"
+} from "../../examples/print-colors.ts"
+import { cmyk, separation, serializePdf, validatePdf } from "../../src/index.ts"
 
 describe("consumer color integration examples", () => {
 	it("keeps create-design percentage and byte conversion at the adapter boundary", () => {

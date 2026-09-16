@@ -8,7 +8,7 @@ import type {
 	PdfPagesDictionary,
 	PdfProcessColor,
 	PdfVersion,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 import {
 	array,
 	bindColorContent,
@@ -27,7 +27,7 @@ import {
 	serializePdf,
 	spot,
 	strokeColor,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 
 const orange = separation("Brand Orange / #1", {
 	type: "exponential",

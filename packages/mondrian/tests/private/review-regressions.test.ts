@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test"
 import { createHash } from "node:crypto"
-import { renderPdf } from "../src/testing.ts"
-import { orangeInk } from "../examples/print-colors.ts"
+import { renderPdf } from "../../src/testing.ts"
+import { orangeInk } from "../../examples/print-colors.ts"
 import type {
 	PdfDictionary,
 	PdfObjectBuilder,
@@ -9,7 +9,7 @@ import type {
 	PdfStream,
 	PdfVersion,
 	PdfTextBuilder,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 import {
 	array,
 	ascii,
@@ -29,7 +29,7 @@ import {
 	paintState,
 	serializePdf,
 	validatePdf,
-} from "../src/index.ts"
+} from "../../src/index.ts"
 
 describe("independent review regressions", () => {
 	it.each([4, 5, 6, 7])(

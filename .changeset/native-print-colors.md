@@ -1,5 +1,5 @@
 ---
-"mondrian.pdf": minor
+"mondrian.pdf": patch
 ---
 
 Add shared typed gray, RGB, CMYK, and named Separation paint APIs for graphics,

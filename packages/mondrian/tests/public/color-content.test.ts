@@ -78,8 +78,6 @@ it("preserves bound resources and stream entries while copying compressed data",
 	expect(compressed.stream.entries.Custom).toEqual(name("Preserved"))
 	expect(compressed.stream.byteEntries).toEqual(content.stream.byteEntries)
 	expect(compressed.stream.data).not.toBe(content.stream.data)
-	expect(Object.isFrozen(compressed)).toBe(true)
-	expect(Object.isFrozen(compressed.stream)).toBe(true)
 	expect(
 		validatePdf(colorPage(objects, compressed, compressed.resources)),
 	).toEqual([])

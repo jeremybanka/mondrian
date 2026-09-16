@@ -2,6 +2,15 @@ import { inflateSync } from "node:zlib"
 import { expect, it } from "vite-plus/test"
 import { compressColorContent, dictionary, stream } from "../../src/index.ts"
 
+it("freezes the compressed content and stream wrappers", () => {
+	const compressed = compressColorContent({
+		stream: stream({}, new Uint8Array()),
+		resources: dictionary({}),
+	})
+	expect(Object.isFrozen(compressed)).toBe(true)
+	expect(Object.isFrozen(compressed.stream)).toBe(true)
+})
+
 it("round-trips content across DEFLATE block transitions", () => {
 	// Fixed-seed xorshift bytes resist compression without ambient randomness.
 	let seed = 0x12345678

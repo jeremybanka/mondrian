@@ -74,7 +74,7 @@ it("proofs scoped graphics and JPEG placement", async () => {
 				pdf.graphics((g) =>
 					g
 						.rgbFill(0, 0, 1)
-						.rgbStroke(0, 0, 0)
+						.rgbStroke(1, 0, 1)
 						.lineWidth(4)
 						.moveTo(40, 10)
 						.lineTo(60, 10)

@@ -83,7 +83,7 @@ it("paints paths, scopes transforms, and places a JPEG at the requested size", a
 				pdf.graphics((g) =>
 					g
 						.rgbFill(0, 0, 1)
-						.rgbStroke(0, 0, 0)
+						.rgbStroke(1, 0, 1)
 						.lineWidth(4)
 						.moveTo(40, 10)
 						.lineTo(60, 10)
@@ -113,8 +113,8 @@ it("paints paths, scopes transforms, and places a JPEG at the requested size", a
 	expect(colorAt(20, 20)).toEqual([0, 255, 0, 255])
 	expect(colorAt(5, 5)).toEqual([255, 255, 255, 255])
 	expect(colorAt(50, 20)).toEqual([0, 0, 255, 255])
-	expect(colorAt(40, 20)).toEqual([0, 0, 0, 255])
-	expect(colorAt(30, 45)).toEqual([0, 0, 0, 255])
+	expect(colorAt(40, 20)).toEqual([255, 0, 255, 255])
+	expect(colorAt(30, 45)).toEqual([255, 0, 255, 255])
 	const [red, green, blue, alpha] = colorAt(80, 25)
 	expect(red).toBeGreaterThan(240)
 	expect(green).toBeLessThan(10)

@@ -25,6 +25,7 @@ export async function readPdf(bytes: Uint8Array) {
 			rotation: number
 			text: string
 		}[] = []
+		const pageFonts: { text: string; font: string }[][] = []
 		const pageCharacters: { text: string; x: number; y: number }[][] = []
 		for (let index = 0; index < pdfium.FPDF_GetPageCount(document); index++) {
 			const page = pdfium.FPDF_LoadPage(document, index)
@@ -35,6 +36,7 @@ export async function readPdf(bytes: Uint8Array) {
 				try {
 					const count = pdfium.FPDFText_CountChars(textPage)
 					const characters: { text: string; x: number; y: number }[] = []
+					const fonts: { text: string; font: string }[] = []
 					const coordinates = memory.malloc(16)
 					if (!coordinates)
 						throw new Error("Could not allocate text coordinates")
@@ -50,6 +52,36 @@ export async function readPdf(bytes: Uint8Array) {
 							) {
 								throw new Error("Could not read character origin")
 							}
+							const length = pdfium.FPDFText_GetFontInfo(
+								textPage,
+								character,
+								0,
+								0,
+								0,
+							)
+							if (length) {
+								const pointer = memory.malloc(length)
+								if (!pointer) throw new Error("Could not allocate font name")
+								try {
+									pdfium.FPDFText_GetFontInfo(
+										textPage,
+										character,
+										pointer,
+										length,
+										0,
+									)
+									fonts.push({
+										text: String.fromCodePoint(
+											pdfium.FPDFText_GetUnicode(textPage, character),
+										),
+										font: new TextDecoder().decode(
+											heap().subarray(pointer, pointer + length - 1),
+										),
+									})
+								} finally {
+									memory.free(pointer)
+								}
+							}
 							const values = new DataView(heap().buffer, coordinates, 16)
 							characters.push({
 								text: String.fromCodePoint(
@@ -63,6 +95,7 @@ export async function readPdf(bytes: Uint8Array) {
 						memory.free(coordinates)
 					}
 					pageCharacters.push(characters)
+					pageFonts.push(fonts)
 					pages.push({
 						width: pdfium.FPDF_GetPageWidthF(page),
 						height: pdfium.FPDF_GetPageHeightF(page),
@@ -88,6 +121,7 @@ export async function readPdf(bytes: Uint8Array) {
 		return {
 			pages,
 			pageCharacters,
+			pageFonts,
 			fileIds: [fileId(0), fileId(1)],
 			title: metadata("Title"),
 			author: metadata("Author"),

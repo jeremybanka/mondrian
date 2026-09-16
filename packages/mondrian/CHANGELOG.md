@@ -1,5 +1,11 @@
 # mondrian.pdf
 
+## 0.1.1
+
+### Patch Changes
+
+- d6dbed4: Expose PDF document, metadata, and object inspection through `mondrian.pdf/testing`.
+
 ## 0.1.0
 
 ### Minor Changes

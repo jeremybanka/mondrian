@@ -42,9 +42,22 @@ it("renders each page at the requested resolution and background", async () => {
 it("updates artifacts explicitly and verifies changes without overwriting the baseline", async () => {
 	const root = await mkdtemp(join(tmpdir(), "mondrian-artifact-contract-"))
 	try {
-		const pdf = createPdfDocument()
-		pdf.setPages(pdf.page({ mediaBox: rectangle(0, 0, 20, 20) }))
-		const bytes = pdf.serialize()
+		function solidPage(red: number, green: number, blue: number) {
+			const pdf = createPdfDocument()
+			pdf.setPages(
+				pdf.page({
+					mediaBox: rectangle(0, 0, 20, 20),
+					content: [
+						pdf.graphics((g) =>
+							g.rgbFill(red, green, blue).rectangle(0, 0, 20, 20).fill(),
+						),
+					],
+				}),
+			)
+			return pdf.serialize()
+		}
+		const bytes = solidPage(1, 0, 0)
+		const changedBytes = solidPage(0, 0, 1)
 		const directory = join(root, "baseline")
 		const options = {
 			directory,
@@ -77,15 +90,22 @@ it("updates artifacts explicitly and verifies changes without overwriting the ba
 		expect(
 			(await checkPdfArtifact(bytes, { ...options, mode: "verify" })).status,
 		).toBe("matched")
+		const changed = await checkPdfArtifact(changedBytes, {
+			...options,
+			mode: "verify",
+		})
+		expect(changed.status).toBe("mismatched")
+		expect(changed.pageDifferences).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ differingPixels: expect.any(Number) }),
+			]),
+		)
 		expect(
-			(
-				await checkPdfArtifact(bytes, {
-					...options,
-					mode: "verify",
-					background: "#ff0000",
-				})
-			).status,
-		).toBe("mismatched")
+			changed.pageDifferences.some(
+				({ differingPixels }) => differingPixels > 0,
+			),
+		).toBe(true)
+
 		expect(await baselineFiles()).toEqual(baseline)
 	} finally {
 		await rm(root, { recursive: true, force: true })
@@ -95,27 +115,39 @@ it("updates artifacts explicitly and verifies changes without overwriting the ba
 it("registers the Vitest matcher and fails it when a rendered page changes", async () => {
 	const root = await mkdtemp(join(tmpdir(), "mondrian-matcher-contract-"))
 	try {
-		const pdf = createPdfDocument()
-		pdf.setPages(pdf.page({ mediaBox: rectangle(0, 0, 20, 20) }))
-		const bytes = pdf.serialize()
+		function solidPage(red: number, green: number, blue: number) {
+			const pdf = createPdfDocument()
+			pdf.setPages(
+				pdf.page({
+					mediaBox: rectangle(0, 0, 20, 20),
+					content: [
+						pdf.graphics((g) =>
+							g.rgbFill(red, green, blue).rectangle(0, 0, 20, 20).fill(),
+						),
+					],
+				}),
+			)
+			return pdf.serialize()
+		}
+		const bytes = solidPage(1, 0, 0)
+		const changedBytes = solidPage(0, 0, 1)
 		const options = {
 			artifactRoot: join(root, "baseline"),
 			failureRoot: join(root, "failure"),
 			resolution: 72,
 		}
-		await expect(bytes).toMatchPdfArtifact("blank-page", {
+		await expect(bytes).toMatchPdfArtifact("solid-page", {
 			...options,
 			mode: "update",
 		})
-		await expect(bytes).toMatchPdfArtifact("blank-page", {
+		await expect(bytes).toMatchPdfArtifact("solid-page", {
 			...options,
 			mode: "verify",
 		})
 		await expect(
-			expect(bytes).toMatchPdfArtifact("blank-page", {
+			expect(changedBytes).toMatchPdfArtifact("solid-page", {
 				...options,
 				mode: "verify",
-				background: "#0000ff",
 			}),
 		).rejects.toThrow()
 	} finally {

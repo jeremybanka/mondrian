@@ -33,14 +33,14 @@ it.each([
 ] as const)(
 	"round-trips %s content through zlib-compatible Flate compression",
 	(_label, data) => {
-		const original = data.slice()
 		const bound = { stream: stream({}, data), resources: dictionary({}) }
+		const original = bound.stream.data.slice()
 		const compressed = compressColorContent(bound)
+		expect(bound.stream.data).toEqual(original)
 		expect(compressed.stream.entries.Filter).toEqual(name("FlateDecode"))
 		expect(new Uint8Array(inflateSync(compressed.stream.data))).toEqual(
 			original,
 		)
-		expect(data).toEqual(original)
 		expect(bound.stream.entries).not.toHaveProperty("Filter")
 		expect(compressColorContent(bound).stream.data).toEqual(
 			compressed.stream.data,

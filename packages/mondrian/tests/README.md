@@ -19,10 +19,14 @@ asserts. If a test needs repeated construction, use a local helper named for tha
 specific scenario. Avoid shared, generic example documents: unrelated tests
 should not inherit an arbitrary document's shape as part of their contract.
 
-The initial contracts cover page order, geometry, rotation, text and metadata
-preservation; explicit PDF versions; deterministic output; interoperability
-between the builders, validator, and serializer; reserved references; and
-rejection of invalid page ownership and reuse. Public tests import `mondrian.pdf`
+The contracts cover page order, geometry, rotation, text placement and metadata;
+explicit versions and identifiers; deterministic output; manually described
+object graphs and object primitives; validation failures; graphics and JPEG
+placement; and the rendering, artifact verification, and Vitest entrypoints.
+The reader also rejects cross-reference tables that required repair. Expected
+values come from each description or PDF semantics, rather than comparing two
+paths through the implementation. Graphics assertions sample solid interiors
+and allow JPEG color variation; exact rendered pages remain private proofs. Public tests import `mondrian.pdf`
 through its package exports, using the built JavaScript and declarations. Build,
 type-check, and test commands prepare those artifacts before resolving consumer
 imports. Moving source files without changing package imports does not change

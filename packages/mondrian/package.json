@@ -61,7 +61,7 @@
 		}
 	},
 	"devDependencies": {
-		"break-check": "0.7.1",
+		"break-check": "0.7.2",
 		"recoverage": "0.1.16",
 		"vitest": "4.1.11"
 	}

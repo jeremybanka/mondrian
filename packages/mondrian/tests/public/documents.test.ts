@@ -152,8 +152,10 @@ describe("document compatibility", () => {
 	it("rejects reusing a page in two positions instead of silently duplicating it", () => {
 		const pdf = createPdfDocument()
 		const page = pdf.page({ mediaBox: pageSizes.letter })
-		pdf.setPages(page, page)
-		expect(() => pdf.serialize()).toThrow(PdfValidationError)
+		expect(() => {
+			pdf.setPages(page, page)
+			pdf.serialize()
+		}).toThrow(PdfValidationError)
 	})
 
 	it("rejects pages and content owned by a different document", () => {

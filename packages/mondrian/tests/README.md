@@ -22,7 +22,11 @@ should not inherit an arbitrary document's shape as part of their contract.
 The contracts cover page order, geometry, rotation, text placement and metadata;
 explicit versions and identifiers; deterministic output; manually described
 object graphs and object primitives; validation failures; graphics and JPEG
-placement; and the rendering, artifact verification, and Vitest entrypoints.
+placement, independent fonts and images on shared pages; and the rendering,
+annotation, artifact verification, and Vitest entrypoints. Object-builder
+contracts preserve ownership, reachable reservations, and single assignment.
+Artifact verification compares changed painted content with identical render
+options and preserves baselines regardless of their directory layout.
 The reader also rejects cross-reference tables that required repair. Expected
 values come from each description or PDF semantics, rather than comparing two
 paths through the implementation. Graphics assertions sample solid interiors

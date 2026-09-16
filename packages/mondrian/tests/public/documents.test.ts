@@ -17,11 +17,13 @@ import {
 import type {
 	PdfCatalogDictionary,
 	PdfDocument,
+	PdfMetadata,
 	PdfPageDictionary,
 	PdfPagesDictionary,
 	PdfReference,
 	PdfVersion,
 } from "mondrian.pdf"
+import { readMetadata } from "./harness/read-metadata.ts"
 import { readPdf } from "./harness/read-pdf.ts"
 
 describe("document compatibility", () => {
@@ -247,5 +249,26 @@ describe("document compatibility", () => {
 			)
 			destination.serialize()
 		}).toThrow()
+	})
+})
+
+it("preserves explicitly supplied descriptive metadata and timestamps", async () => {
+	const metadata: PdfMetadata = {
+		subject: "Quarterly résumé",
+		keywords: "invoice, café",
+		creator: "Invoice authoring tool",
+		producer: "Accounting export",
+		creationDate: new Date("2026-01-02T03:04:05Z"),
+		modificationDate: new Date("2026-02-03T04:05:06Z"),
+	}
+	const pdf = createPdfDocument({ metadata })
+	pdf.setPages(pdf.page({ mediaBox: pageSizes.letter }))
+	expect(await readMetadata(pdf.serialize())).toEqual({
+		subject: "Quarterly résumé",
+		keywords: "invoice, café",
+		creator: "Invoice authoring tool",
+		producer: "Accounting export",
+		creationDate: "2026-01-02T03:04:05.000Z",
+		modificationDate: "2026-02-03T04:05:06.000Z",
 	})
 })

@@ -8,7 +8,8 @@ import {
 	defaultPdfArtifactMode,
 	renderPdf,
 } from "mondrian.pdf/testing"
-import "mondrian.pdf/vitest"
+import { installPdfArtifactMatchers } from "mondrian.pdf/vitest"
+import { createExpect } from "vitest"
 
 it("renders each page at the requested resolution and background", async () => {
 	const pdf = createPdfDocument()
@@ -164,4 +165,34 @@ it("defaults artifact verification to CI while honoring an explicit mode", () =>
 			MONDRIAN_PDF_ARTIFACT_MODE: "update",
 		}),
 	).toBe("update")
+})
+
+it("installs a working matcher on a supplied Vitest expect instance", async () => {
+	const root = await mkdtemp(join(tmpdir(), "mondrian-install-contract-"))
+	const consumerExpect = createExpect()
+	consumerExpect.setState(expect.getState())
+	// Prevent automatic registration on the global expect from masking a no-op installer.
+	consumerExpect.extend({
+		toMatchPdfArtifact() {
+			throw new Error("Consumer matcher has not been installed")
+		},
+	})
+	try {
+		installPdfArtifactMatchers(consumerExpect)
+		const pdf = createPdfDocument()
+		pdf.setPages(pdf.page({ mediaBox: rectangle(0, 0, 20, 20) }))
+		await consumerExpect(pdf.serialize()).toMatchPdfArtifact("blank", {
+			artifactRoot: root,
+			mode: "update",
+			resolution: 72,
+		})
+		await consumerExpect(pdf.serialize()).toMatchPdfArtifact("blank", {
+			artifactRoot: root,
+			mode: "verify",
+			resolution: 72,
+		})
+	} finally {
+		installPdfArtifactMatchers(expect)
+		await rm(root, { recursive: true, force: true })
+	}
 })

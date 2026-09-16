@@ -2,14 +2,14 @@
 
 `public/` defines behavior consumers can depend on across releases. Break Check
 restores this entire directory from the latest release, including the independent
-PDFium reader and TypeScript configuration. The public command
+PDFium and object readers and TypeScript configuration. The public command
 type-checks those tests before running them. Add assertions here only when a
 failure means an existing consumer capability has broken.
 
-The independent reader lives in `public/harness/`, with its own pinned dependency
+The independent readers live in `public/harness/`, with their own pinned dependency
 manifest and lockfile. Test commands install that isolated dependency graph with
 `--ignore-workspace --frozen-lockfile --ignore-scripts`, including after Break
-Check restores a released suite. The reader, its WASM, and its compatible types
+Check restores a released suite. PDFium, its WASM and compatible types, and the pdf-lib object decoder
 therefore travel with the historical tests rather than tracking Mondrian's
 production renderer dependency. Keep observation helpers and their dependencies
 inside this restored boundary.

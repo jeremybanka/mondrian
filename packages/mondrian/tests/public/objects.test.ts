@@ -1,4 +1,5 @@
 import { expect, it } from "vite-plus/test"
+import { readObject } from "./harness/read-object.ts"
 import {
 	array,
 	ascii,
@@ -68,4 +69,39 @@ it("serializes a binary stream body with its derived byte length", () => {
 	expect(body.slice(offset, offset + data.length)).toEqual(data)
 	expect(syntax.slice(offset + data.length)).toMatch(/^\s*endstream\s*$/u)
 	expect(() => serializePdfObjectBody(Number.NaN)).toThrow()
+})
+
+it("serializes arbitrary names, binary strings, scalars, and generation-qualified references faithfully", () => {
+	const binary = Uint8Array.of(0, 8, 9, 10, 12, 13, 40, 41, 92, 255)
+	const body = dictionary(
+		{
+			"sp ace/#é": array(null, true, false, -12.5, 0.0000001, reference(17, 2)),
+		},
+		dictionaryEntry(
+			nameBytes(Uint8Array.of(0x80, 0x20, 0x2f, 0x23, 0xff)),
+			array(
+				nameBytes(Uint8Array.of(0xff, 0x2f, 0x41)),
+				name("sp ace/#é"),
+				literalString(binary),
+				hexString(binary),
+			),
+		),
+	)
+	expect(readObject(serializePdfObjectBody(body))).toEqual(
+		new Map([
+			[
+				"7370206163652f23c3a9",
+				[null, true, false, -12.5, 0.0000001, { reference: [17, 2] }],
+			],
+			[
+				"80202f23ff",
+				[
+					{ name: [255, 47, 65] },
+					{ name: [115, 112, 32, 97, 99, 101, 47, 35, 195, 169] },
+					{ bytes: [0, 8, 9, 10, 12, 13, 40, 41, 92, 255] },
+					{ bytes: [0, 8, 9, 10, 12, 13, 40, 41, 92, 255] },
+				],
+			],
+		]),
+	)
 })

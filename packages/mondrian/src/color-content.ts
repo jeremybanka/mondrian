@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { deflateSync } from "node:zlib"
+import { dictionaryValue } from "./dictionary-lookup.ts"
 import type { PdfColorOperation } from "./color.ts"
 import {
 	ColorScope,
@@ -10,7 +12,7 @@ import {
 } from "./color.ts"
 import type { PdfObjectBuilder } from "./object-builder.ts"
 import type { PdfDictionary, PdfStream } from "./objects.ts"
-import { ascii, stream } from "./objects.ts"
+import { array, ascii, name, stream } from "./objects.ts"
 
 declare const colorContentBrand: unique symbol
 
@@ -24,8 +26,6 @@ export interface PdfBoundColorContent {
 	/** Install on the page or Form containing the stream, alongside Font/XObject resources. */
 	readonly resources: PdfDictionary
 }
-
-const bindings = new WeakMap<PdfStream, PdfDictionary>()
 
 const records = new WeakMap<
 	PdfColorContent,
@@ -88,10 +88,13 @@ export function bindColorContent(
 			commands += typeof part === "string" ? `${part}\n` : scope.encode(part)
 		commands += "Q\n"
 	}
-	const contentStream = stream({}, ascii(commands))
 	const resources = scope.resources()
-	if (Object.keys(resources.entries).length > 0)
-		bindings.set(contentStream, resources)
+	const contentStream = Object.freeze({
+		...stream({}, ascii(commands)),
+		...(Object.keys(resources.entries).length > 0
+			? { requiredResources: resources }
+			: {}),
+	})
 	return Object.freeze({ stream: contentStream, resources })
 }
 
@@ -99,5 +102,66 @@ export function bindColorContent(
 export function boundColorResources(
 	content: PdfStream,
 ): PdfDictionary | undefined {
-	return bindings.get(content)
+	return content.requiredResources
+}
+
+/** Compress bound content without discarding its resource requirements. */
+export function compressColorContent(
+	content: PdfBoundColorContent,
+): PdfBoundColorContent {
+	if (
+		dictionaryValue(content.stream, "Filter") !== undefined ||
+		dictionaryValue(content.stream, "DecodeParms") !== undefined
+	) {
+		throw new TypeError(
+			"Color content compression requires an unfiltered stream",
+		)
+	}
+	const compressed = Object.freeze({
+		...content.stream,
+		...stream(
+			{ ...content.stream.entries, Filter: name("FlateDecode") },
+			deflateSync(content.stream.data),
+			...(content.stream.byteEntries ?? []),
+		),
+	})
+	return Object.freeze({ stream: compressed, resources: content.resources })
+}
+
+/** Wrap bound content in a self-contained Form, retaining its resource requirements. */
+export function formColorContent(
+	content: PdfBoundColorContent,
+	bbox: readonly [number, number, number, number],
+): PdfStream {
+	if (
+		!Array.isArray(bbox) ||
+		bbox.length !== 4 ||
+		!bbox.every(Number.isFinite) ||
+		bbox[2] <= bbox[0] ||
+		bbox[3] <= bbox[1]
+	) {
+		throw new TypeError(
+			"A color Form requires a finite bounding box with positive width and height",
+		)
+	}
+	if (
+		dictionaryValue(content.stream, "Type") !== undefined ||
+		dictionaryValue(content.stream, "Subtype") !== undefined
+	) {
+		throw new TypeError("A color Form requires an ordinary content stream")
+	}
+	return Object.freeze({
+		...content.stream,
+		...stream(
+			{
+				...content.stream.entries,
+				Type: name("XObject"),
+				Subtype: name("Form"),
+				BBox: array(bbox[0], bbox[1], bbox[2], bbox[3]),
+				Resources: content.resources,
+			},
+			content.stream.data,
+			...(content.stream.byteEntries ?? []),
+		),
+	})
 }

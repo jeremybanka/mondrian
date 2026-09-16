@@ -1148,6 +1148,15 @@ function validateLeafPage(
 		}
 	}
 
+	validateFormResources(
+		resources,
+		resources,
+		`${path}.Resources`,
+		objects,
+		context,
+		new Set(),
+	)
+
 	validateRotation(entries.Rotate, `${path}.Rotate`, context)
 }
 
@@ -1480,6 +1489,15 @@ function validateBoundResources(
 ): void {
 	const required = boundColorResources(content)
 	if (required === undefined) return
+	if (!isDictionary(required)) {
+		add(
+			context,
+			"invalid-color-resource",
+			path,
+			"Content resource requirements must be a dictionary",
+		)
+		return
+	}
 	for (const [category, expected] of Object.entries(required.entries)) {
 		if (!isDictionary(expected)) continue
 		const actual = resolvedDictionary(
@@ -1510,5 +1528,59 @@ function validateBoundResources(
 				return
 			}
 		}
+	}
+}
+
+/** Forms can nest; an absent Form Resources dictionary falls back to the page. */
+function validateFormResources(
+	resources: PdfDictionary | undefined,
+	pageResources: PdfDictionary | undefined,
+	path: string,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
+	context: ValidationContext,
+	visited: Set<PdfStream>,
+): void {
+	const xObjects = resolvedDictionary(
+		dictionaryValue(resources, "XObject"),
+		objects,
+	)
+	if (xObjects === undefined) return
+	const entries: readonly (readonly [string, PdfValue | undefined])[] = [
+		...Object.entries(xObjects.entries),
+		...(xObjects.byteEntries ?? [])
+			.filter((entry) => Array.isArray(entry))
+			.map(([, value], index) => [`byteEntries[${index}]`, value] as const),
+	]
+	for (const [key, value] of entries) {
+		const target = isReference(value)
+			? resolveMatching(value, objects)?.value
+			: value
+		if (
+			!isStream(target) ||
+			!isPdfName(dictionaryValue(target, "Subtype"), "Form") ||
+			visited.has(target)
+		)
+			continue
+		visited.add(target)
+		const formPath = `${path}.XObject.${key}`
+		const formResourceValue = dictionaryValue(target, "Resources")
+		const formResources =
+			formResourceValue === undefined
+				? pageResources
+				: validateResourceDictionary(
+						formResourceValue,
+						`${formPath}.Resources`,
+						objects,
+						context,
+					)
+		validateBoundResources(target, formResources, formPath, objects, context)
+		validateFormResources(
+			formResources,
+			pageResources,
+			`${formPath}.Resources`,
+			objects,
+			context,
+			visited,
+		)
 	}
 }

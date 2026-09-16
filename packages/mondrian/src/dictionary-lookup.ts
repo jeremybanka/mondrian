@@ -5,7 +5,7 @@ import { encodePdfName, encodePdfNameBytes, isPdfName } from "./syntax.ts"
 
 /** Resolve a logical dictionary key regardless of its public representation. */
 export function dictionaryValue(
-	dictionary: PdfDictionary | undefined,
+	dictionary: Pick<PdfDictionary, "entries" | "byteEntries"> | undefined,
 	key: string,
 ): PdfValue | undefined {
 	const direct = dictionary?.entries[key]

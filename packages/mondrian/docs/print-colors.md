@@ -215,3 +215,30 @@ proves a printer's plates, color accuracy, PDF/X compliance, or prepress
 approval. ICC spaces/output intents, DeviceN, application swatch policy,
 Pantone authority, conversions, photographic CMYK images, trapping, and
 special finishes remain outside this API.
+
+### Transforming bound content
+
+Resource requirements are explicit in `PdfStream.requiredResources`, an authoring
+annotation that is not serialized into PDF syntax. Spreading a stream or cloning
+a complete document preserves this declaration. Preserve it when transforming a
+stream; constructing a new raw `stream({}, bytes)` intentionally describes raw
+content and does not recover requirements by parsing those bytes.
+
+Use `compressColorContent(bound)` for Flate compression and
+`formColorContent(bound, [xMin, yMin, xMax, yMax])` for a Form XObject. The latter
+installs the binding's resources and keeps its validation declaration. These
+helpers preserve the declaration while copying the stream data and entries.
+
+```ts
+const bound = bindColorContent(objects, fragments)
+const form = objects.add(
+	formColorContent(compressColorContent(bound), [0, 0, 100, 100]),
+)
+// Install `form` in the page's XObject dictionary and invoke it with Do.
+```
+
+Validation checks nested Form resource scopes as well as page Contents. A Form
+with no Resources dictionary uses the page's resources; a Form with its own
+Resources dictionary must supply its required entries there. Compression does
+not weaken these checks. Requirements are declarations, not a parser or audit of
+arbitrary raw content syntax.

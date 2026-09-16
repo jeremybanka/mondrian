@@ -105,4 +105,9 @@ export {
 	paintState,
 } from "./color.ts"
 export type { PdfColorContent, PdfBoundColorContent } from "./color-content.ts"
-export { colorContent, bindColorContent } from "./color-content.ts"
+export {
+	colorContent,
+	bindColorContent,
+	compressColorContent,
+	formColorContent,
+} from "./color-content.ts"

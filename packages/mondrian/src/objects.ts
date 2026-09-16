@@ -104,6 +104,8 @@ export interface PdfStream<
 	readonly entries: TEntries
 	readonly byteEntries?: TByteEntries
 	readonly data: Uint8Array
+	/** Authoring requirements for page/Form content; preserved by copies, not emitted into PDF syntax. */
+	readonly requiredResources?: PdfDictionary
 }
 
 export type PdfDirectObject =

@@ -235,13 +235,17 @@ describe("document compatibility", () => {
 	it("rejects pages and content owned by a different document", () => {
 		const source = createPdfDocument()
 		const destination = createPdfDocument()
-		expect(() =>
-			destination.setPages(source.page({ mediaBox: pageSizes.letter })),
-		).toThrow()
+		expect(() => {
+			destination.setPages(source.page({ mediaBox: pageSizes.letter }))
+			destination.serialize()
+		}).toThrow()
 		const font = source.standardFont("Helvetica")
 		const content = source.text((text) => text.font(font, 12).show("Foreign"))
-		expect(() =>
-			destination.page({ mediaBox: pageSizes.letter, content: [content] }),
-		).toThrow()
+		expect(() => {
+			destination.setPages(
+				destination.page({ mediaBox: pageSizes.letter, content: [content] }),
+			)
+			destination.serialize()
+		}).toThrow()
 	})
 })

@@ -1,5 +1,12 @@
 # mondrian.pdf
 
+## 0.1.2
+
+### Patch Changes
+
+- 38ed899: Add shared typed gray, RGB, CMYK, and named Separation paint APIs for graphics, live text, and object-builder content. Validate normalized channels, exponential tint transforms, ink conflicts, version requirements, and explicit opaque overprint/knockout states. Bind immutable cached color fragments into fresh document resources. Add text rendering modes, conformance proofs, and migration examples; document the supported print-color boundaries. Preserve explicit resource requirements through compression, Form construction, and document cloning, including validation of nested Form scopes. Compare resource references by object number and generation, and derive color-resource version requirements from emitted dictionaries so manual copies retain validation.
+- 07c74a8: Add npm version, runtime dependency count, and coverage badges to the package README.
+
 ## 0.1.1
 
 ### Patch Changes

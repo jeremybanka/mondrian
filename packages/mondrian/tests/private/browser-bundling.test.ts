@@ -6,6 +6,7 @@ import { promisify } from "node:util"
 import { runInNewContext } from "node:vm"
 import { inflateSync } from "node:zlib"
 import { expect, it } from "vite-plus/test"
+import type { PdfDictionary } from "mondrian.pdf"
 
 const execFileAsync = promisify(execFile)
 
@@ -38,8 +39,9 @@ it("compresses color content in a browser bundle without Node globals", async ()
 			original: Array.from(bound.stream.data),
 			compressed: Array.from(compressed.stream.data),
 			filter: compressed.stream.entries.Filter,
-			resourcesPreserved: compressed.resources === bound.resources &&
-				compressed.stream.requiredResources === bound.stream.requiredResources,
+			originalResources: bound.resources,
+			resources: compressed.resources,
+			requiredResources: compressed.stream.requiredResources,
 		})
 	`)
 	let output:
@@ -47,7 +49,9 @@ it("compresses color content in a browser bundle without Node globals", async ()
 				original: number[]
 				compressed: number[]
 				filter: unknown
-				resourcesPreserved: boolean
+				originalResources: PdfDictionary
+				resources: PdfDictionary
+				requiredResources: PdfDictionary | undefined
 		  }
 		| undefined
 	// A fresh VM supplies JavaScript globals, but no Buffer, process, or require.
@@ -62,7 +66,8 @@ it("compresses color content in a browser bundle without Node globals", async ()
 	})
 	expect(output).toBeDefined()
 	expect(output!.filter).toEqual({ kind: "name", value: "FlateDecode" })
-	expect(output!.resourcesPreserved).toBe(true)
+	expect(output!.resources).toEqual(output!.originalResources)
+	expect(output!.requiredResources).toEqual(output!.originalResources)
 	expect(Array.from(inflateSync(Uint8Array.from(output!.compressed)))).toEqual(
 		output!.original,
 	)

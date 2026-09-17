@@ -41,7 +41,7 @@
 		"test:semver": "pnpm test:once:public && break-check"
 	},
 	"dependencies": {
-		"@embedpdf/pdfium": "2.15.0",
+		"@embedpdf/pdfium": "2.15.1",
 		"@napi-rs/canvas": "1.0.9",
 		"fflate": "0.8.3",
 		"pdf-lib": "1.17.1"

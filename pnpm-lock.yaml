@@ -214,8 +214,8 @@ importers:
   packages/mondrian:
     dependencies:
       '@embedpdf/pdfium':
-        specifier: 2.15.0
-        version: 2.15.0
+        specifier: 2.15.1
+        version: 2.15.1
       '@napi-rs/canvas':
         specifier: 1.0.9
         version: 1.0.9
@@ -447,8 +447,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@embedpdf/pdfium@2.15.0':
-    resolution: {integrity: sha512-KgpRND2MYcdbhzb2EMb4WzWcJYrR0A6JXvhMv4WthEHKt6qmNo2v/MC68bpYvpveYT9GNnUnY/+TG5MpXY3pRw==}
+  '@embedpdf/pdfium@2.15.1':
+    resolution: {integrity: sha512-qDH4gEkGSQT0iM+07Hpm3LyvoB7PEFbW3Qyk6+LPkEYLJYfHagkHM1OzYlDq2EDOhJRguykTkzdMOT3/w27x5Q==}
 
   '@emnapi/core@1.11.1':
     resolution: {integrity: sha512-RSvbQmHzdKzNsLYa/wHrbc3KN4sYLKAdPZxqiM2HATqv/SBk2/ENSHpvXGaLOMcsAyz0poEGqkmmKYG3OWiJEQ==}
@@ -2228,7 +2228,7 @@ snapshots:
   '@dprint/win32-x64@0.57.4':
     optional: true
 
-  '@embedpdf/pdfium@2.15.0': {}
+  '@embedpdf/pdfium@2.15.1': {}
 
   '@emnapi/core@1.11.1':
     dependencies:

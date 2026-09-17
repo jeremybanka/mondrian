@@ -7,6 +7,7 @@ import {
 	writeFile,
 } from "node:fs/promises"
 import { createHash } from "node:crypto"
+import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -34,15 +35,20 @@ afterEach(async () => {
 describe("PDF visual artifacts", () => {
 	it("renders every page to deterministic PNG data", async () => {
 		const rendered = await renderPdf(examplePdf("Hello", 2), { resolution: 72 })
+		const packageJson = JSON.parse(
+			await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+		)
+		const pdfiumWasm = await readFile(
+			createRequire(import.meta.url).resolve("@embedpdf/pdfium/pdfium.wasm"),
+		)
 
 		expect(rendered).toMatchObject({
 			background: "#ffffff",
 			renderAnnotations: true,
 			renderer: {
 				name: "pdfium",
-				version: "2.14.4",
-				wasmSha256:
-					"c0af5a6aca30d7e54a149c3a68e317116ca906d6edc28fd3318b12c7d9478ac8",
+				version: packageJson.dependencies["@embedpdf/pdfium"],
+				wasmSha256: createHash("sha256").update(pdfiumWasm).digest("hex"),
 			},
 			resolution: 72,
 		})
@@ -173,6 +179,111 @@ describe("PDF visual artifacts", () => {
 			path: "manifest.json",
 		})
 	})
+
+	it.each(["update", "verify"] as const)(
+		"preserves matching baselines across renderer upgrades in %s mode",
+		async (mode) => {
+			const directory = await temporaryDirectory()
+			const bytes = examplePdf("Renderer upgrade")
+			await checkPdfArtifact(bytes, {
+				directory,
+				mode: "update",
+				resolution: 72,
+			})
+			const manifestPath = join(directory, "manifest.json")
+			const pagePath = join(directory, "page-001.png")
+			const expectedPage = await readFile(pagePath)
+			const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
+			manifest.renderer = {
+				name: "previous-renderer",
+				version: "1.0.0",
+				wasmSha256: "0".repeat(64),
+			}
+			const baseline = JSON.stringify(manifest)
+			await writeFile(manifestPath, baseline)
+
+			const result = await checkPdfArtifact(bytes, {
+				directory,
+				mode,
+				resolution: 72,
+			})
+			expect(result).toMatchObject({
+				status: "matched",
+				changes: [],
+				pageDifferences: [],
+			})
+			expect(await readFile(manifestPath, "utf8")).toBe(baseline)
+			expect(await readFile(pagePath)).toEqual(expectedPage)
+
+			const changed = await checkPdfArtifact(examplePdf("Changed pixels"), {
+				directory,
+				mode: "verify",
+				resolution: 72,
+			})
+			expect(changed.status).toBe("mismatched")
+			expect(changed.changes).toEqual([
+				{ kind: "changed", path: "page-001.png" },
+			])
+			expect(changed.pageDifferences[0]!.differingPixels).toBeGreaterThan(0)
+		},
+	)
+
+	it.each([
+		["resolution", 144],
+		["background", "#000000"],
+		["renderAnnotations", false],
+		["pages", [{ file: "page-001.png", width: 1, height: 1 }]],
+	] as const)(
+		"rejects changed %s metadata even when pixels match",
+		async (key, value) => {
+			const directory = await temporaryDirectory()
+			const bytes = examplePdf("Settings")
+			await checkPdfArtifact(bytes, {
+				directory,
+				mode: "update",
+				resolution: 72,
+			})
+			const manifestPath = join(directory, "manifest.json")
+			const manifest = JSON.parse(await readFile(manifestPath, "utf8"))
+			manifest[key] = value
+			await writeFile(manifestPath, JSON.stringify(manifest))
+
+			const result = await checkPdfArtifact(bytes, {
+				directory,
+				mode: "verify",
+				resolution: 72,
+			})
+			expect(result).toMatchObject({
+				status: "mismatched",
+				changes: [{ kind: "changed", path: "manifest.json" }],
+				pageDifferences: [],
+			})
+		},
+	)
+
+	it.each(["{", "null"])(
+		"reports an invalid manifest (%s) as a mismatch",
+		async (manifest) => {
+			const directory = await temporaryDirectory()
+			const bytes = examplePdf("Invalid manifest")
+			await checkPdfArtifact(bytes, {
+				directory,
+				mode: "update",
+				resolution: 72,
+			})
+			await writeFile(join(directory, "manifest.json"), manifest)
+
+			const result = await checkPdfArtifact(bytes, {
+				directory,
+				mode: "verify",
+				resolution: 72,
+			})
+			expect(result).toMatchObject({
+				status: "mismatched",
+				changes: [{ kind: "changed", path: "manifest.json" }],
+			})
+		},
+	)
 
 	it("compares decoded pixels rather than PNG file bytes", async () => {
 		const root = await temporaryDirectory()

@@ -13,6 +13,7 @@ import {
 	writeFile,
 } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
+import { isDeepStrictEqual } from "node:util"
 import {
 	basename,
 	dirname,
@@ -250,12 +251,33 @@ async function compareArtifacts(
 		} else if (
 			isPageFile(path)
 				? pageIsDifferent(pageDifferences.get(path))
-				: !equalBytes(expectedBytes, actualBytes)
+				: path === "manifest.json"
+					? !equalManifests(expectedBytes, actualBytes)
+					: !equalBytes(expectedBytes, actualBytes)
 		) {
 			changes.push(Object.freeze({ kind: "changed", path }))
 		}
 	}
 	return { changes, pageDiffOutputs }
+}
+
+function equalManifests(expected: Uint8Array, actual: Uint8Array): boolean {
+	try {
+		const decoder = new TextDecoder()
+		const expectedManifest = JSON.parse(
+			decoder.decode(expected),
+		) as PdfArtifactManifest
+		const actualManifest = JSON.parse(
+			decoder.decode(actual),
+		) as PdfArtifactManifest
+		// Keep the baseline's renderer provenance; only the visual contract must match.
+		return isDeepStrictEqual(
+			{ ...expectedManifest, renderer: undefined },
+			{ ...actualManifest, renderer: undefined },
+		)
+	} catch {
+		return false
+	}
 }
 
 function pageIsDifferent(difference: PdfPageDifference | undefined): boolean {

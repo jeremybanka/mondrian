@@ -82,9 +82,12 @@ it("renders the invoice", async () => {
 Local test runs update the artifact directory beside the test file and pass once
 the PDF renders successfully. Review the resulting PNG and manifest changes in
 Git, then commit or revert them. When `CI` is truthy, the matcher instead fails
-if those files would be added, changed, or removed. A failure report containing
-the actual PDF, expected and actual page images, pixel diffs, and an HTML contact
-sheet is written under `artifacts/pdf/`.
+on changed pixels or rendering settings and on added or removed artifacts.
+The manifest records the renderer version and WASM hash as provenance. Renderer
+upgrades alone do not fail verification or rewrite matching baselines; the
+recorded renderer identifies the engine that originally produced the baseline.
+A failure report containing the actual PDF, expected and actual page images,
+pixel diffs, and an HTML contact sheet is written under `artifacts/pdf/`.
 
 Set `MONDRIAN_PDF_ARTIFACT_MODE=update` or `verify` to override environment
 detection. Matcher options can also select the mode, resolution, background,

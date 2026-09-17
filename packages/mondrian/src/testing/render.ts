@@ -5,10 +5,16 @@ import { createCanvas } from "@napi-rs/canvas"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { createRequire } from "node:module"
+import { dirname, resolve } from "node:path"
 
 const require = createRequire(import.meta.url)
-const pdfiumWasm = readFileSync(require.resolve("@embedpdf/pdfium/pdfium.wasm"))
+const pdfiumWasmPath = require.resolve("@embedpdf/pdfium/pdfium.wasm")
+const pdfiumWasm = readFileSync(pdfiumWasmPath)
 const pdfiumWasmSha256 = createHash("sha256").update(pdfiumWasm).digest("hex")
+// PDFium exports its WASM in dist/, but does not export package.json.
+const pdfiumPackage = JSON.parse(
+	readFileSync(resolve(dirname(pdfiumWasmPath), "../package.json"), "utf8"),
+) as { version: string }
 
 const pdfiumBitmapBgra = 4
 const pdfiumRenderAnnotations = 0x01
@@ -17,7 +23,7 @@ const pdfiumRenderReverseByteOrder = 0x10
 
 export const pdfArtifactRenderer = Object.freeze({
 	name: "pdfium",
-	version: "2.14.4",
+	version: pdfiumPackage.version,
 	wasmSha256: pdfiumWasmSha256,
 })
 

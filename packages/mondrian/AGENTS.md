@@ -138,10 +138,13 @@ the generated report and expected, actual, and diff images under
 
 Mondrian rasterizes through pinned PDFium WebAssembly and compares decoded
 pixels exactly. The proof is therefore independent of the host operating
-system and does not use a tolerance that can hide small regressions. Renderer
-identity, resolution, background, and annotation settings are part of the
-visual contract. Treat changes to them as deliberate baseline migrations and
-review every resulting page.
+system and does not use a tolerance that can hide small regressions. Resolution,
+background, and annotation settings are part of the visual contract. Treat
+changes to them as deliberate baseline migrations and review every resulting
+page. Renderer version and WASM hash are provenance: record the engine that
+produced each baseline, but do not fail verification or rewrite a matching
+baseline solely because the renderer changed. Renderer upgrades still compare
+every page's decoded pixels exactly; review any resulting pixel changes.
 
 For another test runner, use the primitives from `mondrian.pdf/testing` and
 preserve the same local-update/CI-verify policy.

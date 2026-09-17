@@ -1,5 +1,13 @@
 # mondrian.pdf
 
+## 0.1.4
+
+### Patch Changes
+
+- bdd8ee8: Treat renderer metadata as provenance in PDF visual artifacts, so PDFium upgrades
+  with identical pixels and rendering settings pass without rewriting baselines.
+  Report the installed PDFium version instead of a hardcoded version.
+
 ## 0.1.3
 
 ### Patch Changes

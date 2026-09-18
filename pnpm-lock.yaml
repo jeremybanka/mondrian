@@ -227,8 +227,8 @@ importers:
         version: 1.17.1
     devDependencies:
       break-check:
-        specifier: 0.7.2
-        version: 0.7.2(supports-color@7.2.0)
+        specifier: 0.7.3
+        version: 0.7.3(supports-color@7.2.0)
       recoverage:
         specifier: 0.1.16
         version: 0.1.16(supports-color@7.2.0)(typescript@7.0.2)
@@ -1471,8 +1471,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  break-check@0.7.2:
-    resolution: {integrity: sha512-A8sWvxRZ0JExrti++MrtkHEc6uaXc1DaRn3HsvkXgaHKqYIY9+TseVPyMXaadpgGjZ3B2vV0+soK5/XjIgDFJQ==}
+  break-check@0.7.3:
+    resolution: {integrity: sha512-nNl1Yxy4hKH1/bRVRjxzCiNWsohwhzf3v9g9qltcd0VIosw7hJOgy8XyXxiPm8v6UmugXNdMuVFyZ6tFSqXU4g==}
     hasBin: true
 
   cac@7.0.0:
@@ -1494,8 +1494,8 @@ packages:
       zod:
         optional: true
 
-  comline@0.8.0:
-    resolution: {integrity: sha512-Np5SpA0LnzFMWcUvgPFypzh7rf98QuzGA5IbjHNMs0UjGcjAh5twPF0QvJqg4YRkWFBHxZ13EzlUpabxBUYT+g==}
+  comline@0.8.1:
+    resolution: {integrity: sha512-FSg4FZRIC4WOlN4Kg8KPLBufj+2crxZ/ZC+Q97rP1q+kEWOBnSaVJuc1rCM/JHx2KVtHd3Jaap9lpTlYAZwdDg==}
     peerDependencies:
       arktype: ^2.1.28
       zod: ^4.2.0
@@ -1872,8 +1872,8 @@ packages:
     resolution: {integrity: sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==}
     engines: {node: '>=6'}
 
-  treetrunks@0.1.11:
-    resolution: {integrity: sha512-3L5O5w3AGZd47pGpTNEQAfp68pSIQCeundsUZnPLPtg4TYL87qmcSJsvoqLeRUXtmL8W7JycaD3gd+i2SCYQrQ==}
+  treetrunks@0.1.12:
+    resolution: {integrity: sha512-x9XbZAus9Y4y7WRke6DwOrxmAxrwXNVv/wSmO9aNEfO92gu4Jau/4lmfXE1untxNle1WygPX2wriCtf+oYKMmg==}
 
   treetrunks@0.1.7:
     resolution: {integrity: sha512-QpS2El77DaQYyN9Hwyeaswaa8v1mfeMnRif1ayzV4lyMNnhnbwHbVKoZyheA35OZJJm88yhkyKExXG2tyWlqDQ==}
@@ -2930,10 +2930,10 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  break-check@0.7.2(supports-color@7.2.0):
+  break-check@0.7.3(supports-color@7.2.0):
     dependencies:
       arktype: 2.2.3
-      comline: 0.8.0(arktype@2.2.3)
+      comline: 0.8.1(arktype@2.2.3)
       minimatch: 10.2.6
       simple-git: 3.36.0(supports-color@7.2.0)
       takua: 0.2.3
@@ -2951,10 +2951,10 @@ snapshots:
     optionalDependencies:
       arktype: 2.2.0
 
-  comline@0.8.0(arktype@2.2.3):
+  comline@0.8.1(arktype@2.2.3):
     dependencies:
       '@standard-schema/spec': 1.1.0
-      treetrunks: 0.1.11
+      treetrunks: 0.1.12
     optionalDependencies:
       arktype: 2.2.3
 
@@ -3320,7 +3320,7 @@ snapshots:
 
   totalist@3.0.1: {}
 
-  treetrunks@0.1.11: {}
+  treetrunks@0.1.12: {}
 
   treetrunks@0.1.7: {}
 

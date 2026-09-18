@@ -48,7 +48,7 @@
 	},
 	"devDependencies": {
 		"break-check": "0.7.3",
-		"recoverage": "0.1.16",
+		"recoverage": "0.1.17",
 		"vitest": "4.1.11"
 	},
 	"peerDependencies": {

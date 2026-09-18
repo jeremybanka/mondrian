@@ -8,6 +8,11 @@ allowBuilds:
 blockExoticSubdeps: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
+  - break-check
+  - comline
+  - recoverage
+  - takua
+  - treetrunks
   - typescript@7.0.2
   - "@typescript/typescript-aix-ppc64@7.0.2"
   - "@typescript/typescript-darwin-arm64@7.0.2"

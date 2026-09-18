@@ -34,6 +34,18 @@
 	],
 	"packageRules": [
 		{
+			"description": "Exempt packages authored by Jeremy Banka from release age checks",
+			"matchDatasources": ["npm"],
+			"matchPackageNames": [
+				"break-check",
+				"comline",
+				"recoverage",
+				"takua",
+				"treetrunks"
+			],
+			"minimumReleaseAge": null
+		},
+		{
 			"matchPackageNames": ["jdx/mise"],
 			"matchDatasources": ["github-releases"],
 			"ignoreUnstable": true

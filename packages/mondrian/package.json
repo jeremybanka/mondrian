@@ -49,7 +49,7 @@
 	"devDependencies": {
 		"break-check": "0.7.3",
 		"recoverage": "0.1.17",
-		"vitest": "4.1.11"
+		"vitest": "5.0.1"
 	},
 	"peerDependencies": {
 		"vitest": ">=4.1.3"

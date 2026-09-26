@@ -23,6 +23,7 @@ import { nameTokenBytes } from "./plate-names.ts"
 import { planPdfPlates, replaceEntries } from "./plate-plan.ts"
 import type {
 	PlateColorSpace,
+	PlateForm,
 	PlateInk,
 	PlatePaint,
 	PlateScope,
@@ -72,7 +73,7 @@ export function previewPdfPlates(
 		}
 		// A scope identifies the Form, page resource context, and inherited paint.
 		// The cache is local to this plate; other plates need their own projection.
-		const projectedForms = new Map<PlateScope, PdfReference>()
+		const projectedForms = new Map<PlateForm, PdfReference>()
 		const emit = (
 			scope: PlateScope,
 		): { data: Uint8Array; resources: PdfDictionary } => {
@@ -80,34 +81,35 @@ export function previewPdfPlates(
 			const forms = new Map<string, PdfValue>()
 			const formNames = new Map<PdfReference, string>()
 			let spotDefinition: PdfValue | undefined
-			const color = (paint: PlatePaint, stroke: boolean): void => {
-				const source = paint.color
-				const value = coverage(paint, plate)!
+			const color = (
+				source: PlatePaint["color"],
+				value: number,
+				stroke: boolean,
+			): void => {
 				if (
 					source.space === "spot" &&
-					source.ink === plate.ink &&
-					plate.colorSpace === "spot"
+					plate.colorSpace === "spot" &&
+					source.ink === plate.ink
 				) {
-					spotDefinition = source.definition!
+					spotDefinition = source.definition
 					commands.push(
 						`/PlateInk ${stroke ? "CS" : "cs"}`,
 						`${formatPdfNumber(value)} ${stroke ? "SCN" : "scn"}`,
 					)
 				} else {
 					const components = [0, 0, 0, 0]
-					if (plate.component !== undefined) components[plate.component] = value
+					if (plate.colorSpace === "cmyk") components[plate.component] = value
 					commands.push(
 						`${components.map(formatPdfNumber).join(" ")} ${stroke ? "K" : "k"}`,
 					)
 				}
 			}
 			for (const instruction of scope.instructions) {
-				const { op, operands } = instruction
-				if (instruction.form) {
+				if (instruction.kind === "form") {
 					let projected = projectedForms.get(instruction.form)
 					if (projected === undefined) {
 						const nested = emit(instruction.form)
-						const source = instruction.form.source!
+						const source = instruction.form.source
 						const entries = replaceEntries(source, {
 							Resources: nested.resources,
 							Filter: undefined,
@@ -131,21 +133,32 @@ export function previewPdfPlates(
 					commands.push(`${key} Do`)
 					continue
 				}
-				const fill =
-					instruction.fill !== undefined &&
-					coverage(instruction.fill, plate) !== undefined
-				const stroke =
-					instruction.stroke !== undefined &&
-					coverage(instruction.stroke, plate) !== undefined
-				if (fill) color(instruction.fill!, false)
-				if (stroke) color(instruction.stroke!, true)
-				if (instruction.textMode !== undefined) {
+				const { op, operands } = instruction
+				if (instruction.kind === "raw") {
+					commands.push(`${operands.join(" ")} ${op}`)
+					continue
+				}
+				const fillValue =
+					instruction.fill === undefined
+						? undefined
+						: coverage(instruction.fill, plate)
+				const strokeValue =
+					instruction.stroke === undefined
+						? undefined
+						: coverage(instruction.stroke, plate)
+				if (instruction.fill !== undefined && fillValue !== undefined)
+					color(instruction.fill.color, fillValue, false)
+				if (instruction.stroke !== undefined && strokeValue !== undefined)
+					color(instruction.stroke.color, strokeValue, true)
+				const fill = fillValue !== undefined
+				const stroke = strokeValue !== undefined
+				if (instruction.kind === "text") {
 					const mode = fill ? (stroke ? 2 : 0) : stroke ? 1 : 3
 					commands.push(
 						`${mode + (instruction.textMode >= 4 ? 4 : 0)} Tr`,
 						`${operands.join(" ")} ${op}`,
 					)
-				} else if (instruction.fill || instruction.stroke) {
+				} else {
 					if (["b", "b*", "s"].includes(op)) commands.push("h")
 					commands.push(
 						fill
@@ -160,7 +173,7 @@ export function previewPdfPlates(
 								? "S"
 								: "n",
 					)
-				} else commands.push(`${operands.join(" ")} ${op}`)
+				}
 			}
 			const resources = replaceEntries(scope.resources, {
 				ColorSpace:
@@ -215,15 +228,17 @@ export function previewPdfPlates(
 /** undefined means leave this plate untouched; zero means knock out its ink. */
 function coverage(paint: PlatePaint, plate: PlateInk): number | undefined {
 	const { color, overprint, mode } = paint
-	const addressed =
-		color.space === "cmyk"
-			? plate.colorSpace === "cmyk"
-			: plate.colorSpace === "spot" && plate.ink === color.ink
-	if (!addressed) return overprint ? undefined : 0
-	const value = color.components[color.space === "cmyk" ? plate.component! : 0]!
-	return overprint && mode === 1 && color.space === "cmyk" && value === 0
-		? undefined
-		: value
+	if (color.space === "cmyk" && plate.colorSpace === "cmyk") {
+		const value = color.components[plate.component]
+		return overprint && mode === 1 && value === 0 ? undefined : value
+	}
+	if (
+		color.space === "spot" &&
+		plate.colorSpace === "spot" &&
+		plate.ink === color.ink
+	)
+		return color.components[0]
+	return overprint ? undefined : 0
 }
 
 function resourceDictionary(

@@ -18,25 +18,37 @@ import type { ContentInstruction } from "./plate-content.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
-export interface PlateInk {
-	readonly name: string
-	readonly colorSpace: PlateColorSpace
-	readonly component?: number
-	/** Canonical PDF name token; identity is byte-based, independent of display. */
-	readonly ink?: string
-}
+type CmykComponent = 0 | 1 | 2 | 3
+type CmykComponents = readonly [number, number, number, number]
+type SpotComponents = readonly [number]
+type TextMode = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 
-interface Color {
-	readonly space: PlateColorSpace
-	readonly components: readonly number[]
-	readonly definition?: PdfValue
-	readonly ink?: string
-}
+export type PlateInk =
+	| {
+			readonly name: string
+			readonly colorSpace: "cmyk"
+			readonly component: CmykComponent
+	  }
+	| {
+			readonly name: string
+			readonly colorSpace: "spot"
+			/** Canonical PDF name token; identity is byte-based, independent of display. */
+			readonly ink: string
+	  }
+
+type Color =
+	| { readonly space: "cmyk"; readonly components: CmykComponents }
+	| {
+			readonly space: "spot"
+			readonly components: SpotComponents
+			readonly definition: PdfValue
+			readonly ink: string
+	  }
 
 export interface PlatePaint {
 	readonly color: Color
 	readonly overprint: boolean
-	readonly mode: number
+	readonly mode: 0 | 1
 }
 
 interface State {
@@ -46,23 +58,34 @@ interface State {
 	strokeOverprint: boolean
 	fillOpacity: number
 	strokeOpacity: number
-	mode: number
-	textMode: number
+	mode: 0 | 1
+	textMode: TextMode
 	textKnockout: boolean
 }
 
-export interface PlateInstruction extends ContentInstruction {
-	readonly fill?: PlatePaint
-	readonly stroke?: PlatePaint
-	readonly textMode?: number
-	readonly form?: PlateScope
-}
+type PathPaint =
+	| { readonly fill: PlatePaint; readonly stroke: PlatePaint | undefined }
+	| { readonly fill: undefined; readonly stroke: PlatePaint }
+
+export type PlateInstruction =
+	| (ContentInstruction & { readonly kind: "raw" })
+	| (ContentInstruction & { readonly kind: "path" } & PathPaint)
+	| (ContentInstruction & {
+			readonly kind: "text"
+			readonly fill: PlatePaint | undefined
+			readonly stroke: PlatePaint | undefined
+			readonly textMode: TextMode
+	  })
+	| { readonly kind: "form"; readonly form: PlateForm }
 
 export interface PlateScope {
 	readonly resources: PdfDictionary
 	readonly states: ReadonlyMap<string, PdfDictionary>
 	readonly instructions: readonly PlateInstruction[]
-	readonly source?: PdfStream
+}
+
+export interface PlateForm extends PlateScope {
+	readonly source: PdfStream
 }
 
 export interface PlatePage {
@@ -168,8 +191,8 @@ export function planPdfPlates(
 		return value
 	}
 	const plates: PlateInk[] = permitted.has("cmyk")
-		? processNames.map((name, component) => ({
-				name,
+		? ([0, 1, 2, 3] as const).map((component) => ({
+				name: processNames[component],
 				colorSpace: "cmyk",
 				component,
 			}))
@@ -310,7 +333,7 @@ export function planPdfPlates(
 	const activeForms = new Set<PdfStream>()
 	const formPlans = new WeakMap<
 		PdfStream,
-		WeakMap<PdfDictionary, Map<string, PlateScope>>
+		WeakMap<PdfDictionary, Map<string, PlateForm>>
 	>()
 	const scope = (
 		source: string,
@@ -318,7 +341,6 @@ export function planPdfPlates(
 		pageResources: PdfDictionary,
 		initial: State,
 		location: string,
-		form?: PdfStream,
 	): PlateScope => {
 		try {
 			for (const [alias, value] of presentItems(
@@ -410,13 +432,16 @@ export function planPdfPlates(
 							throw new TypeError("Implicit DeviceGray color is not permitted")
 						const components = operands.map(Number)
 						if (
-							components.length !== (color.space === "cmyk" ? 4 : 1) ||
 							components.some(
 								(value) => !Number.isFinite(value) || value < 0 || value > 1,
 							)
 						)
 							throw new TypeError("Invalid plate color components")
-						state[channel] = { ...color, components }
+						if (color.space === "cmyk" && isCmykComponents(components))
+							state[channel] = { ...color, components }
+						else if (color.space === "spot" && isSpotComponents(components))
+							state[channel] = { ...color, components }
+						else throw new TypeError("Invalid plate color components")
 					}
 					continue
 				} else if (op === "gs") {
@@ -449,10 +474,11 @@ export function planPdfPlates(
 					}
 					if (get("op") !== undefined)
 						state.fillOverprint = get("op") as boolean
-					if (get("OPM") !== undefined) {
-						if (get("OPM") !== 0 && get("OPM") !== 1)
+					const overprintMode = get("OPM")
+					if (overprintMode !== undefined) {
+						if (overprintMode !== 0 && overprintMode !== 1)
 							throw new TypeError("Invalid overprint mode")
-						state.mode = get("OPM") as number
+						state.mode = overprintMode
 					}
 					for (const key of ["ca", "CA"]) {
 						const alpha = get(key)
@@ -514,7 +540,7 @@ export function planPdfPlates(
 					)
 				} else if (op === "Tr") {
 					const mode = Number(operands[0])
-					if (!Number.isInteger(mode) || mode < 0 || mode > 7)
+					if (!isTextMode(mode))
 						throw new TypeError("Invalid text rendering mode")
 					state.textMode = mode
 					continue
@@ -525,7 +551,7 @@ export function planPdfPlates(
 				} else if (pathPaints.has(op) || textPaints.has(op)) {
 					const text = textPaints.has(op)
 					if (text && !textHasGlyphs(instruction)) {
-						instructions.push(instruction)
+						instructions.push({ ...instruction, kind: "raw" })
 						continue
 					}
 					const mode = state.textMode % 4
@@ -549,12 +575,28 @@ export function planPdfPlates(
 						throw new TypeError(
 							"Plate previews do not support combined fill and stroke with unequal opacities (implicit knockout group)",
 						)
-					instructions.push({
-						...instruction,
-						...(fill ? { fill: paint("fill") } : {}),
-						...(stroke ? { stroke: paint("stroke") } : {}),
-						...(text ? { textMode: state.textMode } : {}),
-					})
+					if (text)
+						instructions.push({
+							...instruction,
+							kind: "text",
+							textMode: state.textMode,
+							fill: fill ? paint("fill") : undefined,
+							stroke: stroke ? paint("stroke") : undefined,
+						})
+					else if (fill)
+						instructions.push({
+							...instruction,
+							kind: "path",
+							fill: paint("fill"),
+							stroke: stroke ? paint("stroke") : undefined,
+						})
+					else
+						instructions.push({
+							...instruction,
+							kind: "path",
+							fill: undefined,
+							stroke: paint("stroke"),
+						})
 					continue
 				} else if (op === "Do") {
 					const key = tokenName(operands[0])
@@ -595,24 +637,26 @@ export function planPdfPlates(
 					if (nested === undefined) {
 						activeForms.add(value)
 						const ownResources = entry(value, "Resources")
-						nested = scope(
-							readStream(value),
-							// PDF 1.6 §3.7.2: missing Form Resources falls back to the
-							// page, even when an enclosing Form has private resources.
-							ownResources === undefined ? pageResources : dict(ownResources),
-							pageResources,
-							state,
-							`${location} / XObject ${key}`,
-							value,
-						)
+						nested = {
+							...scope(
+								readStream(value),
+								// PDF 1.6 §3.7.2: missing Form Resources falls back to the
+								// page, even when an enclosing Form has private resources.
+								ownResources === undefined ? pageResources : dict(ownResources),
+								pageResources,
+								state,
+								`${location} / XObject ${key}`,
+							),
+							source: value,
+						}
 						activeForms.delete(value)
 						variants.set(stateKey, nested)
 					}
-					instructions.push({ ...instruction, form: nested })
+					instructions.push({ kind: "form", form: nested })
 					continue
 				} else if (!passthrough.has(op))
 					throw new TypeError(`Unsupported plate content operator ${op}`)
-				instructions.push(instruction)
+				instructions.push({ ...instruction, kind: "raw" })
 			}
 			if (stack.length !== 0)
 				throw new TypeError("Unbalanced q in plate content")
@@ -620,7 +664,6 @@ export function planPdfPlates(
 				resources,
 				states,
 				instructions,
-				...(form ? { source: form } : {}),
 			}
 		} catch (error) {
 			throw new TypeError(
@@ -712,13 +755,31 @@ export function planPdfPlates(
 	return { plates, pages, pageBranches }
 }
 
+function isCmykComponents(values: readonly number[]): values is CmykComponents {
+	return values.length === 4
+}
+
+function isSpotComponents(values: readonly number[]): values is SpotComponents {
+	return values.length === 1
+}
+
+function isTextMode(value: number): value is TextMode {
+	return Number.isInteger(value) && value >= 0 && value <= 7
+}
+
 /** Form resources are fixed by the source and page context; only paint is baked in.
  * Named ink consistency is validated separately, so equivalent references to an
  * ink must not prevent sharing. Geometry and layout remain inherited at render time.
  */
 function inheritedPaintKey(state: State): string {
 	const colorKey = (color: Color | undefined) =>
-		color === undefined ? null : [color.space, color.components, color.ink]
+		color === undefined
+			? null
+			: [
+					color.space,
+					color.components,
+					color.space === "spot" ? color.ink : undefined,
+				]
 	return JSON.stringify({
 		...state,
 		fill: colorKey(state.fill),

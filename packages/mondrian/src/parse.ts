@@ -55,6 +55,7 @@ class DocumentParser {
 	readonly budget: DecodeBudget
 	readonly entries = new Map<number, XrefEntry>()
 	readonly objects = new Map<number, PdfIndirectObject>()
+	readonly crossReferenceOffsets = new Set<number>()
 	readonly loading = new Set<number>()
 	readonly objectStreams = new Map<
 		number,
@@ -125,7 +126,12 @@ class DocumentParser {
 			if (number >= size) this.entries.delete(number)
 		}
 		for (const [number, entry] of this.entries) {
-			if (number > 0 && entry.type !== 0) this.load(number)
+			if (number === 0 || entry.type === 0) continue
+			// Consumed cross-reference streams describe file revisions, not the
+			// current object graph. Match offsets so reused object numbers survive.
+			if (entry.type === 1 && this.crossReferenceOffsets.has(entry.offset))
+				continue
+			this.load(number)
 		}
 		const root = trailer.entries.Root
 		if (!isKind(root, "reference"))
@@ -234,6 +240,7 @@ class DocumentParser {
 			stream.entries.Type.value !== "XRef"
 		)
 			reader.fail("Expected a cross-reference stream")
+		this.crossReferenceOffsets.add(offset)
 		const data = this.decode(stream, offset)
 		const widths = stream.entries.W
 		if (!isKind(widths, "array") || widths.items.length !== 3)

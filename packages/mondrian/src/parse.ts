@@ -330,13 +330,16 @@ class DocumentParser {
 
 	private resolve(value: PdfValue | undefined): PdfIndirectValue | undefined {
 		if (!isKind(value, "reference")) return value
-		const object = this.load(value.objectNumber)
-		if (object.generation !== value.generation)
-			throw new PdfParseError(
-				"Reference generation does not match its object",
-				this.objectOffset(value.objectNumber),
-			)
-		return object.value
+		const entry = this.entries.get(value.objectNumber)
+		// An undefined reference has the PDF null value. Required fields validate
+		// that value separately; loading a required object remains strict.
+		if (
+			entry === undefined ||
+			entry.type === 0 ||
+			(entry.type === 1 ? entry.generation : 0) !== value.generation
+		)
+			return null
+		return this.load(value.objectNumber).value
 	}
 
 	private objectOffset(number: number): number {

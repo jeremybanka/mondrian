@@ -233,6 +233,65 @@ it("rejects invalid cross-reference offsets, cycles, and mismatched headers", ()
 	).toThrow(/dictionary/)
 })
 
+it.each([
+	["/Type /XRef", "/Type /Other", "Expected a cross-reference stream"],
+	[
+		"/Length 49",
+		"/Length 1 0 R",
+		"Cross-reference stream Length must be direct",
+	],
+	["/W [1 4 2]", "/W [1 4]", "Cross-reference W must contain three integers"],
+	[
+		"/W [1 4 2]",
+		"/W [1 -4 2]",
+		"Expected a non-negative integer for cross-reference field width",
+	],
+	["/Index [0 7]", "/Index 7", "Cross-reference Index must be an array"],
+	["/Index [0 7]", "/Index [0]", "Cross-reference Index must contain pairs"],
+	[
+		"/Index [0 7]",
+		"/Index [0 1 0 1]",
+		"Overlapping cross-reference Index ranges",
+	],
+	["/Index [0 7]", "/Index [0 8]", "Truncated cross-reference stream"],
+	[
+		"/Index [0 7]",
+		"/Index [0 6]",
+		"Unexpected trailing cross-reference stream data",
+	],
+])(
+	"diagnoses damaged cross-reference metadata %s → %s",
+	(original, replacement, message) => {
+		const source = structuralPdf({})
+		expect(source).toContain(original)
+		const damaged = source.replace(original, replacement)
+		expect(() => parsePdf(damaged)).toThrow(PdfParseError)
+		expect(() => parsePdf(damaged)).toThrow(message)
+	},
+)
+
+it.each([
+	[
+		"xref\n0 1",
+		"xref\n0 999999",
+		"Cross-reference subsection exceeds the input",
+	],
+	[
+		"trailer\n",
+		"1 1\n0000000009 00000 n \ntrailer\n",
+		"Overlapping cross-reference subsections",
+	],
+])(
+	"diagnoses damaged classic cross-references %s",
+	(original, replacement, message) => {
+		const source = classic([[1, 0, "<< /Type /Catalog >>"]], "/Root 1 0 R")
+		expect(source).toContain(original)
+		const damaged = source.replace(original, replacement)
+		expect(() => parsePdf(damaged)).toThrow(PdfParseError)
+		expect(() => parsePdf(damaged)).toThrow(message)
+	},
+)
+
 it("rejects damaged compressed structures without scanning for replacement objects", () => {
 	const source = structuralPdf({})
 	expect(() => parsePdf(source.replace("/W [1 4 2]", "/W [1 4 9]"))).toThrow(

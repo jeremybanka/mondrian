@@ -6,6 +6,7 @@ import type {
 	PdfObjectBuilder,
 	PdfPagesDictionary,
 	PdfStream,
+	PdfVersion,
 } from "../../src/index.ts"
 import {
 	array,
@@ -42,6 +43,38 @@ const blue = separation("Blue", {
 	exponent: 1,
 })
 const white = [255, 255, 255, 255]
+
+it.each([false, true])(
+	"preserves PDF 1.2 with an ordinary graphics state (OP present: %s)",
+	async (overprint) => {
+		const source = rawDocument(
+			() => ({
+				resources: dictionary({
+					ExtGState: dictionary({
+						Width: dictionary({
+							Type: name("ExtGState"),
+							LW: 3,
+							...(overprint ? { OP: true } : {}),
+						}),
+					}),
+				}),
+				contents: [stream({}, ascii("/Width gs 1 0 0 0 K 10 10 m 70 70 l S"))],
+			}),
+			"1.2",
+		)
+		const expected = (await renderPdf(serializePdf(source), { resolution: 72 }))
+			.pages[0]!
+		const plates = previewPdfPlates(source)
+		for (const plate of plates) {
+			expect(plate.document.version).toBe("1.2")
+			expect(() => serializePdf(plate.document)).not.toThrow()
+		}
+		const actual = (
+			await renderPdf(serializePdf(plates[0]!.document), { resolution: 72 })
+		).pages[0]!
+		expect(actual.pixels).toEqual(expected.pixels)
+	},
+)
 
 it.each(["B", "B*", "b", "b*", "text 2", "text 6"])(
 	"rejects the unsupported implicit knockout group of %s with unequal opacity",
@@ -463,6 +496,7 @@ function rawDocument(
 		resources?: PdfDictionary
 		page?: PdfDictionaryEntries
 	},
+	version: PdfVersion = "1.7",
 ) {
 	const objects = createPdfObjectBuilder()
 	const data = make(objects)
@@ -487,7 +521,7 @@ function rawDocument(
 	const root = objects.add(
 		dictionary({ Type: name("Catalog"), Pages: pages.ref }),
 	)
-	return objects.build({ root })
+	return objects.build({ root, version })
 }
 
 async function samples(

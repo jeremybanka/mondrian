@@ -406,7 +406,14 @@ export function planPdfPlates(
 						throw new TypeError("Soft masks are unsupported in plate previews")
 					states.set(
 						key,
-						replaceEntries(value, { OP: false, op: false, OPM: 0 }),
+						// Projection already applies overprint; removing all source
+						// controls keeps the default knockout state without adding
+						// entries requiring a newer PDF version.
+						replaceEntries(value, {
+							OP: undefined,
+							op: undefined,
+							OPM: undefined,
+						}),
 					)
 				} else if (op === "Tr") {
 					const mode = Number(operands[0])

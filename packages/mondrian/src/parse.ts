@@ -146,7 +146,14 @@ class DocumentParser {
 			if (catalogVersion.value > version)
 				version = catalogVersion.value as PdfVersion
 		}
-		const info = trailer.entries.Info
+		let info = trailer.entries.Info
+		if (version === "2.0" && isKind(info, "dictionary")) {
+			// Size is beyond every original object number, including free entries.
+			if (size < 1 || size > 9_999_999_999)
+				reader.fail("Cannot allocate an indirect object for trailer Info")
+			this.objects.set(size, indirectObject(size, info))
+			info = reference<PdfInfoDictionary>(size)
+		}
 		if (info != null && !isKind(info, "reference"))
 			reader.fail("Trailer Info must be an indirect reference")
 		let id: readonly [PdfHexString, PdfHexString] | undefined

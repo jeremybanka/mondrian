@@ -170,6 +170,40 @@ it("uses the latest incremental revision and honors deleted objects", () => {
 	).toEqual([])
 })
 
+it.each(["header", "catalog"])(
+	"normalizes direct Info in PDF 2.0 selected by the %s",
+	async (versionSource) => {
+		const source = classic(
+			[
+				`<< /Type /Catalog /Pages 2 0 R /Extra 4 0 R ${versionSource === "catalog" ? "/Version /2.0" : ""} >>`,
+				"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+				"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
+				"(occupied)",
+			],
+			"/Info << /Title (Example) /Custom (preserved) >> /ID [<00112233445566778899aabbccddeeff> <00112233445566778899aabbccddeeff>]",
+		).replace("%PDF-1.7", versionSource === "header" ? "%PDF-2.0" : "%PDF-1.7")
+		const document = parsePdf(source)
+		expect(document.version).toBe("2.0")
+		expect(document.info).toMatchObject({ objectNumber: 5, generation: 0 })
+		expect(document.objects.map((object) => object.objectNumber)).toEqual([
+			1, 2, 3, 4, 5,
+		])
+		expect(document.objects[3]?.value).toEqual({
+			kind: "literal-string",
+			bytes: ascii("occupied"),
+		})
+		expect(document.objects[4]?.value).toMatchObject({
+			entries: {
+				Title: { kind: "literal-string", bytes: ascii("Example") },
+				Custom: { kind: "literal-string", bytes: ascii("preserved") },
+			},
+		})
+		const bytes = serializePdf(document)
+		expect((await readPdf(bytes)).title).toBe("Example")
+		expect(parsePdf(bytes)).toEqual(document)
+	},
+)
+
 it("reports parse errors with byte offsets and rejects Unicode-decoded binary input", () => {
 	expect(() => parsePdf("not a PDF")).toThrow(PdfParseError)
 	try {

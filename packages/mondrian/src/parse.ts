@@ -157,11 +157,12 @@ class DocumentParser {
 		if (info != null && !isKind(info, "reference"))
 			reader.fail("Trailer Info must be an indirect reference")
 		let id: readonly [PdfHexString, PdfHexString] | undefined
-		const identifiers = trailer.entries.ID
+		const identifiers = this.resolve(trailer.entries.ID)
 		if (identifiers != null) {
 			if (!isKind(identifiers, "array") || identifiers.items.length !== 2)
 				reader.fail("Trailer ID must contain two strings")
-			const strings = identifiers.items.map((value) => {
+			const strings = identifiers.items.map((item) => {
+				const value = this.resolve(item)
 				if (!isKind(value, "hex-string") && !isKind(value, "literal-string"))
 					reader.fail("Trailer ID must contain two strings")
 				return hexString(value.bytes)

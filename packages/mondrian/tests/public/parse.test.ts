@@ -64,6 +64,35 @@ it("parses raw PDF text into an inspectable document", () => {
 	).toEqual([])
 })
 
+it.each([
+	[
+		"indirect array",
+		"4 0 R",
+		"[<30313233343536373839616263646566> (fedcba9876543210)]",
+	],
+	["indirect strings", "[5 0 R 6 0 R]", "null"],
+	["indirect array and strings", "4 0 R", "[5 0 R 6 0 R]"],
+])("resolves file identifiers from an %s", async (_label, id, array) => {
+	const source = classic(
+		[
+			"<< /Type /Catalog /Pages 2 0 R >>",
+			"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+			"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
+			array,
+			"<30313233343536373839616263646566>",
+			"(fedcba9876543210)",
+		],
+		`/ID ${id}`,
+	)
+	const expected = [ascii("0123456789abcdef"), ascii("fedcba9876543210")]
+	expect((await readPdf(Buffer.from(source, "latin1"))).fileIds).toEqual(
+		expected,
+	)
+	const document = parsePdf(source)
+	expect(document.id).toEqual(expected.map((bytes) => hexString(bytes)))
+	expect((await readPdf(serializePdf(document))).fileIds).toEqual(expected)
+})
+
 it("round-trips serialized documents without losing page content or metadata", async () => {
 	const builder = createPdfDocument({
 		metadata: { title: "Parsed café", author: "Parser test" },

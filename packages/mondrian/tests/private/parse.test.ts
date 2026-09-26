@@ -110,6 +110,47 @@ it("uses a newer uncompressed object over an older compressed revision", () => {
 	).toMatchObject({ entries: { Answer: 99 } })
 })
 
+it.each([
+	["1.7", "1.7"],
+	["1.2", "1.4"],
+])(
+	"resolves indirect catalog version %s without downgrading the header",
+	(catalogVersion, expected) => {
+		const source = classic(
+			[
+				[1, 0, "<< /Type /Catalog /Pages 2 0 R /Version 4 0 R >>"],
+				[2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"],
+				[
+					3,
+					0,
+					"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
+				],
+				[4, 0, `/${catalogVersion}`],
+			],
+			"/Root 1 0 R",
+		).replace("%PDF-1.7", "%PDF-1.4")
+		const document = parsePdf(source)
+		expect(document.version).toBe(expected)
+		expect(
+			Buffer.from(serializePdf(document)).toString("latin1").split("\n")[0],
+		).toBe(`%PDF-${expected}`)
+	},
+)
+
+it("rejects an unsupported indirect catalog version", () => {
+	expect(() =>
+		parsePdf(
+			classic(
+				[
+					[1, 0, "<< /Type /Catalog /Version 2 0 R >>"],
+					[2, 0, "/9.0"],
+				],
+				"/Root 1 0 R",
+			),
+		),
+	).toThrow(/Unsupported catalog Version/)
+})
+
 it("honors the catalog version and preserves sparse object numbers and generations", () => {
 	const source = classic(
 		[

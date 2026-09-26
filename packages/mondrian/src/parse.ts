@@ -139,7 +139,7 @@ class DocumentParser {
 		const catalog = this.resolve(root)
 		if (!isKind(catalog, "dictionary"))
 			reader.fail("Trailer Root must resolve to a catalog dictionary")
-		const catalogVersion = catalog.entries.Version
+		const catalogVersion = this.resolve(catalog.entries.Version)
 		if (isKind(catalogVersion, "name")) {
 			if (!/^(1\.[0-7]|2\.0)$/.test(catalogVersion.value))
 				reader.fail("Unsupported catalog Version")

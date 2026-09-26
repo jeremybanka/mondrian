@@ -45,6 +45,7 @@ interface State {
 	strokeOpacity: number
 	mode: number
 	textMode: number
+	textKnockout: boolean
 }
 
 export interface PlateInstruction extends ContentInstruction {
@@ -272,6 +273,7 @@ export function planPdfPlates(
 		strokeOpacity: 1,
 		mode: 0,
 		textMode: 0,
+		textKnockout: true,
 	})
 	const activeForms = new Set<PdfStream>()
 	const formPlans = new WeakMap<
@@ -300,6 +302,7 @@ export function planPdfPlates(
 			const stack: State[] = []
 			const states = new Map<string, PdfDictionary>()
 			const instructions: PlateInstruction[] = []
+			let textObject: { transparent: boolean; overprint: boolean } | undefined
 			const paint = (channel: "fill" | "stroke"): PlatePaint => {
 				const color = state[channel]
 				if (color === undefined)
@@ -315,7 +318,22 @@ export function planPdfPlates(
 			}
 			for (const instruction of parsePlateContent(source)) {
 				const { op, operands } = instruction
-				if (op === "q") {
+				if (op === "BT") {
+					textObject = { transparent: false, overprint: false }
+				} else if (op === "ET") {
+					// PDF 1.6 §5.2.7: all glyphs share an implicit knockout group.
+					// Suppressing an overprinting glyph loses the shape that can
+					// erase earlier ink against the text object's initial backdrop.
+					if (
+						state.textKnockout &&
+						textObject?.transparent &&
+						textObject.overprint
+					)
+						throw new TypeError(
+							"Plate previews do not support transparent overprinting text with text knockout enabled",
+						)
+					textObject = undefined
+				} else if (op === "q") {
 					stack.push({ ...state })
 				} else if (op === "Q") {
 					const previous = stack.pop()
@@ -383,6 +401,13 @@ export function planPdfPlates(
 								`Unsupported plate graphics state setting ${entry}`,
 							)
 					const get = (key: string) => resolve(dictionaryValue(value, key))
+					if (get("TK") !== undefined) {
+						if (typeof get("TK") !== "boolean" || textObject !== undefined)
+							throw new TypeError(
+								"Text knockout must be a boolean set outside a text object",
+							)
+						state.textKnockout = get("TK") as boolean
+					}
 					for (const key of ["OP", "op"])
 						if (get(key) !== undefined && typeof get(key) !== "boolean")
 							throw new TypeError(`Invalid ${key} overprint flag`)
@@ -444,6 +469,13 @@ export function planPdfPlates(
 					const stroke = text
 						? mode === 1 || mode === 2
 						: !["f", "F", "f*"].includes(op)
+					if (text && textObject) {
+						textObject.transparent ||=
+							(fill && state.fillOpacity < 1) ||
+							(stroke && state.strokeOpacity < 1)
+						textObject.overprint ||=
+							(fill && state.fillOverprint) || (stroke && state.strokeOverprint)
+					}
 					// PDF 1.6 §7.6.3: unequal alpha makes combined painting an
 					// implicit knockout group. Dropping either channel loses shape
 					// that can remove the earlier fill, even when it deposits no ink.

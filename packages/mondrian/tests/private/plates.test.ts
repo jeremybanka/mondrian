@@ -44,6 +44,100 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+// PDF 1.6 §5.2.7 requires glyph shapes to survive implicit text knockout.
+// PDFium does not distinguish TK in this fixture; this tests the support boundary.
+it.each([undefined, true])(
+	"rejects transparent overprinting text with TK=%s",
+	(TK) => {
+		const source = knockoutTextDocument({ ca: 0.5, op: true, OPM: 1, TK })
+		expect(() => previewPdfPlates(source)).toThrow(
+			/transparent overprinting text.*knockout/u,
+		)
+	},
+)
+
+it("checks transparency and overprint across the whole text object", () => {
+	const source = knockoutTextDocument(
+		{ ca: 0.5 },
+		"BT /F 30 Tf 1 0 0 0 k (M) Tj /Over gs 1 0 0 1 0 0 Tm 0 1 0 0 k (M) Tj ET",
+	)
+	expect(() => previewPdfPlates(source)).toThrow(
+		/transparent overprinting text/u,
+	)
+})
+
+it("tracks text knockout through partial states, save/restore, and cached Forms", () => {
+	const source = knockoutTextDocument(
+		{ ca: 0.5, op: true, OPM: 1 },
+		"q /NoKnockout gs /Text Do Q /Text Do",
+		true,
+	)
+	expect(() => previewPdfPlates(source)).toThrow(
+		/XObject.*transparent overprinting text/u,
+	)
+})
+
+it.each([
+	[{ ca: 0.5, op: true, OPM: 1, TK: false }, undefined],
+	[{ ca: 0.5 }, undefined],
+	[{ op: true, OPM: 1 }, undefined],
+	[
+		{ ca: 0.5 },
+		"BT /F 30 Tf 1 0 0 0 k (M) Tj ET /Over gs BT /F 30 Tf 0 1 0 0 k (M) Tj ET",
+	],
+] as const)("retains supported text compositing %j", (state, commands) => {
+	expect(previewPdfPlates(knockoutTextDocument(state, commands))).toHaveLength(
+		4,
+	)
+})
+
+function knockoutTextDocument(
+	state: PdfDictionaryEntries,
+	commands = "BT /F 30 Tf 1 0 0 0 k (M) Tj 1 0 0 1 0 0 Tm 0 1 0 0 k (M) Tj ET",
+	form = false,
+) {
+	return rawDocument((objects) => {
+		const resources = dictionary({
+			Font: dictionary({
+				F: dictionary({
+					Type: name("Font"),
+					Subtype: name("Type1"),
+					BaseFont: name("Helvetica"),
+				}),
+			}),
+			ExtGState: dictionary({
+				State: dictionary(state),
+				Over: dictionary({ ca: 1, op: true, OPM: 1 }),
+				NoKnockout: dictionary({ TK: false }),
+			}),
+		})
+		return {
+			resources: dictionary({
+				...resources.entries,
+				...(form
+					? {
+							XObject: dictionary({
+								Text: objects.add(
+									stream(
+										{
+											Type: name("XObject"),
+											Subtype: name("Form"),
+											BBox: array(0, 0, 80, 80),
+										},
+										ascii(
+											"BT /F 30 Tf 1 0 0 0 k (M) Tj 1 0 0 1 0 0 Tm 0 1 0 0 k (M) Tj ET",
+										),
+									),
+								),
+							}),
+						}
+					: {}),
+			}),
+			contents: [stream({}, ascii(`/State gs ${commands}`))],
+		}
+	})
+}
+
 it("keeps shared nested Form projections linear in the source graph", async () => {
 	const source = rawDocument((objects) => {
 		let child = objects.add(

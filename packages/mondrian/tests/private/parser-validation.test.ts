@@ -1,5 +1,6 @@
 import { expect, it } from "vitest"
 import {
+	hexString,
 	parsePdf,
 	reference,
 	serializePdf,
@@ -60,6 +61,7 @@ function withInfo(fields: string, extra: [number, number, string][] = []) {
 	return {
 		...withContents("[]", [[4, 0, `<< ${fields} >>`], ...extra]),
 		info: reference<PdfInfoDictionary>(4),
+		id: [hexString(new Uint8Array(16)), hexString(new Uint8Array(16))] as const,
 	}
 }
 
@@ -88,3 +90,57 @@ it.each([
 	)
 	expect(() => serializePdf(document)).toThrow()
 })
+
+const utf8Date = (text: string) =>
+	Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(text)])
+const utf16Date = (text: string) =>
+	Buffer.from(`\ufeff${text}`, "utf16le").swap16()
+
+it.each([utf8Date, utf16Date])(
+	"validates encoded Info dates without changing their bytes (%#)",
+	(encode) => {
+		const bytes = encode("D:20240229010203Z")
+		const document = {
+			...withInfo(`/CreationDate <${bytes.toString("hex")}>`),
+			version: "2.0" as const,
+		}
+		expect(validatePdf(document).filter((d) => d.severity === "error")).toEqual(
+			[],
+		)
+		expect(parsePdf(serializePdf(document))).toEqual(document)
+	},
+)
+
+it.each([
+	utf8Date("D:20230229010203Z"),
+	utf16Date("D:20230229010203Z"),
+	Buffer.from([0xef, 0xbb, 0xbf, 0xc0, 0xaf]),
+	Buffer.from([0xfe, 0xff, 0xd8, 0x00]),
+])("rejects malformed encoded dates (%#)", (bytes) => {
+	const document = {
+		...withInfo(`/ModDate <${bytes.toString("hex")}>`),
+		version: "2.0" as const,
+	}
+	expect(validatePdf(document)).toContainEqual(
+		expect.objectContaining({ code: "invalid-info", path: "info.ModDate" }),
+	)
+})
+
+it.each([
+	["1.7", utf8Date("D:20260926")],
+	["1.1", utf16Date("D:20260926")],
+] as const)(
+	"checks the version of encoded dates in PDF %s",
+	(version, bytes) => {
+		const document = {
+			...withInfo(`/CreationDate <${bytes.toString("hex")}>`),
+			version,
+		}
+		expect(validatePdf(document)).toContainEqual(
+			expect.objectContaining({
+				code: "unsupported-version-feature",
+				path: "info.CreationDate",
+			}),
+		)
+	},
+)

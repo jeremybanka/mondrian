@@ -791,20 +791,16 @@ function validateInfoValue(
 		return
 	}
 
-	if (key === "CreationDate" || key === "ModDate") {
-		if (!isValidPdfDate(value.bytes)) {
-			add(
-				context,
-				"invalid-info",
-				path,
-				"Info date values must use PDF date-string syntax",
-			)
-		}
-		return
-	}
-
 	if (!hasValidUnicodeEncoding(value.bytes)) {
 		add(context, "invalid-info", path, "Info text string encoding is invalid")
+		return
+	} else if (hasUtf8Bom(value.bytes) && context.version !== "2.0") {
+		add(
+			context,
+			"unsupported-version-feature",
+			path,
+			"UTF-8 text strings require PDF 2.0",
+		)
 	} else if (
 		(context.version === "1.0" || context.version === "1.1") &&
 		value.bytes[0] === 0xfe &&
@@ -817,9 +813,32 @@ function validateInfoValue(
 			"Unicode text strings require PDF 1.2 or later",
 		)
 	}
+	if (
+		(key === "CreationDate" || key === "ModDate") &&
+		!isValidPdfDate(value.bytes)
+	) {
+		add(
+			context,
+			"invalid-info",
+			path,
+			"Info date values must use PDF date-string syntax",
+		)
+	}
+}
+
+function hasUtf8Bom(bytes: Uint8Array): boolean {
+	return bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf
 }
 
 function hasValidUnicodeEncoding(bytes: Uint8Array): boolean {
+	if (hasUtf8Bom(bytes)) {
+		try {
+			new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+			return true
+		} catch {
+			return false
+		}
+	}
 	if (bytes[0] !== 0xfe || bytes[1] !== 0xff) {
 		return !(bytes[0] === 0xff && bytes[1] === 0xfe)
 	}
@@ -852,11 +871,14 @@ function hasValidUnicodeEncoding(bytes: Uint8Array): boolean {
 
 function isValidPdfDate(bytes: Uint8Array): boolean {
 	let value = ""
-	for (const byte of bytes) {
-		if (byte > 0x7f) {
-			return false
+	if (hasUtf8Bom(bytes)) value = new TextDecoder("utf-8").decode(bytes)
+	else if (bytes[0] === 0xfe && bytes[1] === 0xff)
+		value = new TextDecoder("utf-16be").decode(bytes)
+	else {
+		for (const byte of bytes) {
+			if (byte > 0x7f) return false
+			value += String.fromCharCode(byte)
 		}
-		value += String.fromCharCode(byte)
 	}
 
 	const match =

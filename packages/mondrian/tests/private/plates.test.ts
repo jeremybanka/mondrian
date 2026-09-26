@@ -51,6 +51,81 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it("keeps page replacement linear for shuffled, noncontiguous object numbers", () => {
+	const readsFor = (pageCount: number) => {
+		const objects = createPdfObjectBuilder()
+		const parent = objects.reserve<PdfPagesDictionary>()
+		const pages = Array.from({ length: pageCount }, (_, index) => {
+			objects.add(null) // Unreachable slots leave gaps in the final object numbers.
+			const contents = objects.add(
+				stream({}, ascii(`1 0 0 0 k ${index} 0 10 10 re f`)),
+			)
+			return objects.add(
+				dictionary({
+					Type: name("Page"),
+					Parent: parent.ref,
+					Contents: contents,
+					PrivateIndex: index,
+				}),
+			)
+		})
+		parent.set(
+			dictionary({
+				Type: name("Pages"),
+				Kids: array(...pages),
+				Count: pageCount,
+				MediaBox: array(0, 0, 200, 200),
+				Resources: dictionary({}),
+			}),
+		)
+		const root = objects.add(
+			dictionary({ Type: name("Catalog"), Pages: parent.ref }),
+		)
+		const built = objects.build({ root })
+		let reads = 0
+		const source = {
+			...built,
+			objects: [...built.objects].reverse().map((object) => ({
+				...object,
+				get objectNumber() {
+					reads++
+					return object.objectNumber
+				},
+			})),
+		}
+		for (const plate of previewPdfPlates(source)) {
+			const byNumber = new Map(
+				plate.document.objects.map((object) => [
+					object.objectNumber,
+					object.value,
+				]),
+			)
+			for (const [index, page] of pages.entries()) {
+				const value = byNumber.get(page.objectNumber)
+				expect(value).toMatchObject({
+					kind: "dictionary",
+					entries: { PrivateIndex: index },
+				})
+				if (
+					value === null ||
+					typeof value !== "object" ||
+					value.kind !== "dictionary"
+				)
+					throw new Error("Missing page")
+				const contents = value.entries.Contents as PdfReference
+				const content = byNumber.get(contents.objectNumber) as PdfStream
+				expect(Buffer.from(content.data).toString("latin1")).toContain(
+					`${index} 0 10 10 re`,
+				)
+			}
+		}
+		return reads
+	}
+	// Count actual object-number accesses, avoiding environment-dependent timing.
+	// Quadrupling pages should scale linearly, not rescan all objects per page.
+	expect(readsFor(128)).toBeLessThan(readsFor(32) * 5)
+})
+
 it("indexes each resource category once per discovery despite repeated escaped-name lookups", () => {
 	const scans = new Map<string, number>()
 	const source = rawDocument((objects) => {

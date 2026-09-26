@@ -60,9 +60,13 @@ export function previewPdfPlates(
 		throw new TypeError('permitColors must contain only "cmyk" and "spot"')
 	throwForPdfErrors(validatePdf(document))
 	const plan = planPdfPlates(document, new Set(permitted))
+	const objectIndices = new Map<number, number>()
 	let highestNumber = 0
-	for (const object of document.objects)
-		highestNumber = Math.max(highestNumber, object.objectNumber)
+	for (const [index, object] of document.objects.entries()) {
+		const number = object.objectNumber
+		objectIndices.set(number, index)
+		highestNumber = Math.max(highestNumber, number)
+	}
 	return plan.plates.map((plate) => {
 		const objects: PdfIndirectObject[] = [...document.objects]
 		let nextNumber = highestNumber + 1
@@ -173,9 +177,8 @@ export function previewPdfPlates(
 				Contents: add(stream({}, content.data)),
 				Resources: content.resources,
 			})
-			const index = objects.findIndex(
-				(object) => object.objectNumber === page.reference.objectNumber,
-			)
+			// Existing slots stay fixed; each plate only appends new objects.
+			const index = objectIndices.get(page.reference.objectNumber)!
 			objects[index] = { ...objects[index]!, value }
 		}
 		// Every leaf and projected Form now has explicit resources. Inherited

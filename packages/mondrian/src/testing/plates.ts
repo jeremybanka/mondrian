@@ -189,6 +189,16 @@ export function previewPdfPlates(
 			)
 			objects[index] = { ...objects[index]!, value }
 		}
+		// Every leaf and projected Form now has explicit resources. Inherited
+		// tables are shadowed, and would otherwise retain the original Form graph.
+		for (const [index, object] of objects.entries()) {
+			const branch = plan.pageBranches.get(object.objectNumber)
+			if (branch !== undefined)
+				objects[index] = {
+					...object,
+					value: replaceEntries(branch, { Resources: undefined }),
+				}
+		}
 		// Copy all retained bytes and dictionaries, including fonts and metadata.
 		// Pruning also removes the original, now unreferenced content streams.
 		const preview = structuredClone({

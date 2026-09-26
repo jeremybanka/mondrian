@@ -8,6 +8,7 @@ import type {
 	PdfStream,
 	PdfVersion,
 	PdfAnyName,
+	PdfReference,
 } from "../../src/index.ts"
 import {
 	array,
@@ -45,6 +46,68 @@ const blue = separation("Blue", {
 	exponent: 1,
 })
 const white = [255, 255, 255, 255]
+
+it("prunes shadowed inherited Form graphs while retaining other references", async () => {
+	let originals: PdfReference[] = []
+	let retained: PdfReference | undefined
+	const source = rawDocument((objects) => {
+		const form = (commands: string, resources = dictionary({})) =>
+			objects.add(
+				stream(
+					{
+						Type: name("XObject"),
+						Subtype: name("Form"),
+						BBox: array(0, 0, 80, 80),
+						Resources: resources,
+					},
+					ascii(commands),
+				),
+			)
+		const child = form("1 0 0 0 k 10 10 60 60 re f")
+		const outer = form(
+			"/Child Do",
+			dictionary({ XObject: dictionary({ Child: child }) }),
+		)
+		const unused = form(`%${"unused".repeat(20_000)}\n`)
+		retained = form("% Retained by a non-resource reference\n")
+		originals = [child, outer, unused]
+		return {
+			resources: dictionary({
+				XObject: dictionary({
+					Outer: outer,
+					Unused: unused,
+					Retained: retained,
+				}),
+			}),
+			page: { PrivateData: retained },
+			contents: [stream({}, ascii("/Outer Do"))],
+		}
+	})
+	const before = serializePdf(source)
+	const plates = previewPdfPlates(source)
+	for (const { document } of plates) {
+		const ids = new Set(
+			document.objects.map(({ objectNumber }) => objectNumber),
+		)
+		for (const original of originals)
+			expect(ids.has(original.objectNumber)).toBe(false)
+		expect(
+			document.objects.find(
+				({ objectNumber }) => objectNumber === retained!.objectNumber,
+			),
+		).toEqual(
+			source.objects.find(
+				({ objectNumber }) => objectNumber === retained!.objectNumber,
+			),
+		)
+		expect(serializePdf(document).length).toBeLessThan(before.length / 10)
+	}
+	expect(serializePdf(source)).toEqual(before)
+	expect(await samples(plates[0]!.document, [[40, 40]])).toEqual([
+		[0, 174, 239, 255],
+	])
+	expect(await samples(plates[1]!.document, [[40, 40]])).toEqual([white])
+})
 
 it("returns UTF-8 spot names and coalesces equivalent byte names", async () => {
 	const source = namedSpotDocument(

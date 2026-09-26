@@ -103,7 +103,11 @@ function dictionaryItems(
 export function planPdfPlates(
 	document: PdfDocument,
 	permitted: ReadonlySet<PlateColorSpace>,
-): { plates: PlateInk[]; pages: PlatePage[] } {
+): {
+	plates: PlateInk[]
+	pages: PlatePage[]
+	pageBranches: ReadonlyMap<number, PdfDictionary>
+} {
 	const objects = new Map(
 		document.objects.map((object) => [
 			`${object.objectNumber}:${object.generation}`,
@@ -593,6 +597,7 @@ export function planPdfPlates(
 		}
 	}
 	const pages: PlatePage[] = []
+	const pageBranches = new Map<number, PdfDictionary>()
 	const activePages = new Set<PdfIndirectValue>()
 	const visit = (ref: PdfReference, inherited: PdfDictionary): void => {
 		const node = dict(ref)
@@ -602,6 +607,7 @@ export function planPdfPlates(
 		const resources =
 			ownResources === undefined ? inherited : dict(ownResources)
 		if (pdfName(resolve(entry(node, "Type"))) === "/Pages") {
+			pageBranches.set(ref.objectNumber, node)
 			const kids = resolve(entry(node, "Kids"))
 			if (kids === null || typeof kids !== "object" || kids.kind !== "array")
 				throw new TypeError("Expected page tree Kids")
@@ -670,7 +676,7 @@ export function planPdfPlates(
 	)
 		throw new TypeError("Expected a page tree reference")
 	visit(pageTree, dictionary({}))
-	return { plates, pages }
+	return { plates, pages, pageBranches }
 }
 
 /** Form resources are fixed by the source and page context; only paint is baked in.

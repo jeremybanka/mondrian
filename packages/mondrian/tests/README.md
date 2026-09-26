@@ -43,6 +43,16 @@ visual proof for nested pages and escaped text has its own inline setup here so
 renderer versions and exact pixel baselines do not become API compatibility
 promises.
 
+## Plate preview contracts
+
+`public/plates.test.ts` covers discovery order and ink identity, permitted color spaces, per-plate color components and tints, knockout/overprint semantics, and deterministic output. `public/plate-documents.test.ts` covers document versions, identifiers, metadata, page geometry/order, live text placement and fonts, independent fill/stroke coverage, and ownership of mutable preview buffers. These assertions describe consumer capabilities rather than particular resource names, object numbers, stream layouts, or error wording.
+
+The public color tests share a small independent PDF reader in `public/helpers/painted-fills.ts`. It resolves resource aliases and decodes streams through `pdf-lib`; expected ink components come from the fixture's description. Keeping this helper under `public/` includes it in Break Check's historical replay. Public fixtures remain local to their tests and use package exports; they must not depend on private fixtures or source implementation helpers. Interior spot-color samples allow renderer rounding, while exact page pixels remain private proofs.
+
+Private plate tests are split into `plate-colors`, `plate-content`, `plate-forms`, `plate-graphics-state`, `plate-resources`, `plate-scalability`, `plate-text`, and `plate-validation` suites, alongside the internal `plate-types` contracts. Their reusable low-level setup lives in `private/fixtures/plates.ts`. Operator sequences, planner state, cache work counts, object retention, heap/size thresholds, diagnostic details, and current unsupported-feature boundaries stay private. A future implementation can change those details or support more PDF constructs without turning this test organization into a new compatibility promise. Each visual baseline lives beside the suite that owns it.
+
+## Running compatibility checks
+
 Run `pnpm --filter mondrian.pdf test:once:public` for the public suite. Normal
 test and coverage commands run both directories. Run `pnpm test:semver` from a
 clean checkout for current public tests followed by release compatibility.

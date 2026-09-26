@@ -93,6 +93,8 @@ Set `MONDRIAN_PDF_ARTIFACT_MODE=update` or `verify` to override environment
 detection. Matcher options can also select the mode, resolution, background,
 annotation rendering, and artifact roots explicitly.
 
+For individual ink proofs, `previewPdfPlates(pdf.compile())` returns a colored `PdfDocument` for each CMYK and named spot plate, preserving knockout and overprint. See [print plate previews](docs/print-plates.md) for options, supported painting, and examples.
+
 The runner-neutral `mondrian.pdf/testing` submodule exports `renderPdf()`,
 `checkPdfArtifact()`, and their associated types for other test runners and
 custom workflows:

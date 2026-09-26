@@ -247,7 +247,7 @@ export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
 		const info = resolveMatching(document.info, objects)
 		if (info !== undefined) {
 			if (isDictionary(info.value)) {
-				validateInfoDictionary(info.value, context)
+				validateInfoDictionary(info.value, objects, context)
 			} else {
 				add(
 					context,
@@ -713,13 +713,14 @@ function validateRootAndPageTree(
 
 function validateInfoDictionary(
 	info: PdfDictionary,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
 ): void {
 	for (const [key, value] of Object.entries(info.entries)) {
 		if (value === undefined) {
 			continue
 		}
-		validateInfoValue(key, value, `info.${key}`, context)
+		validateInfoValue(key, value, `info.${key}`, objects, context)
 	}
 
 	if (!Array.isArray(info.byteEntries)) {
@@ -741,6 +742,7 @@ function validateInfoDictionary(
 			serialized.slice(1),
 			entry[1],
 			`info.byteEntries[${index}].value`,
+			objects,
 			context,
 		)
 	}
@@ -748,10 +750,17 @@ function validateInfoDictionary(
 
 function validateInfoValue(
 	key: string,
-	value: PdfValue,
+	value: PdfValue | PdfStream,
 	path: string,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
 ): void {
+	if (isReference(value)) {
+		const target = resolveMatching(value, objects)
+		// The general reference pass already reports missing or stale targets.
+		if (target === undefined) return
+		value = target.value
+	}
 	if (key === "Trapped") {
 		if (
 			!isPdfName(value) ||

@@ -60,8 +60,8 @@ export class SyntaxReader {
 		this.containerOffset = containerOffset
 	}
 
-	fail(message: string): never {
-		throw new PdfParseError(message, this.containerOffset ?? this.position)
+	fail(message: string, position = this.position): never {
+		throw new PdfParseError(message, this.containerOffset ?? position)
 	}
 
 	skip(): void {
@@ -127,6 +127,7 @@ export class SyntaxReader {
 			this.source.slice(this.position),
 		)
 		if (match === null) this.fail("Expected a PDF value")
+		const start = this.position
 		this.position += match[0].length
 		const next = this.source[this.position]
 		const number = Number(match[0])
@@ -135,6 +136,8 @@ export class SyntaxReader {
 			(next !== undefined && !delimiter.test(next))
 		)
 			this.fail("Invalid PDF number")
+		if (Number.isInteger(number) && !Number.isSafeInteger(number))
+			this.fail("PDF integer exceeds safe integer precision", start)
 		const afterNumber = this.position
 		if (/^\d+$/.test(match[0])) {
 			this.skip()

@@ -74,6 +74,24 @@ it("compresses color content in a browser bundle without Node globals", async ()
 	expect(output!.compressed.length).toBeLessThan(output!.original.length)
 })
 
+it("parses PDFs in a browser bundle without Node globals", async () => {
+	const bundle = await browserBundle(`
+		import { createPdfDocument, parsePdf, rectangle, serializePdf } from "mondrian.pdf"
+		const pdf = createPdfDocument()
+		pdf.setPages(pdf.page({ mediaBox: rectangle(0, 0, 100, 100) }))
+		const original = pdf.serialize()
+		const parsed = parsePdf(original)
+		console.log({ version: parsed.version, count: parsed.objects.length, same: serializePdf(parsed).every((byte, index) => byte === original[index]) })
+	`)
+	const output: unknown[] = []
+	runInNewContext(bundle, {
+		TextEncoder,
+		TextDecoder,
+		console: { log: (value: unknown) => output.push(value) },
+	})
+	expect(output).toEqual([{ version: "1.7", count: 4, same: true }])
+})
+
 async function browserBundle(source: string): Promise<string> {
 	// Keep the entry inside the package so Bun resolves its published export map.
 	const directory = await mkdtemp(

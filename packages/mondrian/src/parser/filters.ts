@@ -303,8 +303,20 @@ function inflate(
 ): Uint8Array {
 	const chunks: Uint8Array[] = []
 	let length = 0
+	let low = 1
+	let high = 0
 	const decoder = new Unzlib((chunk) => {
 		check(length + chunk.length)
+		// RFC 1950 Adler-32, reduced in blocks to keep the sums bounded.
+		for (let start = 0; start < chunk.length; start += 5552) {
+			const end = Math.min(start + 5552, chunk.length)
+			for (let index = start; index < end; index++) {
+				low += chunk[index]!
+				high += low
+			}
+			low %= 65521
+			high %= 65521
+		}
 		if (chunk.length) chunks.push(chunk)
 		length += chunk.length
 	})
@@ -321,6 +333,13 @@ function inflate(
 			position + 64 >= bytes.length,
 		)
 	}
+	// fflate validates the zlib header, but discards its checksum unchecked.
+	const checksum = new DataView(
+		bytes.buffer,
+		bytes.byteOffset + bytes.length - 4,
+		4,
+	).getUint32(0)
+	if (high * 65536 + low !== checksum) throw new Error("Invalid zlib checksum")
 	const output = new Uint8Array(length)
 	let position = 0
 	for (const chunk of chunks) {

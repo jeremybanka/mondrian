@@ -1,4 +1,4 @@
-import { deflateSync } from "node:zlib"
+import { deflateSync, inflateSync } from "node:zlib"
 import { expect, it } from "vitest"
 import { array, ascii, dictionary, name, stream } from "../../src/objects.ts"
 import type { PdfDictionaryEntries, PdfValue } from "../../src/objects.ts"
@@ -39,6 +39,24 @@ it("decodes structural filter chains with per-filter parameters", () => {
 	)
 	expect(result).toEqual(ascii("structure"))
 })
+
+it.each(["payload", "checksum"])("rejects Flate %s corruption", (damage) => {
+	const bytes = deflateSync("4 0 << /Answer 42 >>", { level: 0 })
+	if (damage === "payload") bytes[bytes.indexOf("42")] = "5".charCodeAt(0)
+	else bytes[bytes.length - 1]! ^= 1
+	expect(() => inflateSync(bytes)).toThrow(/data check/)
+	expect(() => decode("FlateDecode", bytes)).toThrow(
+		new PdfParseError("Invalid FlateDecode structural stream", 42),
+	)
+})
+
+it.each([0, 1, 64, 5552, 65536])(
+	"verifies Flate checksums across %s decoded bytes",
+	(length) => {
+		const input = Uint8Array.from({ length }, (_, index) => index % 251)
+		expect(decode("FlateDecode", deflateSync(input))).toEqual(input)
+	},
+)
 
 it.each([
 	["ASCIIHexDecode", ascii("61\t6 2\n6>"), Uint8Array.of(97, 98, 96)],

@@ -17,6 +17,7 @@ import { parsePlateContent, textHasGlyphs } from "./plate-content.ts"
 import type { ContentInstruction } from "./plate-content.ts"
 import { pathPainting, textPainting } from "./plate-paint.ts"
 import type { PathShape, TextMode } from "./plate-paint.ts"
+import { decodePlateGraphicsState } from "./plate-graphics-state.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
@@ -102,11 +103,6 @@ const passthrough = new Set(
 	),
 )
 const textPaints = new Set(["Tj", "TJ", "'", '"'])
-const standardBlendModes = new Set(
-	"Normal Compatible Multiply Screen Overlay Darken Lighten ColorDodge ColorBurn HardLight SoftLight Difference Exclusion Hue Saturation Color Luminosity"
-		.split(" ")
-		.map((mode) => `/${mode}`),
-)
 
 function dictionaryItems(
 	value: Pick<PdfDictionary, "entries" | "byteEntries">,
@@ -465,97 +461,39 @@ export function planPdfPlates(
 					continue
 				} else if (op === "gs") {
 					const key = tokenName(operands[0])
-					const value = dict(resource(resources, "ExtGState", key))
-					const allowed = new Set(
-						"Type OP op OPM ca CA BM SMask LW LC LJ ML D RI FL SA TK".split(
-							" ",
-						),
+					const decoded = decodePlateGraphicsState(
+						dict(resource(resources, "ExtGState", key)),
+						resolve,
 					)
-					for (const [entry] of presentItems(value))
-						if (!allowed.has(entry.slice(1)))
-							throw new TypeError(
-								`Unsupported plate graphics state setting ${entry}`,
-							)
-					const get = (key: string) => resolve(entry(value, key))
-					if (get("TK") !== undefined) {
-						if (typeof get("TK") !== "boolean" || textObject !== undefined)
+					if (decoded.textKnockout !== undefined) {
+						if (textObject !== undefined)
 							throw new TypeError(
 								"Text knockout must be a boolean set outside a text object",
 							)
-						state.textKnockout = get("TK") as boolean
+						state.textKnockout = decoded.textKnockout
 					}
-					for (const key of ["OP", "op"])
-						if (get(key) !== undefined && typeof get(key) !== "boolean")
-							throw new TypeError(`Invalid ${key} overprint flag`)
-					if (get("OP") !== undefined) {
-						state.strokeOverprint = get("OP") as boolean
+					if (decoded.strokeOverprint !== undefined) {
+						state.strokeOverprint = decoded.strokeOverprint
+						// OP supplies both channels unless op explicitly overrides fill.
 						state.fillOverprint = state.strokeOverprint
 					}
-					if (get("op") !== undefined)
-						state.fillOverprint = get("op") as boolean
-					const overprintMode = get("OPM")
-					if (overprintMode !== undefined) {
-						if (overprintMode !== 0 && overprintMode !== 1)
-							throw new TypeError("Invalid overprint mode")
-						state.mode = overprintMode
-					}
-					for (const key of ["ca", "CA"]) {
-						const alpha = get(key)
-						if (
-							alpha !== undefined &&
-							(typeof alpha !== "number" ||
-								!Number.isFinite(alpha) ||
-								alpha < 0 ||
-								alpha > 1)
-						)
-							throw new TypeError(`Invalid ${key} opacity`)
-						if (typeof alpha === "number")
-							state[key === "ca" ? "fillOpacity" : "strokeOpacity"] = alpha
-					}
-					const blend = get("BM")
-					if (blend !== undefined) {
-						let mode = pdfName(blend)
-						if (
-							blend !== null &&
-							typeof blend === "object" &&
-							blend.kind === "array"
-						) {
-							const modes = blend.items.map((item) => pdfName(resolve(item)))
-							if (modes.some((item) => item === undefined))
-								throw new TypeError("Expected blend-mode names")
-							// Recognize all standard modes before checking our support;
-							// [Multiply Normal] must not silently become Normal.
-							mode =
-								modes.find((item) => standardBlendModes.has(item!)) ?? "/Normal"
-						}
-						if (mode !== "/Normal" && mode !== "/Compatible")
-							throw new TypeError("Plate previews support only Normal blending")
-					}
-					if (get("SMask") !== undefined && pdfName(get("SMask")) !== "/None")
-						throw new TypeError("Soft masks are unsupported in plate previews")
+					state.fillOverprint = decoded.fillOverprint ?? state.fillOverprint
+					state.mode = decoded.overprintMode ?? state.mode
+					state.fillOpacity = decoded.fillOpacity ?? state.fillOpacity
+					state.strokeOpacity = decoded.strokeOpacity ?? state.strokeOpacity
 					states.set(
 						key,
 						// Projection already applies overprint; removing all source
 						// controls keeps the default knockout state without adding
 						// entries requiring a newer PDF version.
-						replaceEntries(
-							dictionary(
-								Object.fromEntries(
-									Object.entries(value.entries).filter(
-										([, item]) => resolve(item) !== null,
-									),
-								),
-								...(value.byteEntries ?? []).filter(
-									([, item]) => resolve(item) !== null,
-								),
-							),
-							{
-								OP: undefined,
-								op: undefined,
-								OPM: undefined,
-								...(blend === undefined ? {} : { BM: name("Normal") }),
-							},
-						),
+						replaceEntries(decoded.source, {
+							OP: undefined,
+							op: undefined,
+							OPM: undefined,
+							...(decoded.blendMode === undefined
+								? {}
+								: { BM: name(decoded.blendMode) }),
+						}),
 					)
 				} else if (op === "Tr") {
 					const mode = Number(operands[0])

@@ -626,6 +626,71 @@ it("leaves inherited opacity unchanged by null byte-name graphics state entries"
 	).toEqual([[128, 214, 247, 255]])
 })
 
+it.each([
+	[{ OP: false }, false, false],
+	[{ OP: false, op: null }, false, false],
+	[{ OP: true, op: false }, false, true],
+] as const)(
+	"applies partial graphics state %j and restores inherited paint",
+	(flags, fill, stroke) => {
+		const source = rawDocument((objects) => ({
+			resources: dictionary({
+				ExtGState: dictionary({
+					Initial: dictionary({ OP: true, OPM: 1 }),
+					Reset: dictionary(
+						{},
+						...Object.entries({ ...flags, OPM: 0 }).map(
+							([key, value]) =>
+								[nameBytes(ascii(key)), objects.add(value)] as const,
+						),
+					),
+				}),
+			}),
+			contents: [
+				stream(
+					{},
+					ascii(
+						"/Initial gs 1 0 0 0 k 0 1 0 0 K q /Reset gs 10 10 20 20 re B Q 40 40 20 20 re B",
+					),
+				),
+			],
+		}))
+		const plan = planPdfPlates(source, new Set(["cmyk"]))
+		const paints = plan.pages[0]!.scope.instructions.filter(
+			({ kind }) => kind === "path",
+		)
+		expect(paints).toMatchObject([
+			{
+				fill: { overprint: fill, mode: 0 },
+				stroke: { overprint: stroke, mode: 0 },
+			},
+			{
+				fill: { overprint: true, mode: 1 },
+				stroke: { overprint: true, mode: 1 },
+			},
+		])
+	},
+)
+
+it.each([true, false, null])(
+	"checks text-knockout context on each use of TK=%s",
+	(TK) => {
+		const source = rawDocument((objects) => ({
+			resources: dictionary({
+				ExtGState: dictionary({
+					State: dictionary({}, [nameBytes(ascii("TK")), objects.add(TK)]),
+				}),
+			}),
+			contents: [stream({}, ascii("/State gs BT /State gs ET"))],
+		}))
+		if (TK === null) expect(() => previewPdfPlates(source)).not.toThrow()
+		else
+			expect(() => previewPdfPlates(source)).toThrow(
+				/Text knockout.*outside a text object/u,
+			)
+	},
+)
+
 it.each([false, true])(
 	"treats optional null dictionary entries as absent (indirect: %s)",
 	async (indirect) => {
@@ -1549,10 +1614,14 @@ describe("discovery failures", () => {
 	})
 	it.each([
 		[{ BM: name("Multiply") }, /Normal blending/u],
+		[{ BM: array(name("Normal"), 1) }, /Expected blend-mode names/u],
 		[{ SMask: dictionary({ S: name("Alpha") }) }, /Soft masks/u],
 		[{ ca: 2 }, /opacity/u],
+		[{ CA: -1 }, /opacity/u],
 		[{ OPM: 2 }, /overprint mode/u],
 		[{ OP: 1 }, /overprint flag/u],
+		[{ op: 1 }, /overprint flag/u],
+		[{ TK: 1 }, /Text knockout.*boolean/u],
 		[{ TR: name("Identity") }, /graphics state setting/u],
 	] as const)("rejects unsupported graphics states %j", (state, message) => {
 		expect(() =>

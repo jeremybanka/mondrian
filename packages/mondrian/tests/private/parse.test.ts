@@ -72,6 +72,14 @@ it("uses the default cross-reference range for a null /Index", () => {
 	)
 })
 
+it("resolves an indirect object-stream Type before unpacking its objects", () => {
+	const document = parsePdf(structuralPdf({ indirectType: true }))
+	expect(
+		document.objects.find((object) => object.objectNumber === 4)?.value,
+	).toMatchObject({ entries: { Answer: 42 } })
+	expect(() => serializePdf(document)).not.toThrow()
+})
+
 it("follows hybrid cross-references, preferring stream entries to table placeholders", () => {
 	const document = parsePdf(structuralPdf({ hybrid: true }))
 	expect(
@@ -192,6 +200,7 @@ function classic(objects: [number, number, string][], trailer: string): string {
 function structuralPdf(options: {
 	hybrid?: boolean
 	predicted?: boolean
+	indirectType?: boolean
 }): string {
 	let source = "%PDF-1.7\n"
 	const offsets = new Map<number, number>()
@@ -205,16 +214,18 @@ function structuralPdf(options: {
 		3,
 		"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
 	)
+	if (options.indirectType) add(7, "/ObjStm")
+	const count = options.indirectType ? 8 : 7
 	const objects = "4 0 << /Answer 42 >>"
 	const compressed = binaryText(deflateSync(objects))
 	add(
 		5,
-		`<< /Type /ObjStm /N 1 /First 4 /Filter /FlateDecode /Length ${compressed.length} >>\nstream\n${compressed}\nendstream`,
+		`<< /Type ${options.indirectType ? "7 0 R" : "/ObjStm"} /N 1 /First 4 /Filter /FlateDecode /Length ${compressed.length} >>\nstream\n${compressed}\nendstream`,
 	)
 	offsets.set(6, source.length)
-	const records = new Uint8Array(7 * 7)
+	const records = new Uint8Array(count * 7)
 	const view = new DataView(records.buffer)
-	for (let number = 0; number < 7; number++) {
+	for (let number = 0; number < count; number++) {
 		const position = number * 7
 		records[position] = number === 0 ? 0 : number === 4 ? 2 : 1
 		view.setUint32(position + 1, number === 4 ? 5 : (offsets.get(number) ?? 0))
@@ -223,8 +234,8 @@ function structuralPdf(options: {
 	let data = records
 	let filters = ""
 	if (options.predicted) {
-		const predicted = new Uint8Array(7 * 8)
-		for (let row = 0; row < 7; row++) {
+		const predicted = new Uint8Array(count * 8)
+		for (let row = 0; row < count; row++) {
 			predicted[row * 8] = 2
 			for (let byte = 0; byte < 7; byte++)
 				predicted[row * 8 + byte + 1] =
@@ -236,16 +247,16 @@ function structuralPdf(options: {
 	}
 	add(
 		6,
-		`<< /Type /XRef /Size 7 /Root 1 0 R /W [1 4 2] /Index [0 7] ${filters} /Length ${data.length} >>\nstream\n${binaryText(data)}\nendstream`,
+		`<< /Type /XRef /Size ${count} /Root 1 0 R /W [1 4 2] /Index [0 ${count}] ${filters} /Length ${data.length} >>\nstream\n${binaryText(data)}\nendstream`,
 	)
 	let xref = offsets.get(6)!
 	if (options.hybrid) {
 		xref = source.length
-		source += "xref\n0 7\n0000000000 65535 f \n"
-		for (let number = 1; number < 7; number++)
+		source += `xref\n0 ${count}\n0000000000 65535 f \n`
+		for (let number = 1; number < count; number++)
 			source +=
 				number === 4 ? "0000000000 00000 f \n" : row(offsets.get(number)!)
-		source += `trailer\n<< /Size 7 /Root 1 0 R /XRefStm ${offsets.get(6)} >>\n`
+		source += `trailer\n<< /Size ${count} /Root 1 0 R /XRefStm ${offsets.get(6)} >>\n`
 	}
 	return source + `startxref\n${xref}\n%%EOF\n`
 }

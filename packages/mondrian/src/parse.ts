@@ -366,10 +366,13 @@ class DocumentParser {
 					offset,
 				)
 			const stream = this.load(entry.stream).value
+			const type = isKind(stream, "stream")
+				? this.resolve(stream.entries.Type)
+				: undefined
 			if (
 				!isKind(stream, "stream") ||
-				!isKind(stream.entries.Type, "name") ||
-				stream.entries.Type.value !== "ObjStm"
+				!isKind(type, "name") ||
+				type.value !== "ObjStm"
 			)
 				throw new PdfParseError("Expected an object stream", offset)
 			const source = binaryText(this.decode(stream, offset))

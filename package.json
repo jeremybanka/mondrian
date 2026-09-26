@@ -26,7 +26,7 @@
 		"@dprint/oxc": "0.41.0",
 		"@dprint/toml": "0.8.0",
 		"@types/node": "26.6.2",
-		"@vitest/coverage-v8": "4.1.11",
+		"@vitest/coverage-v8": "5.0.2",
 		"dprint": "0.57.4",
 		"dprint-plugin-malva": "0.16.0",
 		"dprint-plugin-markup": "0.27.5",

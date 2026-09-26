@@ -1109,7 +1109,10 @@ function validateLeafPage(
 
 	const contents = entries.Contents
 	if (contents !== undefined) {
-		if (isReference(contents)) {
+		const resolved = isReference(contents)
+			? resolveMatching(contents, objects)?.value
+			: contents
+		if (isReference(contents) && !isPdfArray(resolved)) {
 			validateStreamReference(
 				contents,
 				`${path}.Contents`,
@@ -1117,9 +1120,9 @@ function validateLeafPage(
 				context,
 				resources,
 			)
-		} else if (isPdfArray(contents)) {
-			for (let index = 0; index < contents.items.length; index += 1) {
-				const item = contents.items[index]
+		} else if (isPdfArray(resolved)) {
+			for (let index = 0; index < resolved.items.length; index += 1) {
+				const item = resolved.items[index]
 				if (!isReference(item)) {
 					add(
 						context,

@@ -80,6 +80,32 @@ it("resolves an indirect object-stream Type before unpacking its objects", () =>
 	expect(() => serializePdf(document)).not.toThrow()
 })
 
+it("preserves braces in ordinary PDF 2.0 names and dictionary keys", () => {
+	const source = classic(
+		[
+			[1, 0, "<< /Type /Catalog /Pages 2 0 R /Extra 4 0 R >>"],
+			[2, 0, "<< /Type /Pages /Kids [3 0 R] /Count 1 >>"],
+			[
+				3,
+				0,
+				"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] /Resources << >> >>",
+			],
+			[4, 0, "<< /Key /A{B} /A{B} /C}D{ >>"],
+		],
+		"/Root 1 0 R /ID [<00112233445566778899aabbccddeeff> <00112233445566778899aabbccddeeff>]",
+	).replace("%PDF-1.7", "%PDF-2.0")
+	const document = parsePdf(source)
+	expect(
+		document.objects.find((object) => object.objectNumber === 4)?.value,
+	).toMatchObject({
+		entries: {
+			Key: { kind: "name", value: "A{B}" },
+			"A{B}": { kind: "name", value: "C}D{" },
+		},
+	})
+	expect(parsePdf(serializePdf(document))).toEqual(document)
+})
+
 it("follows hybrid cross-references, preferring stream entries to table placeholders", () => {
 	const document = parsePdf(structuralPdf({ hybrid: true }))
 	expect(

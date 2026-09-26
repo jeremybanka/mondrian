@@ -21,7 +21,8 @@ import {
 import { PdfParseError } from "./error.ts"
 
 const whitespace = /[\x00\t\n\f\r ]/
-const delimiter = /[\x00\t\n\f\r ()<>[\]{}/%]/
+// Braces delimit Type 4 calculator functions, not ordinary PDF objects.
+const delimiter = /[\x00\t\n\f\r ()<>[\]/%]/
 let utf8: TextDecoder | undefined
 
 export function binaryText(bytes: Uint8Array): string {

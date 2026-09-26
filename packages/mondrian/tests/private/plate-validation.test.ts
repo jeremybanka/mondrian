@@ -1,9 +1,33 @@
 import { describe, expect, it } from "vite-plus/test"
-import { array, ascii, dictionary, name, stream } from "../../src/index.ts"
+import {
+	array,
+	ascii,
+	createPdfDocument,
+	dictionary,
+	name,
+	rectangle,
+	stream,
+} from "../../src/index.ts"
 import { previewPdfPlates } from "../../src/testing.ts"
 import { rawDocument } from "./fixtures/plates.ts"
 
 describe("discovery failures", () => {
+	it("identifies the page containing forbidden paint", () => {
+		const pdf = createPdfDocument()
+		pdf.setPages(
+			pdf.page({ mediaBox: rectangle(0, 0, 10, 10) }),
+			pdf.page({
+				mediaBox: rectangle(0, 0, 10, 10),
+				content: [
+					pdf.graphics((g) =>
+						g.rgbFill(1, 0, 0).rectangle(0, 0, 10, 10).fill(),
+					),
+				],
+			}),
+		)
+		expect(() => previewPdfPlates(pdf.compile())).toThrow(/Page 2:.*DeviceRGB/u)
+	})
+
 	it.each([
 		["1 0 0 rg", /DeviceRGB/u],
 		["0 g", /DeviceGray/u],

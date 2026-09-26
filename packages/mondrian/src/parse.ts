@@ -19,13 +19,14 @@ import { PdfParseError } from "./parser/error.ts"
 import { binaryText, isKind, SyntaxReader } from "./parser/syntax.ts"
 import { decodeStructureStream } from "./parser/filters.ts"
 import { DecodeBudget } from "./parser/limits.ts"
+import { createDecryption } from "./parser/encryption.ts"
 import type { PdfParseOptions } from "./parser/limits.ts"
 
 export type { PdfParseOptions, PdfParseWarning } from "./parser/limits.ts"
 
 export { PdfParseError } from "./parser/error.ts"
 
-/** Parse an unencrypted PDF. Strings must contain one code unit per original byte. */
+/** Parse a PDF, decrypting supported encryption. Strings must contain one code unit per original byte. */
 export function parsePdf(
 	input: string | Uint8Array,
 	options: PdfParseOptions = {},
@@ -78,6 +79,9 @@ class DocumentParser {
 	readonly objects = new Map<number, PdfIndirectObject>()
 	readonly crossReferenceOffsets = new Set<number>()
 	readonly loading = new Set<number>()
+	private decrypt: ReturnType<typeof createDecryption> | undefined
+	private encryptionObject: number | undefined
+	private readonly unencryptedObjects = new Set<number>()
 	readonly objectStreams = new Map<
 		number,
 		{
@@ -155,8 +159,6 @@ class DocumentParser {
 		}
 		const reader: SyntaxReader = new SyntaxReader(this.source, ending.index)
 		if (trailer === undefined) reader.fail("Missing PDF trailer")
-		if (trailer.entries.Encrypt != null)
-			reader.fail("Encrypted PDFs are not supported")
 		const size = this.integer(trailer.entries.Size, reader, "trailer Size")
 		for (const number of this.entries.keys()) {
 			if (number >= size) this.entries.delete(number)
@@ -174,8 +176,34 @@ class DocumentParser {
 				}
 			}
 		}
+		const encryption = trailer.entries.Encrypt
+		if (encryption != null) {
+			if (
+				!isKind(encryption, "reference") ||
+				this.entries.get(encryption.objectNumber)?.type !== 1
+			)
+				reader.fail(
+					"Encrypted PDFs require an uncompressed encryption dictionary",
+				)
+			const dictionary = this.resolve(encryption)
+			if (!isKind(dictionary, "dictionary"))
+				reader.fail("Encrypted PDFs require an encryption dictionary")
+			this.encryptionObject = encryption.objectNumber
+			this.decrypt = createDecryption(
+				dictionary,
+				(value) => this.resolve(value),
+				this.options.password,
+				this.budget,
+				this.objectOffset(encryption.objectNumber),
+			)
+			for (const number of this.objects.keys())
+				this.unencryptedObjects.add(number)
+			this.objects.clear()
+			this.objectStreams.clear()
+		}
 		for (const [number, entry] of this.entries) {
-			if (number === 0 || entry.type === 0) continue
+			if (number === 0 || number === this.encryptionObject || entry.type === 0)
+				continue
 			// Consumed cross-reference streams describe file revisions, not the
 			// current object graph. Match offsets so reused object numbers survive.
 			if (entry.type === 1 && this.crossReferenceOffsets.has(entry.offset))
@@ -405,6 +433,12 @@ class DocumentParser {
 					object.generation !== entry.generation
 				)
 					reader.fail("Cross-reference entry does not match the object header")
+				if (this.decrypt !== undefined && !this.unencryptedObjects.has(number))
+					object = indirectObject(
+						number,
+						this.decrypt(object.value, entry.offset),
+						object.generation,
+					)
 			} else object = this.compressed(number, entry)
 			this.objects.set(number, object)
 			return object

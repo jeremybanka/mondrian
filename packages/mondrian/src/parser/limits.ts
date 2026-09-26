@@ -11,6 +11,8 @@ export interface PdfParseWarning {
 }
 
 export interface PdfParseOptions {
+	/** AES-256 user or owner password. Default: empty. Unicode passwords require prepared UTF-8 bytes (SASLprep for R=6). */
+	readonly password?: string | Uint8Array
 	/** Recover a header in the first 1,024 bytes and zero-offset in-use xref entries. Default: false. */
 	readonly recover?: boolean
 	/** Receives each recovery performed when recover is true. */

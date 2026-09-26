@@ -45,6 +45,83 @@ const blue = separation("Blue", {
 const white = [255, 255, 255, 255]
 
 it.each([false, true])(
+	"accepts equivalent spot function streams regardless of key order (indirect arrays: %s)",
+	async (indirect) => {
+		const source = spotFunctionDocument(indirect)
+		const plates = previewPdfPlates(source)
+		expect(plates.map(({ name }) => name)).toEqual([
+			"Cyan",
+			"Magenta",
+			"Yellow",
+			"Black",
+			"Red",
+		])
+		const [solid, tint] = await samples(plates[4]!.document, [
+			[20, 20],
+			[60, 20],
+		])
+		expect(solid).toEqual([255, 0, 0, 255])
+		expect(tint![0]).toBe(255)
+		expect(tint![1]).toBeCloseTo(128, -1)
+		expect(tint![2]).toBe(tint![1])
+	},
+)
+
+it.each(["bytes", "domain", "range"] as const)(
+	"still rejects spot function streams with different %s",
+	(difference) => {
+		expect(() =>
+			previewPdfPlates(spotFunctionDocument(true, difference)),
+		).toThrow(/Conflicting definitions for separation Red/u)
+	},
+)
+
+function spotFunctionDocument(
+	indirect: boolean,
+	difference?: "bytes" | "domain" | "range",
+) {
+	return rawDocument((objects) => {
+		const values = (...components: number[]) =>
+			indirect ? objects.add(array(...components)) : array(...components)
+		const code = "{ 1 exch 1 exch sub dup }"
+		const first = objects.add(
+			stream(
+				{
+					FunctionType: 4,
+					Domain: values(0, 1),
+					Range: values(0, 1, 0, 1, 0, 1),
+				},
+				ascii(code),
+			),
+		)
+		const second = objects.add(
+			stream(
+				{
+					Range: values(0, 1, 0, 1, 0, difference === "range" ? 0.5 : 1),
+					Domain: values(0, difference === "domain" ? 2 : 1),
+					FunctionType: 4,
+				},
+				ascii(difference === "bytes" ? "{ 0 exch dup }" : code),
+			),
+		)
+		return {
+			resources: dictionary({
+				ColorSpace: dictionary({
+					A: array(name("Separation"), name("Red"), name("DeviceRGB"), first),
+					B: array(name("Separation"), name("Red"), name("DeviceRGB"), second),
+				}),
+			}),
+			contents: [
+				stream(
+					{},
+					ascii("/A cs 1 scn 0 0 40 40 re f /B cs 0.5 scn 40 0 40 40 re f"),
+				),
+			],
+		}
+	})
+}
+
+it.each([false, true])(
 	"preserves PDF 1.2 with an ordinary graphics state (OP present: %s)",
 	async (overprint) => {
 		const source = rawDocument(

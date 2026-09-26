@@ -101,7 +101,9 @@ function tokenName(value: string | undefined): string {
 	)
 }
 
-function dictionaryItems(value: PdfDictionary): [string, PdfValue][] {
+function dictionaryItems(
+	value: Pick<PdfDictionary, "entries" | "byteEntries">,
+): [string, PdfValue][] {
 	return [
 		...Object.entries(value.entries)
 			.filter((entry): entry is [string, PdfValue] => entry[1] !== undefined)
@@ -181,10 +183,14 @@ export function planPdfPlates(
 		if (pdfName(resolved) !== undefined) return pdfName(resolved)
 		if (resolved.kind === "array")
 			return resolved.items.map((item) => canonical(item, depth + 1))
-		if (resolved.kind === "dictionary")
-			return dictionaryItems(resolved)
+		if (resolved.kind === "dictionary" || resolved.kind === "stream") {
+			const entries = dictionaryItems(resolved)
 				.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 				.map(([key, item]) => [key, canonical(item, depth + 1)])
+			return resolved.kind === "stream"
+				? { entries, data: Array.from(resolved.data) }
+				: entries
+		}
 		return resolved
 	}
 	const colorSpace = (value: PdfValue): Color => {

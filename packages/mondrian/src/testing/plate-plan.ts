@@ -274,6 +274,10 @@ export function planPdfPlates(
 		textMode: 0,
 	})
 	const activeForms = new Set<PdfStream>()
+	const formPlans = new WeakMap<
+		PdfStream,
+		WeakMap<PdfDictionary, Map<string, PlateScope>>
+	>()
 	const scope = (
 		source: string,
 		resources: PdfDictionary,
@@ -478,19 +482,34 @@ export function planPdfPlates(
 						)
 					if (activeForms.has(value))
 						throw new TypeError("Recursive Form XObject in plate content")
-					activeForms.add(value)
-					const ownResources = dictionaryValue(value, "Resources")
-					const nested = scope(
-						readStream(value),
-						// PDF 1.6 §3.7.2: missing Form Resources falls back to the
-						// page, even when an enclosing Form has private resources.
-						ownResources === undefined ? pageResources : dict(ownResources),
-						pageResources,
-						state,
-						`${location} / XObject ${key}`,
-						value,
-					)
-					activeForms.delete(value)
+					let contexts = formPlans.get(value)
+					if (contexts === undefined) {
+						contexts = new WeakMap()
+						formPlans.set(value, contexts)
+					}
+					let variants = contexts.get(pageResources)
+					if (variants === undefined) {
+						variants = new Map()
+						contexts.set(pageResources, variants)
+					}
+					const stateKey = inheritedPaintKey(state)
+					let nested = variants.get(stateKey)
+					if (nested === undefined) {
+						activeForms.add(value)
+						const ownResources = dictionaryValue(value, "Resources")
+						nested = scope(
+							readStream(value),
+							// PDF 1.6 §3.7.2: missing Form Resources falls back to the
+							// page, even when an enclosing Form has private resources.
+							ownResources === undefined ? pageResources : dict(ownResources),
+							pageResources,
+							state,
+							`${location} / XObject ${key}`,
+							value,
+						)
+						activeForms.delete(value)
+						variants.set(stateKey, nested)
+					}
 					instructions.push({ ...instruction, form: nested })
 					continue
 				} else if (!passthrough.has(op))
@@ -591,6 +610,20 @@ export function planPdfPlates(
 		throw new TypeError("Expected a page tree reference")
 	visit(pageTree, dictionary({}))
 	return { plates, pages }
+}
+
+/** Form resources are fixed by the source and page context; only paint is baked in.
+ * Named ink consistency is validated separately, so equivalent references to an
+ * ink must not prevent sharing. Geometry and layout remain inherited at render time.
+ */
+function inheritedPaintKey(state: State): string {
+	const colorKey = (color: Color | undefined) =>
+		color === undefined ? null : [color.space, color.components, color.name]
+	return JSON.stringify({
+		...state,
+		fill: colorKey(state.fill),
+		stroke: colorKey(state.stroke),
+	})
 }
 
 /** Replace logical keys, including byte-name entries, without duplicate PDF keys. */

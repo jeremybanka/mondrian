@@ -67,11 +67,15 @@ export function previewPdfPlates(
 			objects.push(indirectObject(number, value))
 			return reference(number)
 		}
+		// A scope identifies the Form, page resource context, and inherited paint.
+		// The cache is local to this plate; other plates need their own projection.
+		const projectedForms = new Map<PlateScope, PdfReference>()
 		const emit = (
 			scope: PlateScope,
 		): { data: Uint8Array; resources: PdfDictionary } => {
 			const commands: string[] = []
 			const forms = new Map<string, PdfValue>()
+			const formNames = new Map<PdfReference, string>()
 			let spotDefinition: PdfValue | undefined
 			const color = (paint: PlatePaint, stroke: boolean): void => {
 				const source = paint.color
@@ -97,24 +101,30 @@ export function previewPdfPlates(
 			for (const instruction of scope.instructions) {
 				const { op, operands } = instruction
 				if (instruction.form) {
-					const nested = emit(instruction.form)
-					const source = instruction.form.source!
-					const entries = replaceEntries(source, {
-						Resources: nested.resources,
-						Filter: undefined,
-						DecodeParms: undefined,
-					})
-					const key = `/PlateForm${forms.size}`
-					forms.set(
-						key,
-						add(
+					let projected = projectedForms.get(instruction.form)
+					if (projected === undefined) {
+						const nested = emit(instruction.form)
+						const source = instruction.form.source!
+						const entries = replaceEntries(source, {
+							Resources: nested.resources,
+							Filter: undefined,
+							DecodeParms: undefined,
+						})
+						projected = add(
 							stream(
 								entries.entries,
 								nested.data,
 								...(entries.byteEntries ?? []),
 							),
-						),
-					)
+						)
+						projectedForms.set(instruction.form, projected)
+					}
+					let key = formNames.get(projected)
+					if (key === undefined) {
+						key = `/PlateForm${forms.size}`
+						formNames.set(projected, key)
+						forms.set(key, projected)
+					}
 					commands.push(`${key} Do`)
 					continue
 				}

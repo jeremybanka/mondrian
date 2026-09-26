@@ -44,6 +44,146 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it("keeps shared nested Form projections linear in the source graph", async () => {
+	const source = rawDocument((objects) => {
+		let child = objects.add(
+			stream(
+				{
+					Type: name("XObject"),
+					Subtype: name("Form"),
+					BBox: array(0, 0, 80, 80),
+				},
+				ascii("1 0 0 0 k 10 10 60 60 re f"),
+			),
+		)
+		for (let depth = 0; depth < 12; depth++) {
+			child = objects.add(
+				stream(
+					{
+						Type: name("XObject"),
+						Subtype: name("Form"),
+						BBox: array(0, 0, 80, 80),
+						Resources: dictionary({ XObject: dictionary({ Child: child }) }),
+					},
+					ascii("/Child Do /Child Do"),
+				),
+			)
+		}
+		return {
+			resources: dictionary({ XObject: dictionary({ Root: child }) }),
+			contents: [stream({}, ascii("/Root Do"))],
+		}
+	})
+	const inputBytes = serializePdf(source).length
+	const plates = previewPdfPlates(source)
+	for (const plate of plates) {
+		expect(plate.document.objects.length).toBeLessThanOrEqual(
+			source.objects.length * 2,
+		)
+		expect(serializePdf(plate.document).length).toBeLessThan(inputBytes * 4)
+	}
+	expect(
+		await samples(plates[0]!.document, [
+			[40, 40],
+			[5, 5],
+		]),
+	).toEqual([[0, 174, 239, 255], white])
+})
+
+it("keeps cached Forms separate for different page resources", async () => {
+	const objects = createPdfObjectBuilder()
+	const parent = objects.reserve<PdfPagesDictionary>()
+	const inner = objects.add(
+		stream(
+			{
+				Type: name("XObject"),
+				Subtype: name("Form"),
+				BBox: array(0, 0, 80, 80),
+			},
+			ascii("/CS0 cs 1 scn 10 10 60 60 re f"),
+		),
+	)
+	const outer = objects.add(
+		stream(
+			{
+				Type: name("XObject"),
+				Subtype: name("Form"),
+				BBox: array(0, 0, 80, 80),
+				Resources: dictionary({ XObject: dictionary({ Inner: inner }) }),
+			},
+			ascii("/Inner Do"),
+		),
+	)
+	const contents = objects.add(stream({}, ascii("/Outer Do")))
+	const pages = [red, blue].map((ink) => {
+		const colors = bindColorContent(objects, [
+			colorContent([fillColor(spot(ink, 1))]),
+		])
+		return objects.add(
+			dictionary({
+				Type: name("Page"),
+				Parent: parent.ref,
+				Resources: dictionary({
+					...colors.resources.entries,
+					XObject: dictionary({ Outer: outer }),
+				}),
+				Contents: contents,
+			}),
+		)
+	})
+	parent.set(
+		dictionary({
+			Type: name("Pages"),
+			Kids: array(...pages),
+			Count: pages.length,
+			MediaBox: array(0, 0, 80, 80),
+		}),
+	)
+	const root = objects.add(
+		dictionary({ Type: name("Catalog"), Pages: parent.ref }),
+	)
+	const plates = previewPdfPlates(objects.build({ root }))
+	for (const [index, color] of [
+		[4, [255, 0, 0, 255]],
+		[5, [0, 0, 255, 255]],
+	] as const) {
+		const rendered = await renderPdf(serializePdf(plates[index]!.document), {
+			resolution: 72,
+		})
+		for (const [pageIndex, page] of rendered.pages.entries()) {
+			const offset = ((page.height - 1 - 40) * page.width + 40) * 4
+			expect(Array.from(page.pixels.slice(offset, offset + 4))).toEqual(
+				pageIndex === index - 4 ? color : white,
+			)
+		}
+	}
+})
+
+it("does not let a cached Form bypass inherited opacity validation", () => {
+	const source = rawDocument((objects) => {
+		const form = objects.add(
+			stream(
+				{
+					Type: name("XObject"),
+					Subtype: name("Form"),
+					BBox: array(0, 0, 80, 80),
+				},
+				ascii("20 20 40 40 re B"),
+			),
+		)
+		return {
+			resources: dictionary({
+				XObject: dictionary({ Fm: form }),
+				ExtGState: dictionary({ Unequal: dictionary({ CA: 0.5 }) }),
+			}),
+			contents: [
+				stream({}, ascii("1 0 0 0 k 0 1 0 0 K /Fm Do /Unequal gs /Fm Do")),
+			],
+		}
+	})
+	expect(() => previewPdfPlates(source)).toThrow(/unequal opacities/u)
+})
+
 it.each([false, true])(
 	"accepts equivalent spot function streams regardless of key order (indirect arrays: %s)",
 	async (indirect) => {

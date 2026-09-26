@@ -1,7 +1,7 @@
 import { expect, it } from "vitest"
-import { parsePdf, PdfParseError } from "../../src/index.ts"
+import { parsePdf, PdfParseError, serializePdf } from "../../src/index.ts"
 import { readPdf } from "../../src/testing/inspection/read-pdf.ts"
-import { classic, row } from "../fixtures/parser.ts"
+import { classic, row, structuralPdf } from "../fixtures/parser.ts"
 
 it.each(["missing", "free", "null", "stale generation"])(
 	"treats an optional reference to a %s object as null",
@@ -54,5 +54,38 @@ it.each([
 		const source = classic([[1, 0, body]], trailer)
 		expect(() => parsePdf(source)).toThrow(PdfParseError)
 		expect(() => parsePdf(source)).toThrow(message)
+	},
+)
+
+it.each(["null", "7 0 R", "99 0 R"])(
+	"reads an internal object stream with /F %s",
+	async (file) => {
+		const source = structuralPdf({
+			objectStreamEntries: `/F ${file}`,
+			extraObjects: [[7, "null"]],
+		})
+		const expected = await readPdf(Buffer.from(source, "latin1"))
+		const document = parsePdf(source)
+		expect(
+			document.objects.find((object) => object.objectNumber === 4)?.value,
+		).toMatchObject({ entries: { Answer: 42 } })
+		// Undefined references retain their original syntax in the graph.
+		if (file !== "99 0 R")
+			expect((await readPdf(serializePdf(document))).pages).toEqual(
+				expected.pages,
+			)
+	},
+)
+
+it.each(["(external.bin)", "7 0 R"])(
+	"still rejects an external object stream with /F %s",
+	(file) => {
+		const source = structuralPdf({
+			objectStreamEntries: `/F ${file}`,
+			extraObjects: [[7, "(external.bin)"]],
+		})
+		expect(() => parsePdf(source)).toThrow(
+			/External structural streams are not supported/,
+		)
 	},
 )

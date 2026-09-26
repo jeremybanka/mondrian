@@ -25,7 +25,7 @@ export function decodeStructureStream(
 	const fail: (message: string) => never = (message) => {
 		throw new PdfParseError(message, offset)
 	}
-	if (stream.entries.F != null)
+	if (resolve(stream.entries.F) != null)
 		fail("External structural streams are not supported")
 	const filter = resolve(stream.entries.Filter)
 	const parameters = resolve(stream.entries.DecodeParms)

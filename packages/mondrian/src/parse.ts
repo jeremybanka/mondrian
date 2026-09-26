@@ -88,6 +88,11 @@ class DocumentParser {
 		let offset: number | undefined = Number(ending[1])
 		const visited = new Set<number>()
 		let trailer: PdfDictionary | undefined
+		const sections: {
+			offset: number
+			entries: Map<number, XrefEntry>
+			trailer: PdfDictionary
+		}[] = []
 		while (offset !== undefined) {
 			if (visited.has(offset))
 				throw new PdfParseError("Cyclic cross-reference chain", offset)
@@ -97,25 +102,33 @@ class DocumentParser {
 				? this.table(reader)
 				: this.xrefStream(reader)
 			trailer ??= section.trailer
-			const hybridOffset = section.trailer.entries.XRefStm
+			sections.push({ ...section, offset })
+			const previous = section.trailer.entries.Prev
+			offset =
+				previous == null
+					? undefined
+					: this.integer(previous, reader, "Prev offset")
+		}
+		// Build each revision against its predecessors so indirect hybrid offsets
+		// resolve in that revision, even if a newer revision reuses their objects.
+		for (const section of sections.reverse()) {
+			for (const [number, entry] of section.entries)
+				this.entries.set(number, entry)
+			const reader = this.reader(section.offset)
+			const hybridOffset = this.resolve(section.trailer.entries.XRefStm)
 			if (hybridOffset != null) {
 				const hybrid = this.integer(hybridOffset, reader, "XRefStm offset")
 				if (visited.has(hybrid))
 					reader.fail("Cyclic hybrid cross-reference chain")
 				visited.add(hybrid)
 				const supplement = this.xrefStream(this.reader(hybrid))
-				// Hybrid stream entries supersede this revision's table, not newer revisions.
 				for (const [number, entry] of supplement.entries)
-					section.entries.set(number, entry)
+					this.entries.set(number, entry)
 			}
-			for (const [number, entry] of section.entries) {
-				if (!this.entries.has(number)) this.entries.set(number, entry)
-			}
-			const previous = section.trailer.entries.Prev
-			offset =
-				previous == null
-					? undefined
-					: this.integer(previous, reader, "Prev offset")
+			// Offset resolution may load objects that a supplement or later revision
+			// replaces. Only the final cross-reference map may populate the graph.
+			this.objects.clear()
+			this.objectStreams.clear()
 		}
 		const reader: SyntaxReader = new SyntaxReader(this.source, ending.index)
 		if (trailer === undefined) reader.fail("Missing PDF trailer")

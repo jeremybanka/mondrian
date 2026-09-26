@@ -1,6 +1,7 @@
 import { expect, it } from "vitest"
 import { parsePdf, serializePdf, validatePdf } from "../../src/index.ts"
 import { readPdf } from "../../src/testing/inspection/read-pdf.ts"
+import { row, structuralPdf } from "../fixtures/parser.ts"
 import { binaryText } from "../../src/parser/syntax.ts"
 
 it.each(["delete-info", "replace-catalog"] as const)(
@@ -87,3 +88,47 @@ function revisedPdf(
 		`trailer\n<< /Size ${change === "replace-catalog" ? 7 : 6} /Root ${change === "replace-catalog" ? 6 : 1} 0 R /Info null /Prev ${previous} >>\nstartxref\n${xref}\n%%EOF\n`
 	)
 }
+
+it.each([false, true])(
+	"resolves an indirect hybrid offset with a later revision: %s",
+	async (updated) => {
+		let source = structuralPdf({ hybrid: true, indirectOffset: true })
+		if (updated) {
+			const previous = Number(/startxref\n(\d+)\n%%EOF\n$/.exec(source)![1])
+			const object4 = source.length
+			source += "4 0 obj\n<< /Answer 99 >>\nendobj\n"
+			const object7 = source.length
+			source += "7 0 obj\n(current)\nendobj\n"
+			const xref = source.length
+			source += `xref\n4 1\n${row(object4)}7 1\n${row(object7)}trailer\n<< /Size 8 /Root 1 0 R /Prev ${previous} >>\nstartxref\n${xref}\n%%EOF\n`
+		}
+		const original = await readPdf(Buffer.from(source, "latin1"))
+		const document = parsePdf(source)
+		expect(
+			document.objects.find((object) => object.objectNumber === 4)?.value,
+		).toMatchObject({ entries: { Answer: updated ? 99 : 42 } })
+		if (updated)
+			expect(
+				document.objects.find((object) => object.objectNumber === 7)?.value,
+			).toMatchObject({ bytes: Uint8Array.from(Buffer.from("current")) })
+		expect((await readPdf(serializePdf(document))).pages).toEqual(
+			original.pages,
+		)
+	},
+)
+
+it("resolves a hybrid offset object inherited from an earlier table", async () => {
+	let source = structuralPdf({ hybrid: true, indirectOffset: true }).replace(
+		"/XRefStm 7 0 R",
+		"",
+	)
+	const previous = Number(/startxref\n(\d+)\n%%EOF\n$/.exec(source)![1])
+	const xref = source.length
+	source += `xref\n0 1\n0000000000 65535 f \ntrailer\n<< /Size 8 /Root 1 0 R /Prev ${previous} /XRefStm 7 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+	const original = await readPdf(Buffer.from(source, "latin1"))
+	const document = parsePdf(source)
+	expect(
+		document.objects.find((object) => object.objectNumber === 4)?.value,
+	).toMatchObject({ entries: { Answer: 42 } })
+	expect((await readPdf(serializePdf(document))).pages).toEqual(original.pages)
+})

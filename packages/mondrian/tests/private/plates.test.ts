@@ -34,6 +34,7 @@ import {
 } from "../../src/index.ts"
 import { previewPdfPlates, readPdf, renderPdf } from "../../src/testing.ts"
 import { parsePlateContent } from "../../src/testing/plate-content.ts"
+import { planPdfPlates } from "../../src/testing/plate-plan.ts"
 import "../../src/vitest.ts"
 
 const red = separation("Red / # ink", {
@@ -49,6 +50,107 @@ const blue = separation("Blue", {
 	exponent: 1,
 })
 const white = [255, 255, 255, 255]
+
+it("indexes each resource category once per discovery despite repeated escaped-name lookups", () => {
+	const scans = new Map<string, number>()
+	const source = rawDocument((objects) => {
+		const values = {
+			Font: objects.add(
+				dictionary({
+					Type: name("Font"),
+					Subtype: name("Type1"),
+					BaseFont: name("Helvetica"),
+				}),
+			),
+			ExtGState: objects.add(dictionary({ ca: 1 })),
+			ColorSpace: objects.add(name("DeviceCMYK")),
+			XObject: objects.add(
+				stream(
+					{
+						Type: name("XObject"),
+						Subtype: name("Form"),
+						BBox: array(0, 0, 80, 80),
+						Resources: dictionary({}),
+					},
+					ascii(""),
+				),
+			),
+		}
+		const nil = objects.add(null)
+		const categories = Object.entries(values).map(([category, value]) => {
+			const table = dictionary(
+				{
+					...Object.fromEntries(
+						Array.from({ length: 64 }, (_, index) => [`Unused${index}`, value]),
+					),
+					Absent: nil,
+				},
+				[nameBytes(ascii("Resource /")), value],
+			)
+			return [
+				category,
+				objects.add({
+					...table,
+					entries: new Proxy(table.entries, {
+						ownKeys(target) {
+							scans.set(category, (scans.get(category) ?? 0) + 1)
+							return Reflect.ownKeys(target)
+						},
+					}),
+				}),
+			]
+		})
+		return {
+			resources: dictionary(Object.fromEntries(categories)),
+			contents: [
+				stream(
+					{},
+					ascii(
+						Array.from({ length: 128 }, (_, index) => {
+							const key =
+								index % 2 === 0 ? "/Resource#20#2f" : "/Resourc#65#20#2F"
+							return `${key} gs ${key} cs ${key} Do BT ${key} 12 Tf ET`
+						}).join("\n"),
+					),
+				),
+			],
+		}
+	})
+	// Count discovery work independently of object-builder validation.
+	scans.clear()
+	for (let run = 1; run <= 2; run++) {
+		const plan = planPdfPlates(source, new Set(["cmyk"]))
+		expect(
+			plan.pages[0]!.scope.instructions.filter(({ kind }) => kind === "form"),
+		).toHaveLength(128)
+		expect(Object.fromEntries(scans)).toEqual({
+			Font: run,
+			ExtGState: run,
+			ColorSpace: run,
+			XObject: run,
+		})
+	}
+})
+
+it.each([
+	["Font", "BT /Missing 12 Tf ET"],
+	["ExtGState", "/Missing gs"],
+	["ColorSpace", "/Missing cs"],
+	["XObject", "/Missing Do"],
+])("treats indirect null %s resources as missing", (category, commands) => {
+	const source = rawDocument((objects) => ({
+		resources: dictionary({
+			[category]: dictionary({}, [
+				nameBytes(ascii("Missing")),
+				objects.add(null),
+			]),
+		}),
+		contents: [stream({}, ascii(commands))],
+	}))
+	expect(() => previewPdfPlates(source)).toThrow(
+		`Missing ${category} resource /Missing`,
+	)
+})
 
 it.each([
 	["S", ["n", "S", "n", "S"]],

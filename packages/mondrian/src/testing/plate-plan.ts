@@ -179,13 +179,34 @@ export function planPdfPlates(
 			throw new TypeError("Expected a PDF resource dictionary")
 		return resolved
 	}
+	// Scope identity matters: the same alias can refer to different page/Form
+	// resources. Keep canonical names and original references local to this plan.
+	const resourceTables = new WeakMap<
+		PdfDictionary,
+		Map<string, ReadonlyMap<string, PdfValue>>
+	>()
+	const resourceTable = (
+		resources: PdfDictionary,
+		category: string,
+	): ReadonlyMap<string, PdfValue> => {
+		let categories = resourceTables.get(resources)
+		if (categories === undefined) {
+			categories = new Map()
+			resourceTables.set(resources, categories)
+		}
+		let table = categories.get(category)
+		if (table === undefined) {
+			table = new Map(presentItems(dict(entry(resources, category))))
+			categories.set(category, table)
+		}
+		return table
+	}
 	const resource = (
 		resources: PdfDictionary,
 		category: string,
 		key: string,
 	): PdfValue => {
-		const entries = presentItems(dict(entry(resources, category)))
-		const value = entries.find(([name]) => name === tokenName(key))?.[1]
+		const value = resourceTable(resources, category).get(tokenName(key))
 		if (value === undefined)
 			throw new TypeError(`Missing ${category} resource ${key}`)
 		return value
@@ -343,9 +364,7 @@ export function planPdfPlates(
 		location: string,
 	): PlateScope => {
 		try {
-			for (const [alias, value] of presentItems(
-				dict(entry(resources, "ColorSpace")),
-			)) {
+			for (const [alias, value] of resourceTable(resources, "ColorSpace")) {
 				if (["/DefaultCMYK", "/DefaultRGB", "/DefaultGray"].includes(alias))
 					throw new TypeError(
 						"Default color space replacements are unsupported",

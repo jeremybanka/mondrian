@@ -56,7 +56,7 @@ export function parsePdf(
 		}
 	}
 	try {
-		return new DocumentParser(source, options).parse()
+		return new DocumentParser(source, options, prefix).parse()
 	} catch (error) {
 		if (prefix !== 0 && error instanceof PdfParseError)
 			throw new PdfParseError(error.reason, error.offset + prefix)
@@ -71,6 +71,8 @@ type XrefEntry =
 
 class DocumentParser {
 	readonly source: string
+	readonly options: PdfParseOptions
+	readonly sourceOffset: number
 	readonly budget: DecodeBudget
 	readonly entries = new Map<number, XrefEntry>()
 	readonly objects = new Map<number, PdfIndirectObject>()
@@ -85,8 +87,10 @@ class DocumentParser {
 		}
 	>()
 
-	constructor(source: string, options: PdfParseOptions) {
+	constructor(source: string, options: PdfParseOptions, sourceOffset = 0) {
 		this.source = source
+		this.options = options
+		this.sourceOffset = sourceOffset
 		this.budget = new DecodeBudget(options)
 	}
 
@@ -156,6 +160,19 @@ class DocumentParser {
 		const size = this.integer(trailer.entries.Size, reader, "trailer Size")
 		for (const number of this.entries.keys()) {
 			if (number >= size) this.entries.delete(number)
+		}
+		if (this.options.recover === true) {
+			for (const [number, entry] of this.entries) {
+				if (number !== 0 && entry.type === 1 && entry.offset === 0) {
+					this.entries.set(number, { type: 0 })
+					this.options.onWarning?.({
+						code: "zero-offset-object",
+						offset: this.sourceOffset,
+						objectNumber: number,
+						message: `Ignored in-use cross-reference entry for object ${number} with offset zero`,
+					})
+				}
+			}
 		}
 		for (const [number, entry] of this.entries) {
 			if (number === 0 || entry.type === 0) continue

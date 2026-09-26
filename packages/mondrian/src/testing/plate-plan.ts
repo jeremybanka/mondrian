@@ -271,6 +271,7 @@ export function planPdfPlates(
 	const scope = (
 		source: string,
 		resources: PdfDictionary,
+		pageResources: PdfDictionary,
 		initial: State,
 		location: string,
 		form?: PdfStream,
@@ -468,7 +469,10 @@ export function planPdfPlates(
 					const ownResources = dictionaryValue(value, "Resources")
 					const nested = scope(
 						readStream(value),
-						ownResources === undefined ? resources : dict(ownResources),
+						// PDF 1.6 §3.7.2: missing Form Resources falls back to the
+						// page, even when an enclosing Form has private resources.
+						ownResources === undefined ? pageResources : dict(ownResources),
+						pageResources,
 						state,
 						`${location} / XObject ${key}`,
 						value,
@@ -559,7 +563,7 @@ export function planPdfPlates(
 			pages.push({
 				reference: ref,
 				source: node,
-				scope: scope(source, resources, initialState(), location),
+				scope: scope(source, resources, resources, initialState(), location),
 			})
 		}
 		activePages.delete(node)

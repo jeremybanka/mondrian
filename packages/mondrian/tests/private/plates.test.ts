@@ -27,6 +27,7 @@ import {
 } from "../../src/index.ts"
 import { previewPdfPlates, readPdf, renderPdf } from "../../src/testing.ts"
 import { parsePlateContent } from "../../src/testing/plate-content.ts"
+import "../../src/vitest.ts"
 
 const red = separation("Red / # ink", {
 	type: "exponential",
@@ -176,6 +177,54 @@ it("projects shared compressed Forms per invocation, with inherited colors and p
 	expect(reds[0]).toEqual(reds[1])
 	expect(reds[0]![0]).toBe(255)
 	expect(reds[0]![1]).toBeCloseTo(128, -1)
+})
+
+it("resolves resource-less nested Forms against the page resources", async () => {
+	const source = rawDocument((objects) => {
+		const colors = bindColorContent(objects, [
+			colorContent([fillColor(spot(red, 1))]),
+		])
+		const inner = objects.add(
+			stream(
+				{
+					Type: name("XObject"),
+					Subtype: name("Form"),
+					BBox: array(0, 0, 80, 80),
+				},
+				ascii("/CS0 cs 1 scn 10 10 60 60 re f"),
+			),
+		)
+		const outer = objects.add(
+			stream(
+				{
+					Type: name("XObject"),
+					Subtype: name("Form"),
+					BBox: array(0, 0, 80, 80),
+					Resources: dictionary({ XObject: dictionary({ Inner: inner }) }),
+				},
+				ascii("/Inner Do"),
+			),
+		)
+		return {
+			resources: dictionary({
+				...colors.resources.entries,
+				XObject: dictionary({ Outer: outer }),
+			}),
+			contents: [stream({}, ascii("/Outer Do"))],
+		}
+	})
+	expect(await samples(source, [[40, 40]])).toEqual([[255, 0, 0, 255]])
+	const plates = previewPdfPlates(source)
+	expect(
+		await samples(plates[4]!.document, [
+			[40, 40],
+			[5, 5],
+		]),
+	).toEqual([[255, 0, 0, 255], white])
+	await expect(serializePdf(plates[4]!.document)).toMatchPdfArtifact(
+		"nested-form-page-resources",
+		{ resolution: 96 },
+	)
 })
 
 it("handles bound compressed content and nested Forms without losing resource declarations", async () => {

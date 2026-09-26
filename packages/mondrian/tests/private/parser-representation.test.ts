@@ -7,6 +7,41 @@ import {
 	serializePdf,
 } from "../../src/index.ts"
 import { classic } from "../fixtures/parser.ts"
+import { SyntaxReader } from "../../src/parser/syntax.ts"
+
+it("retains current name and string variants for each token spelling", () => {
+	expect(
+		new SyntaxReader(
+			String.raw`[/A#20B /#ff <a b c> (a(b)\n\101\(\)\\)]`,
+		).value(),
+	).toEqual({
+		kind: "array",
+		items: [
+			{ kind: "name", value: "A B" },
+			{ kind: "byte-name", bytes: Uint8Array.of(255) },
+			{ kind: "hex-string", bytes: Uint8Array.of(171, 192) },
+			{
+				kind: "literal-string",
+				bytes: new TextEncoder().encode("a(b)\nA()\\"),
+			},
+		],
+	})
+})
+
+it("produces deeply equal models from byte strings and byte arrays", () => {
+	const source = classic(
+		[
+			[1, 0, "<< /Type /Catalog /Extra 2 0 R >>"],
+			[
+				2,
+				0,
+				"<< /Length 3 /Filter /CustomFilter >>\nstream\n\x00\x80\xff\nendstream",
+			],
+		],
+		"/Root 1 0 R",
+	)
+	expect(parsePdf(source)).toEqual(parsePdf(Buffer.from(source, "latin1")))
+})
 
 it("reproduces the current writer's bytes after parsing its output", () => {
 	const builder = createPdfDocument({

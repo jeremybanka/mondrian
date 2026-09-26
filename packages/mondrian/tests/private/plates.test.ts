@@ -42,6 +42,76 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it.each(["B", "B*", "b", "b*", "text 2", "text 6"])(
+	"rejects the unsupported implicit knockout group of %s with unequal opacity",
+	(operator) => {
+		const source = rawDocument((objects) => {
+			const font = objects.add(
+				dictionary({
+					Type: name("Font"),
+					Subtype: name("Type1"),
+					BaseFont: name("Helvetica"),
+				}),
+			)
+			const paint = operator.startsWith("text")
+				? `BT /F 30 Tf ${operator.slice(5)} Tr 20 20 Td (Ink) Tj ET`
+				: `20 20 40 40 re ${operator}`
+			return {
+				resources: dictionary({
+					Font: dictionary({ F: font }),
+					ExtGState: dictionary({
+						Over: dictionary({ OP: true, op: true, OPM: 1, ca: 1, CA: 0.5 }),
+					}),
+				}),
+				contents: [
+					stream({}, ascii(`/Over gs 1 0 0 0 k 0 1 0 0 K 20 w ${paint}`)),
+				],
+			}
+		})
+		expect(() => previewPdfPlates(source)).toThrow(
+			/Page 1:.*combined fill.*stroke.*unequal opacit/iu,
+		)
+	},
+)
+
+it("tracks partial opacity updates into Forms and restores opacity after Q", () => {
+	const make = (restore: boolean) =>
+		rawDocument((objects) => {
+			const form = objects.add(
+				stream(
+					{
+						Type: name("XObject"),
+						Subtype: name("Form"),
+						BBox: array(0, 0, 80, 80),
+					},
+					ascii("1 0 0 0 k 0 1 0 0 K 20 20 40 40 re B"),
+				),
+			)
+			return {
+				resources: dictionary({
+					ExtGState: dictionary({
+						Fill: dictionary({ ca: 0.5 }),
+						Stroke: dictionary({ CA: 0.5 }),
+						Unequal: dictionary({ CA: 0.25 }),
+					}),
+					XObject: dictionary({ Fm: form }),
+				}),
+				contents: [
+					stream(
+						{},
+						ascii(
+							`/Fill gs /Stroke gs ${restore ? "q /Unequal gs Q" : "/Unequal gs"} /Fm Do`,
+						),
+					),
+				],
+			}
+		})
+	expect(() => previewPdfPlates(make(false))).toThrow(
+		/XObject \/Fm.*unequal opacities/u,
+	)
+	expect(() => previewPdfPlates(make(true))).not.toThrow()
+})
+
 it("projects shared compressed Forms per invocation, with inherited colors and private resource scopes", async () => {
 	const source = rawDocument((objects) => {
 		const parentInk = bindColorContent(objects, [

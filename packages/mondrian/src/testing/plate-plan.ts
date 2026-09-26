@@ -41,6 +41,8 @@ interface State {
 	stroke: Color | undefined
 	fillOverprint: boolean
 	strokeOverprint: boolean
+	fillOpacity: number
+	strokeOpacity: number
 	mode: number
 	textMode: number
 }
@@ -260,6 +262,8 @@ export function planPdfPlates(
 		stroke: undefined,
 		fillOverprint: false,
 		strokeOverprint: false,
+		fillOpacity: 1,
+		strokeOpacity: 1,
 		mode: 0,
 		textMode: 0,
 	})
@@ -392,6 +396,8 @@ export function planPdfPlates(
 								alpha > 1)
 						)
 							throw new TypeError(`Invalid ${key} opacity`)
+						if (typeof alpha === "number")
+							state[key === "ca" ? "fillOpacity" : "strokeOpacity"] = alpha
 					}
 					if (get("BM") !== undefined && pdfName(get("BM")) !== "/Normal")
 						throw new TypeError("Plate previews support only Normal blending")
@@ -420,6 +426,13 @@ export function planPdfPlates(
 					const stroke = text
 						? mode === 1 || mode === 2
 						: !["f", "F", "f*"].includes(op)
+					// PDF 1.6 §7.6.3: unequal alpha makes combined painting an
+					// implicit knockout group. Dropping either channel loses shape
+					// that can remove the earlier fill, even when it deposits no ink.
+					if (fill && stroke && state.fillOpacity !== state.strokeOpacity)
+						throw new TypeError(
+							"Plate previews do not support combined fill and stroke with unequal opacities (implicit knockout group)",
+						)
 					instructions.push({
 						...instruction,
 						...(fill ? { fill: paint("fill") } : {}),

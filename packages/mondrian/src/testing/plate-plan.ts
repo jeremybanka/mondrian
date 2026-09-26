@@ -15,13 +15,14 @@ import { encodePdfName } from "../syntax.ts"
 import { pdfName, tokenName, displayName } from "./plate-names.ts"
 import { parsePlateContent, textHasGlyphs } from "./plate-content.ts"
 import type { ContentInstruction } from "./plate-content.ts"
+import { pathPainting, textPainting } from "./plate-paint.ts"
+import type { PathShape, TextMode } from "./plate-paint.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
 type CmykComponent = 0 | 1 | 2 | 3
 type CmykComponents = readonly [number, number, number, number]
 type SpotComponents = readonly [number]
-type TextMode = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7
 
 export type PlateInk =
 	| {
@@ -69,12 +70,12 @@ type PathPaint =
 
 export type PlateInstruction =
 	| (ContentInstruction & { readonly kind: "raw" })
-	| (ContentInstruction & { readonly kind: "path" } & PathPaint)
+	| ({ readonly kind: "path" } & PathShape & PathPaint)
 	| (ContentInstruction & {
 			readonly kind: "text"
 			readonly fill: PlatePaint | undefined
 			readonly stroke: PlatePaint | undefined
-			readonly textMode: TextMode
+			readonly clip: boolean
 	  })
 	| { readonly kind: "form"; readonly form: PlateForm }
 
@@ -100,7 +101,6 @@ const passthrough = new Set(
 		" ",
 	),
 )
-const pathPaints = new Set("S s f F f* B B* b b*".split(" "))
 const textPaints = new Set(["Tj", "TJ", "'", '"'])
 const standardBlendModes = new Set(
 	"Normal Compatible Multiply Screen Overlay Darken Lighten ColorDodge ColorBurn HardLight SoftLight Difference Exclusion Hue Saturation Color Luminosity"
@@ -548,19 +548,14 @@ export function planPdfPlates(
 					const font = dict(resource(resources, "Font", tokenName(operands[0])))
 					if (pdfName(resolve(entry(font, "Subtype"))) === "/Type3")
 						throw new TypeError("Type3 fonts are unsupported in plate previews")
-				} else if (pathPaints.has(op) || textPaints.has(op)) {
+				} else if (pathPainting.has(op) || textPaints.has(op)) {
 					const text = textPaints.has(op)
 					if (text && !textHasGlyphs(instruction)) {
 						instructions.push({ ...instruction, kind: "raw" })
 						continue
 					}
-					const mode = state.textMode % 4
-					const fill = text
-						? mode === 0 || mode === 2
-						: !["S", "s"].includes(op)
-					const stroke = text
-						? mode === 1 || mode === 2
-						: !["f", "F", "f*"].includes(op)
+					const channels = pathPainting.get(op) ?? textPainting(state.textMode)
+					const { fill, stroke } = channels
 					if (text && textObject) {
 						textObject.transparent ||=
 							(fill && state.fillOpacity < 1) ||
@@ -575,24 +570,24 @@ export function planPdfPlates(
 						throw new TypeError(
 							"Plate previews do not support combined fill and stroke with unequal opacities (implicit knockout group)",
 						)
-					if (text)
+					if ("clip" in channels)
 						instructions.push({
 							...instruction,
 							kind: "text",
-							textMode: state.textMode,
+							clip: channels.clip,
 							fill: fill ? paint("fill") : undefined,
 							stroke: stroke ? paint("stroke") : undefined,
 						})
 					else if (fill)
 						instructions.push({
-							...instruction,
+							...channels,
 							kind: "path",
 							fill: paint("fill"),
 							stroke: stroke ? paint("stroke") : undefined,
 						})
 					else
 						instructions.push({
-							...instruction,
+							...channels,
 							kind: "path",
 							fill: undefined,
 							stroke: paint("stroke"),

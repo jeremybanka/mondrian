@@ -20,14 +20,14 @@ import {
 import { formatPdfNumber } from "../syntax.ts"
 import { validatePdf } from "../validate.ts"
 import { nameTokenBytes } from "./plate-names.ts"
+import {
+	pathPaintOperator,
+	projectPaint,
+	textPaintMode,
+} from "./plate-paint.ts"
+import type { ProjectedPaint } from "./plate-paint.ts"
 import { planPdfPlates, replaceEntries } from "./plate-plan.ts"
-import type {
-	PlateColorSpace,
-	PlateForm,
-	PlateInk,
-	PlatePaint,
-	PlateScope,
-} from "./plate-plan.ts"
+import type { PlateColorSpace, PlateForm, PlateScope } from "./plate-plan.ts"
 
 export interface PdfPlateOptions {
 	/** Allowed source paint spaces. Defaults to ["cmyk", "spot"]. No color conversion is performed. */
@@ -81,26 +81,18 @@ export function previewPdfPlates(
 			const forms = new Map<string, PdfValue>()
 			const formNames = new Map<PdfReference, string>()
 			let spotDefinition: PdfValue | undefined
-			const color = (
-				source: PlatePaint["color"],
-				value: number,
-				stroke: boolean,
-			): void => {
-				if (
-					source.space === "spot" &&
-					plate.colorSpace === "spot" &&
-					source.ink === plate.ink
-				) {
-					spotDefinition = source.definition
+			const color = (paint: ProjectedPaint, stroke: boolean): void => {
+				if (paint.kind === "skip") return
+				const { color } = paint
+				if (color.space === "spot") {
+					spotDefinition = color.definition
 					commands.push(
 						`/PlateInk ${stroke ? "CS" : "cs"}`,
-						`${formatPdfNumber(value)} ${stroke ? "SCN" : "scn"}`,
+						`${formatPdfNumber(color.components[0])} ${stroke ? "SCN" : "scn"}`,
 					)
 				} else {
-					const components = [0, 0, 0, 0]
-					if (plate.colorSpace === "cmyk") components[plate.component] = value
 					commands.push(
-						`${components.map(formatPdfNumber).join(" ")} ${stroke ? "K" : "k"}`,
+						`${color.components.map(formatPdfNumber).join(" ")} ${stroke ? "K" : "k"}`,
 					)
 				}
 			}
@@ -133,46 +125,28 @@ export function previewPdfPlates(
 					commands.push(`${key} Do`)
 					continue
 				}
-				const { op, operands } = instruction
 				if (instruction.kind === "raw") {
+					const { op, operands } = instruction
 					commands.push(`${operands.join(" ")} ${op}`)
 					continue
 				}
-				const fillValue =
-					instruction.fill === undefined
-						? undefined
-						: coverage(instruction.fill, plate)
-				const strokeValue =
-					instruction.stroke === undefined
-						? undefined
-						: coverage(instruction.stroke, plate)
-				if (instruction.fill !== undefined && fillValue !== undefined)
-					color(instruction.fill.color, fillValue, false)
-				if (instruction.stroke !== undefined && strokeValue !== undefined)
-					color(instruction.stroke.color, strokeValue, true)
-				const fill = fillValue !== undefined
-				const stroke = strokeValue !== undefined
+				const fill = projectPaint(instruction.fill, plate)
+				const stroke = projectPaint(instruction.stroke, plate)
+				color(fill, false)
+				color(stroke, true)
+				const channels = {
+					fill: fill.kind !== "skip",
+					stroke: stroke.kind !== "skip",
+				}
 				if (instruction.kind === "text") {
-					const mode = fill ? (stroke ? 2 : 0) : stroke ? 1 : 3
+					const { op, operands } = instruction
 					commands.push(
-						`${mode + (instruction.textMode >= 4 ? 4 : 0)} Tr`,
+						`${textPaintMode(channels, instruction.clip)} Tr`,
 						`${operands.join(" ")} ${op}`,
 					)
 				} else {
-					if (["b", "b*", "s"].includes(op)) commands.push("h")
-					commands.push(
-						fill
-							? stroke
-								? op.endsWith("*")
-									? "B*"
-									: "B"
-								: op.endsWith("*")
-									? "f*"
-									: "f"
-							: stroke
-								? "S"
-								: "n",
-					)
+					if (instruction.close) commands.push("h")
+					commands.push(pathPaintOperator(channels, instruction.evenOdd))
 				}
 			}
 			const resources = replaceEntries(scope.resources, {
@@ -223,22 +197,6 @@ export function previewPdfPlates(
 		throwForPdfErrors(validatePdf(preview))
 		return { name: plate.name, colorSpace: plate.colorSpace, document: preview }
 	})
-}
-
-/** undefined means leave this plate untouched; zero means knock out its ink. */
-function coverage(paint: PlatePaint, plate: PlateInk): number | undefined {
-	const { color, overprint, mode } = paint
-	if (color.space === "cmyk" && plate.colorSpace === "cmyk") {
-		const value = color.components[plate.component]
-		return overprint && mode === 1 && value === 0 ? undefined : value
-	}
-	if (
-		color.space === "spot" &&
-		plate.colorSpace === "spot" &&
-		plate.ink === color.ink
-	)
-		return color.components[0]
-	return overprint ? undefined : 0
 }
 
 function resourceDictionary(

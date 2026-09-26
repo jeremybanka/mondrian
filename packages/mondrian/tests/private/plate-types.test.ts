@@ -78,8 +78,8 @@ it("requires instruction kinds, source streams for Forms, and paint for paths", 
 	}>().not.toExtend<PlateInstruction>()
 	expectTypeOf<{
 		kind: "path"
-		op: "f"
-		operands: readonly string[]
+		close: false
+		evenOdd: false
 		fill: undefined
 		stroke: undefined
 	}>().not.toExtend<PlateInstruction>()
@@ -101,8 +101,8 @@ it("requires instruction kinds, source streams for Forms, and paint for paths", 
 	}>().toExtend<PlateInstruction>()
 	expectTypeOf<{
 		kind: "path"
-		op: "f"
-		operands: readonly string[]
+		close: false
+		evenOdd: false
 		fill: PlatePaint
 		stroke: undefined
 	}>().toExtend<PlateInstruction>()
@@ -112,6 +112,6 @@ it("requires instruction kinds, source streams for Forms, and paint for paths", 
 		operands: readonly string[]
 		fill: undefined
 		stroke: undefined
-		textMode: 7
+		clip: true
 	}>().toExtend<PlateInstruction>()
 })

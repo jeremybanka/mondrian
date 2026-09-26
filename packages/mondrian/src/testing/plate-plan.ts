@@ -151,6 +151,18 @@ export function planPdfPlates(
 		}
 		return value
 	}
+	// In dictionaries, PDF null (including an indirect null) means no entry.
+	// Keep non-null references intact for resource reuse and output fidelity.
+	const entry = (
+		value: Pick<PdfDictionary, "entries" | "byteEntries">,
+		key: string,
+	): PdfValue | undefined => {
+		const item = dictionaryValue(value, key)
+		return resolve(item) === null ? undefined : item
+	}
+	const presentItems = (
+		value: Pick<PdfDictionary, "entries" | "byteEntries">,
+	) => dictionaryItems(value).filter(([, item]) => resolve(item) !== null)
 	const dict = (value: PdfValue | undefined): PdfDictionary => {
 		const resolved = resolve(value)
 		if (resolved === undefined) return dictionary({})
@@ -167,7 +179,7 @@ export function planPdfPlates(
 		category: string,
 		key: string,
 	): PdfValue => {
-		const entries = dictionaryItems(dict(dictionaryValue(resources, category)))
+		const entries = presentItems(dict(entry(resources, category)))
 		const value = entries.find(([name]) => name === tokenName(key))?.[1]
 		if (value === undefined)
 			throw new TypeError(`Missing ${category} resource ${key}`)
@@ -190,7 +202,7 @@ export function planPdfPlates(
 		if (resolved.kind === "array")
 			return resolved.items.map((item) => canonical(item, depth + 1))
 		if (resolved.kind === "dictionary" || resolved.kind === "stream") {
-			const entries = dictionaryItems(resolved)
+			const entries = presentItems(resolved)
 				.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 				.map(([key, item]) => [key, canonical(item, depth + 1)])
 			return resolved.kind === "stream"
@@ -259,7 +271,7 @@ export function planPdfPlates(
 	}
 	const readStream = (value: PdfStream): string => {
 		let bytes = value.data
-		const filter = resolve(dictionaryValue(value, "Filter"))
+		const filter = resolve(entry(value, "Filter"))
 		if (filter !== undefined) {
 			const filters =
 				filter !== null && typeof filter === "object" && filter.kind === "array"
@@ -268,7 +280,7 @@ export function planPdfPlates(
 			if (
 				filters.length !== 1 ||
 				pdfName(resolve(filters[0])) !== "/FlateDecode" ||
-				dictionaryValue(value, "DecodeParms") !== undefined
+				entry(value, "DecodeParms") !== undefined
 			)
 				throw new TypeError(
 					"Plate content supports only unfiltered or FlateDecode streams without DecodeParms",
@@ -302,8 +314,8 @@ export function planPdfPlates(
 		form?: PdfStream,
 	): PlateScope => {
 		try {
-			for (const [alias, value] of dictionaryItems(
-				dict(dictionaryValue(resources, "ColorSpace")),
+			for (const [alias, value] of presentItems(
+				dict(entry(resources, "ColorSpace")),
 			)) {
 				if (["/DefaultCMYK", "/DefaultRGB", "/DefaultGray"].includes(alias))
 					throw new TypeError(
@@ -408,12 +420,12 @@ export function planPdfPlates(
 							" ",
 						),
 					)
-					for (const [entry] of dictionaryItems(value))
+					for (const [entry] of presentItems(value))
 						if (!allowed.has(entry.slice(1)))
 							throw new TypeError(
 								`Unsupported plate graphics state setting ${entry}`,
 							)
-					const get = (key: string) => resolve(dictionaryValue(value, key))
+					const get = (key: string) => resolve(entry(value, key))
 					if (get("TK") !== undefined) {
 						if (typeof get("TK") !== "boolean" || textObject !== undefined)
 							throw new TypeError(
@@ -474,12 +486,24 @@ export function planPdfPlates(
 						// Projection already applies overprint; removing all source
 						// controls keeps the default knockout state without adding
 						// entries requiring a newer PDF version.
-						replaceEntries(value, {
-							OP: undefined,
-							op: undefined,
-							OPM: undefined,
-							...(blend === undefined ? {} : { BM: name("Normal") }),
-						}),
+						replaceEntries(
+							dictionary(
+								Object.fromEntries(
+									Object.entries(value.entries).filter(
+										([, item]) => resolve(item) !== null,
+									),
+								),
+								...(value.byteEntries ?? []).filter(
+									([, item]) => resolve(item) !== null,
+								),
+							),
+							{
+								OP: undefined,
+								op: undefined,
+								OPM: undefined,
+								...(blend === undefined ? {} : { BM: name("Normal") }),
+							},
+						),
 					)
 				} else if (op === "Tr") {
 					const mode = Number(operands[0])
@@ -489,7 +513,7 @@ export function planPdfPlates(
 					continue
 				} else if (op === "Tf") {
 					const font = dict(resource(resources, "Font", tokenName(operands[0])))
-					if (pdfName(resolve(dictionaryValue(font, "Subtype"))) === "/Type3")
+					if (pdfName(resolve(entry(font, "Subtype"))) === "/Type3")
 						throw new TypeError("Type3 fonts are unsupported in plate previews")
 				} else if (pathPaints.has(op) || textPaints.has(op)) {
 					const text = textPaints.has(op)
@@ -530,15 +554,15 @@ export function planPdfPlates(
 						value.kind !== "stream"
 					)
 						throw new TypeError("Expected an XObject stream")
-					if (pdfName(resolve(dictionaryValue(value, "Subtype"))) !== "/Form") {
-						const imageSpace = dictionaryValue(value, "ColorSpace")
+					if (pdfName(resolve(entry(value, "Subtype"))) !== "/Form") {
+						const imageSpace = entry(value, "ColorSpace")
 						if (imageSpace !== undefined) colorSpace(imageSpace)
 						throw new TypeError("Images are unsupported in plate previews")
 					}
 					if (
-						dictionaryValue(value, "Group") !== undefined ||
-						dictionaryValue(value, "OC") !== undefined ||
-						dictionaryValue(value, "Ref") !== undefined
+						entry(value, "Group") !== undefined ||
+						entry(value, "OC") !== undefined ||
+						entry(value, "Ref") !== undefined
 					)
 						throw new TypeError(
 							"Transparency groups, optional content, and reference XObjects are unsupported in plate previews",
@@ -559,7 +583,7 @@ export function planPdfPlates(
 					let nested = variants.get(stateKey)
 					if (nested === undefined) {
 						activeForms.add(value)
-						const ownResources = dictionaryValue(value, "Resources")
+						const ownResources = entry(value, "Resources")
 						nested = scope(
 							readStream(value),
 							// PDF 1.6 §3.7.2: missing Form Resources falls back to the
@@ -600,11 +624,11 @@ export function planPdfPlates(
 		const node = dict(ref)
 		if (activePages.has(node)) throw new TypeError("Cyclic page tree")
 		activePages.add(node)
-		const ownResources = dictionaryValue(node, "Resources")
+		const ownResources = entry(node, "Resources")
 		const resources =
 			ownResources === undefined ? inherited : dict(ownResources)
-		if (pdfName(resolve(dictionaryValue(node, "Type"))) === "/Pages") {
-			const kids = resolve(dictionaryValue(node, "Kids"))
+		if (pdfName(resolve(entry(node, "Type"))) === "/Pages") {
+			const kids = resolve(entry(node, "Kids"))
 			if (kids === null || typeof kids !== "object" || kids.kind !== "array")
 				throw new TypeError("Expected page tree Kids")
 			for (const child of kids.items) {
@@ -618,11 +642,11 @@ export function planPdfPlates(
 			}
 		} else {
 			const location = `Page ${pages.length + 1}`
-			if (dictionaryValue(node, "Group") !== undefined)
+			if (entry(node, "Group") !== undefined)
 				throw new TypeError(
 					`${location}: transparency groups are unsupported in plate previews`,
 				)
-			const annotations = resolve(dictionaryValue(node, "Annots"))
+			const annotations = resolve(entry(node, "Annots"))
 			if (
 				annotations !== undefined &&
 				!(
@@ -635,7 +659,7 @@ export function planPdfPlates(
 				throw new TypeError(
 					`${location}: annotations are unsupported in plate previews`,
 				)
-			const contents = resolve(dictionaryValue(node, "Contents"))
+			const contents = resolve(entry(node, "Contents"))
 			const streams =
 				contents !== null &&
 				typeof contents === "object" &&
@@ -664,7 +688,7 @@ export function planPdfPlates(
 		activePages.delete(node)
 	}
 	const root = dict(document.root)
-	const pageTree = dictionaryValue(root, "Pages")
+	const pageTree = entry(root, "Pages")
 	if (
 		pageTree === null ||
 		typeof pageTree !== "object" ||

@@ -45,6 +45,106 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it("leaves inherited opacity unchanged by null byte-name graphics state entries", async () => {
+	const source = rawDocument((objects) => ({
+		resources: dictionary({
+			ExtGState: dictionary({
+				Half: dictionary({ ca: 0.5 }),
+				Empty: dictionary({}, [nameBytes(ascii("ca")), objects.add(null)]),
+			}),
+		}),
+		contents: [
+			stream({}, ascii("/Half gs /Empty gs 1 0 0 0 k 10 10 60 60 re f")),
+		],
+	}))
+	expect(
+		await samples(previewPdfPlates(source)[0]!.document, [[40, 40]]),
+	).toEqual([[128, 214, 247, 255]])
+})
+
+it.each([false, true])(
+	"treats optional null dictionary entries as absent (indirect: %s)",
+	async (indirect) => {
+		const source = rawDocument((objects) => {
+			const nil = indirect ? objects.add(null) : null
+			const child = objects.add(
+				stream(
+					{
+						Type: name("XObject"),
+						Subtype: name("Form"),
+						BBox: array(0, 0, 80, 80),
+						Group: nil,
+						OC: nil,
+						Ref: nil,
+						Filter: nil,
+					},
+					ascii("/Ink cs 1 0 0 0 sc /State gs 10 10 60 60 re f"),
+				),
+			)
+			return {
+				page: { Group: nil, Annots: nil },
+				resources: dictionary({
+					ColorSpace: dictionary({
+						Ink: name("DeviceCMYK"),
+						Unused: nil,
+						DefaultCMYK: nil,
+					}),
+					ExtGState: dictionary({
+						State: dictionary({
+							ca: nil,
+							CA: nil,
+							OP: nil,
+							op: nil,
+							OPM: nil,
+							BM: nil,
+							SMask: nil,
+							TK: nil,
+							TR: nil,
+						}),
+					}),
+					XObject: dictionary({ Child: child }),
+				}),
+				contents: [
+					stream(
+						{ Filter: name("FlateDecode"), DecodeParms: nil },
+						zlibSync(ascii("/Child Do")),
+					),
+				],
+			}
+		})
+		const cyan = previewPdfPlates(source)[0]!.document
+		expect(
+			await samples(cyan, [
+				[40, 40],
+				[5, 5],
+			]),
+		).toEqual([[0, 174, 239, 255], white])
+		if (!indirect)
+			await expect(serializePdf(cyan)).toMatchPdfArtifact(
+				"optional-null-entries",
+				{ resolution: 72 },
+			)
+	},
+)
+
+it.each([false, true])(
+	"accepts null resource categories (indirect: %s)",
+	(indirect) => {
+		const source = rawDocument((objects) => {
+			const nil = indirect ? objects.add(null) : null
+			return {
+				contents: [],
+				resources: dictionary({
+					ColorSpace: nil,
+					ExtGState: nil,
+					XObject: nil,
+				}),
+			}
+		})
+		expect(previewPdfPlates(source)).toHaveLength(4)
+	},
+)
+
 it.each([
 	["Normal"],
 	["FutureMode", "Normal"],

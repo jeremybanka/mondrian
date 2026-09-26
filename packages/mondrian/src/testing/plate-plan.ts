@@ -13,7 +13,7 @@ import type {
 import { dictionary, name } from "../objects.ts"
 import { encodePdfName } from "../syntax.ts"
 import { pdfName, tokenName, displayName } from "./plate-names.ts"
-import { parsePlateContent } from "./plate-content.ts"
+import { parsePlateContent, textHasGlyphs } from "./plate-content.ts"
 import type { ContentInstruction } from "./plate-content.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
@@ -524,6 +524,10 @@ export function planPdfPlates(
 						throw new TypeError("Type3 fonts are unsupported in plate previews")
 				} else if (pathPaints.has(op) || textPaints.has(op)) {
 					const text = textPaints.has(op)
+					if (text && !textHasGlyphs(instruction)) {
+						instructions.push(instruction)
+						continue
+					}
 					const mode = state.textMode % 4
 					const fill = text
 						? mode === 0 || mode === 2

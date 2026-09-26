@@ -50,6 +50,85 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it.each([
+	"[100] TJ",
+	"[] TJ",
+	"() Tj",
+	"<> Tj",
+	"< \n > Tj",
+	"[() 100 <> % (ignored glyphs)\n -20] TJ",
+	"(\\\n\\\r\\\r\n) Tj",
+	"() '",
+	'2 3 () "',
+])("retains positioning without requiring paint for %j", async (empty) => {
+	const source = textPositionDocument(`${empty} 1 0 0 0 k (Cyan) Tj`)
+	const plates = previewPdfPlates(source)
+	const original = await readPdf(serializePdf(source))
+	for (const plate of plates) {
+		const actual = await readPdf(serializePdf(plate.document))
+		expect(actual.pageCharacters).toEqual(original.pageCharacters)
+	}
+	const cyan = serializePdf(plates[0]!.document)
+	expect((await renderPdf(cyan, { resolution: 72 })).pages[0]!.pixels).toEqual(
+		(await renderPdf(serializePdf(source), { resolution: 72 })).pages[0]!
+			.pixels,
+	)
+	if (empty === "[100] TJ")
+		await expect(cyan).toMatchPdfArtifact("positioning-only-text", {
+			resolution: 144,
+		})
+})
+
+it("does not count empty text toward transparency and overprint usage", () => {
+	expect(() =>
+		previewPdfPlates(
+			textPositionDocument(
+				"/Half gs [100 ()] TJ /OpaqueOver gs 1 0 0 0 k (Cyan) Tj",
+			),
+		),
+	).not.toThrow()
+	expect(() =>
+		previewPdfPlates(
+			textPositionDocument(
+				"2 Tr /Unequal gs [100 ()] TJ 0 Tr /OpaqueOver gs 1 0 0 0 k (Cyan) Tj",
+			),
+		),
+	).not.toThrow()
+})
+
+it.each([
+	"[(A)] TJ",
+	"(\\101) Tj",
+	"<41> Tj",
+	"(()) Tj",
+	"(\\\\) Tj",
+	"( ) Tj",
+])("still checks actual glyph bytes in %j", (paint) => {
+	expect(() => previewPdfPlates(textPositionDocument(paint))).toThrow(
+		/Implicit DeviceGray/u,
+	)
+})
+
+function textPositionDocument(commands: string) {
+	return rawDocument(() => ({
+		resources: dictionary({
+			Font: dictionary({
+				F: dictionary({
+					Type: name("Font"),
+					Subtype: name("Type1"),
+					BaseFont: name("Helvetica"),
+				}),
+			}),
+			ExtGState: dictionary({
+				Half: dictionary({ ca: 0.5 }),
+				Unequal: dictionary({ ca: 0.5, CA: 1 }),
+				OpaqueOver: dictionary({ ca: 1, op: true, OPM: 1 }),
+			}),
+		}),
+		contents: [stream({}, ascii(`BT /F 12 Tf 20 50 Td 14 TL ${commands} ET`))],
+	}))
+}
+
 it("rejects cycles in spot-function graphs", () => {
 	const source = rawDocument((objects) => {
 		const cycle = objects.reserve<PdfDictionary>()

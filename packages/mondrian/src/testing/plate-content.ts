@@ -6,7 +6,7 @@ export interface ContentInstruction {
 }
 
 /** Tokenize content without interpreting operators inside strings or arrays. */
-export function parsePlateContent(source: string): ContentInstruction[] {
+function* contentTokens(source: string): Generator<string> {
 	let offset = 0
 	const whitespace = /[\0\t\n\f\r ]/u
 	const delimiter = /[\0\t\n\f\r ()<>[\]{}/%]/u
@@ -59,23 +59,46 @@ export function parsePlateContent(source: string): ContentInstruction[] {
 		}
 		return source.slice(start, offset)
 	}
-	const result: ContentInstruction[] = []
-	let operands: string[] = []
 	while (true) {
 		skip()
 		if (offset === source.length) break
-		const value = token()
+		yield token()
+	}
+}
+
+export function parsePlateContent(source: string): ContentInstruction[] {
+	const result: ContentInstruction[] = []
+	let operands: string[] = []
+	for (const value of contentTokens(source)) {
 		if (
 			/^[/(<[]/u.test(value) ||
 			/^[+\-.\d]/u.test(value) ||
 			["true", "false", "null"].includes(value)
-		) {
+		)
 			operands.push(value)
-		} else {
+		else {
 			result.push({ operands, op: value })
 			operands = []
 		}
 	}
-	if (operands.length > 0) fail()
+	if (operands.length > 0)
+		throw new TypeError(`Malformed plate content near byte ${source.length}`)
 	return result
+}
+
+/** Numeric TJ adjustments and empty strings change text state without painting. */
+export function textHasGlyphs({ op, operands }: ContentInstruction): boolean {
+	const operand = operands.at(-1)
+	if (operand === undefined)
+		throw new TypeError("Expected a text-showing operand")
+	const strings = op === "TJ" ? contentTokens(operand.slice(1, -1)) : [operand]
+	for (const value of strings) {
+		if (value.startsWith("(")) {
+			// Escaped line endings contribute no bytes; all other literal content
+			// (including whitespace, nested parentheses and escaped bytes) does.
+			if (!/^(?:\\(?:\r\n|\r|\n))*$/u.test(value.slice(1, -1))) return true
+		} else if (value.startsWith("<") && /[\da-f]/iu.test(value.slice(1, -1)))
+			return true
+	}
+	return false
 }

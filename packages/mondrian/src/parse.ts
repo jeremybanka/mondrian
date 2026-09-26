@@ -98,7 +98,7 @@ class DocumentParser {
 				: this.xrefStream(reader)
 			trailer ??= section.trailer
 			const hybridOffset = section.trailer.entries.XRefStm
-			if (hybridOffset !== undefined) {
+			if (hybridOffset != null) {
 				const hybrid = this.integer(hybridOffset, reader, "XRefStm offset")
 				if (visited.has(hybrid))
 					reader.fail("Cyclic hybrid cross-reference chain")
@@ -113,7 +113,7 @@ class DocumentParser {
 			}
 			const previous = section.trailer.entries.Prev
 			offset =
-				previous === undefined
+				previous == null
 					? undefined
 					: this.integer(previous, reader, "Prev offset")
 		}
@@ -256,10 +256,10 @@ class DocumentParser {
 			"cross-reference Size",
 		)
 		const index = stream.entries.Index
-		if (index !== undefined && !isKind(index, "array"))
+		if (index != null && !isKind(index, "array"))
 			reader.fail("Cross-reference Index must be an array")
 		const ranges =
-			index === undefined
+			index == null
 				? [0, size]
 				: index.items.map((value) =>
 						this.integer(value, reader, "cross-reference Index"),

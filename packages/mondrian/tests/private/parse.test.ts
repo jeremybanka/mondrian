@@ -55,6 +55,23 @@ it("reads large flat arrays without depending on the JavaScript argument limit",
 		expect(value.items).toHaveLength(150_000)
 })
 
+it.each(["Prev", "XRefStm"])(
+	"treats a null optional trailer /%s as absent",
+	(key) => {
+		const objects: [number, number, string][] = [[1, 0, "<< /Type /Catalog >>"]]
+		expect(parsePdf(classic(objects, `/Root 1 0 R /${key} null`))).toEqual(
+			parsePdf(classic(objects, "/Root 1 0 R")),
+		)
+	},
+)
+
+it("uses the default cross-reference range for a null /Index", () => {
+	const source = structuralPdf({})
+	expect(parsePdf(source.replace("/Index [0 7]", "/Index null"))).toEqual(
+		parsePdf(source),
+	)
+})
+
 it("follows hybrid cross-references, preferring stream entries to table placeholders", () => {
 	const document = parsePdf(structuralPdf({ hybrid: true }))
 	expect(

@@ -82,7 +82,7 @@ export {
 	stream,
 	textString,
 } from "./objects.ts"
-export type { PdfParseOptions } from "./parse.ts"
+export type { PdfParseOptions, PdfParseWarning } from "./parse.ts"
 export { parsePdf, PdfParseError } from "./parse.ts"
 export { serializePdf, serializePdfObjectBody } from "./serialize.ts"
 export { validatePdf } from "./validate.ts"

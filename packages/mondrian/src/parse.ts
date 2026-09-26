@@ -21,7 +21,7 @@ import { decodeStructureStream } from "./parser/filters.ts"
 import { DecodeBudget } from "./parser/limits.ts"
 import type { PdfParseOptions } from "./parser/limits.ts"
 
-export type { PdfParseOptions } from "./parser/limits.ts"
+export type { PdfParseOptions, PdfParseWarning } from "./parser/limits.ts"
 
 export { PdfParseError } from "./parser/error.ts"
 
@@ -42,7 +42,26 @@ export function parsePdf(
 		source = input
 	} else if (input instanceof Uint8Array) source = binaryText(input)
 	else throw new TypeError("Expected PDF text or a Uint8Array")
-	return new DocumentParser(source, options).parse()
+	let prefix = 0
+	if (options.recover === true) {
+		const header = /%PDF-(1\.[0-7]|2\.0)(?=[\r\n])/.exec(source.slice(0, 1032))
+		if (header !== null && header.index > 0 && header.index < 1024) {
+			prefix = header.index
+			source = source.slice(prefix)
+			options.onWarning?.({
+				code: "leading-bytes",
+				offset: prefix,
+				message: `Skipped ${prefix} bytes before the PDF header; offsets are relative to the header`,
+			})
+		}
+	}
+	try {
+		return new DocumentParser(source, options).parse()
+	} catch (error) {
+		if (prefix !== 0 && error instanceof PdfParseError)
+			throw new PdfParseError(error.reason, error.offset + prefix)
+		throw error
+	}
 }
 
 type XrefEntry =

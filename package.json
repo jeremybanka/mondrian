@@ -29,7 +29,7 @@
 		"@vitest/coverage-v8": "4.1.11",
 		"dprint": "0.57.4",
 		"dprint-plugin-malva": "0.16.0",
-		"dprint-plugin-markup": "0.27.3",
+		"dprint-plugin-markup": "0.27.5",
 		"dprint-plugin-yaml": "0.6.0",
 		"typescript": "7.0.2",
 		"vite-plus": "0.3.3"

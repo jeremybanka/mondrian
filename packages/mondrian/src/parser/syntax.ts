@@ -11,12 +11,11 @@ import type {
 	PdfValue,
 } from "../objects.ts"
 import {
-	dictionary,
+	dictionaryEntry,
 	hexString,
 	indirectObject,
 	literalString,
 	reference,
-	stream,
 } from "../objects.ts"
 import { PdfParseError } from "./error.ts"
 
@@ -189,7 +188,15 @@ export class SyntaxReader {
 			this.position = end
 			this.expect("endstream")
 			const { Length: _length, ...entries } = value.entries
-			value = stream(entries, data, ...(value.byteEntries ?? []))
+			// These bytes and entries are newly parsed and already owned by this graph.
+			value = Object.freeze({
+				kind: "stream",
+				entries: Object.freeze(entries),
+				...(value.byteEntries === undefined
+					? {}
+					: { byteEntries: value.byteEntries }),
+				data,
+			})
 		}
 		this.expect("endobj")
 		return indirectObject(number, value, generation)
@@ -236,9 +243,15 @@ export class SyntaxReader {
 			keys.add(identity)
 			const value = this.value(depth + 1)
 			if (key.kind === "name") entries[key.value] = value
-			else byteEntries.push([key, value])
+			else byteEntries.push(dictionaryEntry(key, value))
 		}
-		return dictionary(entries, ...byteEntries)
+		return Object.freeze({
+			kind: "dictionary",
+			entries: Object.freeze(entries),
+			...(byteEntries.length === 0
+				? {}
+				: { byteEntries: Object.freeze(byteEntries) }),
+		})
 	}
 
 	private literal() {

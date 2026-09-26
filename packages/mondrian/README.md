@@ -269,6 +269,30 @@ names, `nameBytes()` preserves arbitrary non-NUL bytes and
 values use `textString()`, `asciiTextString()`, and `dateString()` so text and
 date fields cannot be confused with arbitrary PDF byte strings.
 
+## Parsing existing PDFs
+
+`parsePdf(rawPdfText)` reads raw PDF file text into a `PdfDocument`. It also accepts a `Uint8Array`, which is the preferred input when reading a binary file:
+
+```ts
+import { readFile } from "node:fs/promises"
+import { parsePdf, serializePdf, validatePdf } from "mondrian.pdf"
+
+const document = parsePdf(await readFile("input.pdf"))
+console.log(document.version, document.root, document.objects)
+const diagnostics = validatePdf(document)
+const bytes = serializePdf(document)
+```
+
+String input must contain one code unit per original byte, as produced by `Buffer.toString("latin1")`. ASCII PDF text works directly. Do not decode binary PDFs as UTF-8 or with `TextDecoder("latin1")`: those conversions can change bytes and invalidate offsets. Characters above U+00FF are rejected.
+
+The parser reads unencrypted PDF 1.0–2.0 files with classic cross-reference tables, cross-reference streams, hybrid references, and incremental revisions. It selects the latest live object definitions and expands compressed objects into `document.objects`, ordered by object number. Structural streams support Flate, LZW, ASCIIHex, ASCII85, and RunLength filters, including TIFF and PNG prediction for Flate and LZW.
+
+Names and strings preserve their decoded bytes; non-UTF-8 names use `PdfByteName` and dictionary `byteEntries`. Ordinary stream data and filters remain encoded, and direct or indirect `/Length` entries are consumed because serialization derives lengths. The document preserves the effective version, catalog and info references, and file identifiers. Original object and cross-reference stream containers remain available for inspection and may produce unreachable-object warnings during validation.
+
+Parsing reads the object graph without applying Mondrian's authoring validation rules. Use `validatePdf()` separately when preparing a parsed document for serialization. Syntax errors and unsupported structural encodings throw `PdfParseError`, whose `offset` identifies a byte in the original input (the container offset for errors in compressed objects). The parser rejects encryption, external structural streams, malformed cross-references, and nesting deeper than 256 levels; it does not attempt file repair.
+
+Reserializing rebuilds the file layout and cross-reference table. It does not preserve revision history, signature validity, or additional trailer fields outside the `PdfDocument` model.
+
 ## Derived fields
 
 Do not supply values that depend on the final graph or byte layout.

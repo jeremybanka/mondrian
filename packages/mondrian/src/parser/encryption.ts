@@ -208,16 +208,18 @@ export function createDecryption(
 				value === undefined || (signature && name === "Contents")
 					? value
 					: (visit(value) as PdfValue)
+			const mappedEntries = Object.fromEntries(
+				Object.entries(item.entries).map(([name, value]) => [
+					name,
+					field(name, value),
+				]),
+			)
+			// Dictionary entries have a null prototype; parsed stream entries have
+			// an ordinary prototype after removing Length. Preserve both shapes.
+			Object.setPrototypeOf(mappedEntries, Object.getPrototypeOf(item.entries))
 			const mapped = {
 				...item,
-				entries: Object.freeze(
-					Object.fromEntries(
-						Object.entries(item.entries).map(([name, value]) => [
-							name,
-							field(name, value),
-						]),
-					),
-				),
+				entries: Object.freeze(mappedEntries),
 				...(item.byteEntries === undefined
 					? {}
 					: {

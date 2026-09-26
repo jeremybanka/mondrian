@@ -11,6 +11,7 @@ import {
 	plainMetadata,
 } from "../fixtures/encrypted.ts"
 import { deflateSync, inflateSync } from "node:zlib"
+import { isDeepStrictEqual } from "node:util"
 
 it.each([0, 1, 2])(
 	"decrypts AES-256 password vector %s and compressed objects",
@@ -63,7 +64,7 @@ it.each([0, 1, 2])(
 			entries: { Contents: { bytes: Uint8Array.of(1, 2, 3, 4) } },
 		})
 		const serialized = serializePdf(document)
-		expect(parsePdf(serialized)).toEqual(document)
+		expect(isDeepStrictEqual(parsePdf(serialized), document)).toBe(true)
 		expect(serializePdf(parsePdf(serialized))).toEqual(serialized)
 	},
 )

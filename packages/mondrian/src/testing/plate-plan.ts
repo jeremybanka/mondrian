@@ -11,7 +11,8 @@ import type {
 	PdfValue,
 } from "../objects.ts"
 import { dictionary, name } from "../objects.ts"
-import { encodePdfName, encodePdfNameBytes } from "../syntax.ts"
+import { encodePdfName } from "../syntax.ts"
+import { pdfName, tokenName, displayName } from "./plate-names.ts"
 import { parsePlateContent } from "./plate-content.ts"
 import type { ContentInstruction } from "./plate-content.ts"
 
@@ -21,13 +22,15 @@ export interface PlateInk {
 	readonly name: string
 	readonly colorSpace: PlateColorSpace
 	readonly component?: number
+	/** Canonical PDF name token; identity is byte-based, independent of display. */
+	readonly ink?: string
 }
 
 interface Color {
 	readonly space: PlateColorSpace
 	readonly components: readonly number[]
 	readonly definition?: PdfValue
-	readonly name?: string
+	readonly ink?: string
 }
 
 export interface PlatePaint {
@@ -81,31 +84,6 @@ const standardBlendModes = new Set(
 		.split(" ")
 		.map((mode) => `/${mode}`),
 )
-
-export function pdfName(
-	value: PdfIndirectValue | undefined,
-): string | undefined {
-	if (value !== null && typeof value === "object") {
-		if (value.kind === "name") return encodePdfName(value.value)
-		if (value.kind === "byte-name") return encodePdfNameBytes(value.bytes)
-	}
-	return undefined
-}
-
-function tokenName(value: string | undefined): string {
-	if (!value?.startsWith("/"))
-		throw new TypeError("Expected a PDF resource name")
-	return encodePdfNameBytes(
-		Buffer.from(
-			value
-				.slice(1)
-				.replace(/#([\da-f]{2})/giu, (_, hex: string) =>
-					String.fromCharCode(Number.parseInt(hex, 16)),
-				),
-			"latin1",
-		),
-	)
-}
 
 function dictionaryItems(
 	value: Pick<PdfDictionary, "entries" | "byteEntries">,
@@ -246,21 +224,17 @@ export function planPdfPlates(
 				throw new TypeError(
 					"Plate previews require an ordinary named Separation ink",
 				)
-			const name = inkName
-				.slice(1)
-				.replace(/#([\da-f]{2})/giu, (_, hex: string) =>
-					String.fromCharCode(Number.parseInt(hex, 16)),
-				)
+			const name = displayName(inkName)
 			const definition = JSON.stringify(canonical(value))
-			if (spots.has(name) && spots.get(name) !== definition)
+			if (spots.has(inkName) && spots.get(inkName) !== definition)
 				throw new TypeError(`Conflicting definitions for separation ${name}`)
-			if (!spots.has(name)) {
-				spots.set(name, definition)
-				plates.push({ name, colorSpace: "spot" })
+			if (!spots.has(inkName)) {
+				spots.set(inkName, definition)
+				plates.push({ name, colorSpace: "spot", ink: inkName })
 			}
 			return {
 				space: "spot",
-				name,
+				ink: inkName,
 				definition: value,
 				components: [1],
 			}
@@ -705,7 +679,7 @@ export function planPdfPlates(
  */
 function inheritedPaintKey(state: State): string {
 	const colorKey = (color: Color | undefined) =>
-		color === undefined ? null : [color.space, color.components, color.name]
+		color === undefined ? null : [color.space, color.components, color.ink]
 	return JSON.stringify({
 		...state,
 		fill: colorKey(state.fill),

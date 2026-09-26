@@ -19,6 +19,7 @@ import {
 } from "../objects.ts"
 import { formatPdfNumber } from "../syntax.ts"
 import { validatePdf } from "../validate.ts"
+import { nameTokenBytes } from "./plate-names.ts"
 import { planPdfPlates, replaceEntries } from "./plate-plan.ts"
 import type {
 	PlateColorSpace,
@@ -33,7 +34,7 @@ export interface PdfPlateOptions {
 }
 
 export interface PdfPlatePreview {
-	/** Cyan, Magenta, Yellow, Black, or the exact spot ink name. */
+	/** Cyan, Magenta, Yellow, Black, or the spot name decoded as UTF-8 (Latin-1 fallback). */
 	readonly name: string
 	readonly colorSpace: PlateColorSpace
 	/** An independent document retaining this plate's ink color and coverage. */
@@ -82,7 +83,7 @@ export function previewPdfPlates(
 				const value = coverage(paint, plate)!
 				if (
 					source.space === "spot" &&
-					source.name === plate.name &&
+					source.ink === plate.ink &&
 					plate.colorSpace === "spot"
 				) {
 					spotDefinition = source.definition!
@@ -205,7 +206,7 @@ function coverage(paint: PlatePaint, plate: PlateInk): number | undefined {
 	const addressed =
 		color.space === "cmyk"
 			? plate.colorSpace === "cmyk"
-			: plate.colorSpace === "spot" && plate.name === color.name
+			: plate.colorSpace === "spot" && plate.ink === color.ink
 	if (!addressed) return overprint ? undefined : 0
 	const value = color.components[color.space === "cmyk" ? plate.component! : 0]!
 	return overprint && mode === 1 && color.space === "cmyk" && value === 0
@@ -219,20 +220,7 @@ function resourceDictionary(
 	return dictionary(
 		{},
 		...[...entries].map(
-			([key, value]) =>
-				[
-					nameBytes(
-						Buffer.from(
-							key
-								.slice(1)
-								.replace(/#([\da-f]{2})/giu, (_, hex: string) =>
-									String.fromCharCode(Number.parseInt(hex, 16)),
-								),
-							"latin1",
-						),
-					),
-					value,
-				] as const,
+			([key, value]) => [nameBytes(nameTokenBytes(key)), value] as const,
 		),
 	)
 }

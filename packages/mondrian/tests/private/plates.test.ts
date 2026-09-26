@@ -7,6 +7,7 @@ import type {
 	PdfPagesDictionary,
 	PdfStream,
 	PdfVersion,
+	PdfAnyName,
 } from "../../src/index.ts"
 import {
 	array,
@@ -44,6 +45,81 @@ const blue = separation("Blue", {
 	exponent: 1,
 })
 const white = [255, 255, 255, 255]
+
+it("returns UTF-8 spot names and coalesces equivalent byte names", async () => {
+	const source = namedSpotDocument(
+		name("Écarlate / #"),
+		nameBytes(new TextEncoder().encode("Écarlate / #")),
+	)
+	const plates = previewPdfPlates(source, { permitColors: ["spot"] })
+	expect(plates.map(({ name }) => name)).toEqual(["Écarlate / #"])
+	expect(
+		await samples(plates[0]!.document, [
+			[20, 20],
+			[60, 20],
+		]),
+	).toEqual([
+		[255, 0, 0, 255],
+		[255, 0, 0, 255],
+	])
+	await expect(serializePdf(plates[0]!.document)).toMatchPdfArtifact(
+		"utf8-spot-name",
+		{ resolution: 72 },
+	)
+})
+
+it("keeps distinct ink bytes separate even when decoded display names coincide", async () => {
+	const source = namedSpotDocument(name("É"), nameBytes(Uint8Array.of(0xc9)))
+	const plates = previewPdfPlates(source, { permitColors: ["spot"] })
+	expect(plates.map(({ name }) => name)).toEqual(["É", "É"])
+	expect(
+		await samples(plates[0]!.document, [
+			[20, 20],
+			[60, 20],
+		]),
+	).toEqual([[255, 0, 0, 255], white])
+	expect(
+		await samples(plates[1]!.document, [
+			[20, 20],
+			[60, 20],
+		]),
+	).toEqual([white, [255, 0, 0, 255]])
+})
+
+function namedSpotDocument(first: PdfAnyName, second: PdfAnyName) {
+	return rawDocument(() => {
+		const definition = (ink: PdfAnyName) =>
+			array(
+				name("Separation"),
+				ink,
+				name("DeviceRGB"),
+				dictionary({
+					FunctionType: 2,
+					Domain: array(0, 1),
+					C0: array(1, 1, 1),
+					C1: array(1, 0, 0),
+					N: 1,
+				}),
+			)
+		return {
+			resources: dictionary({
+				ColorSpace: dictionary({
+					"É /": definition(first),
+					Other: definition(second),
+				}),
+				ExtGState: dictionary({ "É #": dictionary({ ca: 1 }) }),
+			}),
+			contents: [
+				stream(
+					{},
+					ascii(
+						"/#C3#89#20#23 gs /#C3#89#20#2f cs 1 scn 10 10 20 20 re f /Other cs 1 scn 50 10 20 20 re f",
+					),
+				),
+			],
+		}
+	})
+}
 
 it("leaves inherited opacity unchanged by null byte-name graphics state entries", async () => {
 	const source = rawDocument((objects) => ({

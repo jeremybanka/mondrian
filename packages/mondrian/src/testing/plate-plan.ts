@@ -196,7 +196,15 @@ export function planPdfPlates(
 	}
 	const colorSpace = (value: PdfValue): Color => {
 		const resolved = resolve(value)
-		const named = pdfName(resolved)
+		// Device color spaces may be a family name or a one-element array.
+		const named = pdfName(
+			resolved !== null &&
+				typeof resolved === "object" &&
+				resolved.kind === "array" &&
+				resolved.items.length === 1
+				? resolve(resolved.items[0])
+				: resolved,
+		)
 		if (named === "/DeviceCMYK") {
 			if (!permitted.has("cmyk"))
 				throw new TypeError("Color space DeviceCMYK is not permitted")

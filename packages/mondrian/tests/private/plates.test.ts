@@ -45,6 +45,52 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it.each([false, true])(
+	"accepts array CMYK color spaces (indirect: %s)",
+	async (indirect) => {
+		const source = rawDocument((objects) => ({
+			resources: dictionary({
+				ColorSpace: dictionary({
+					Ink: indirect
+						? objects.add(array(objects.add(name("DeviceCMYK"))))
+						: array(name("DeviceCMYK")),
+				}),
+			}),
+			contents: [stream({}, ascii("/Ink cs 1 0 0 0 sc 10 10 60 60 re f"))],
+		}))
+		const plates = previewPdfPlates(source)
+		expect(
+			await samples(plates[0]!.document, [
+				[40, 40],
+				[5, 5],
+			]),
+		).toEqual([[0, 174, 239, 255], white])
+		for (const plate of plates.slice(1))
+			expect(await samples(plate.document, [[40, 40]])).toEqual([white])
+		expect(() => previewPdfPlates(source, { permitColors: ["spot"] })).toThrow(
+			/DeviceCMYK.*not permitted/u,
+		)
+		if (!indirect)
+			await expect(serializePdf(plates[0]!.document)).toMatchPdfArtifact(
+				"array-cmyk-color-space",
+				{ resolution: 72 },
+			)
+	},
+)
+
+it("still rejects malformed device color space arrays", () => {
+	expect(() =>
+		previewPdfPlates(
+			rawDocument(() => ({
+				resources: dictionary({
+					ColorSpace: dictionary({ Ink: array(name("DeviceCMYK"), 1) }),
+				}),
+				contents: [],
+			})),
+		),
+	).toThrow(/Color space/u)
+})
+
 it("preserves long linked bookmark chains without overflowing the call stack", () => {
 	const objects = createPdfObjectBuilder()
 	const pages = objects.reserve<PdfPagesDictionary>()

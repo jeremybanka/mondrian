@@ -2,7 +2,8 @@
 
 /* eslint-disable no-control-regex -- NUL is PDF whitespace. */
 
-import { unzlibSync } from "fflate"
+import { Unzlib } from "fflate"
+import { DecodeBudget } from "./limits.ts"
 import type {
 	PdfDictionary,
 	PdfIndirectValue,
@@ -19,6 +20,7 @@ export function decodeStructureStream(
 	stream: PdfStream,
 	resolve: Resolve,
 	offset: number,
+	budget = new DecodeBudget(),
 ): Uint8Array {
 	const fail: (message: string) => never = (message) => {
 		throw new PdfParseError(message, offset)
@@ -33,7 +35,9 @@ export function decodeStructureStream(
 			? []
 			: [filter]
 	const params = isKind(parameters, "array") ? parameters.items : [parameters]
+	const check = (bytes: number) => budget.check(bytes, offset)
 	let bytes = stream.data
+	if (filters.length === 0) budget.charge(bytes.length, offset)
 	for (let index = 0; index < filters.length; index++) {
 		const filter = resolve(filters[index] as PdfValue)
 		const param = resolve(params[index] as PdfValue | undefined)
@@ -45,19 +49,19 @@ export function decodeStructureStream(
 		switch (filter.value) {
 			case "FlateDecode":
 				try {
-					bytes = unzlibSync(bytes)
-				} catch {
+					bytes = inflate(bytes, check)
+				} catch (error) {
+					if (error instanceof PdfParseError) throw error
 					fail("Invalid FlateDecode structural stream")
 				}
-				bytes = predict(bytes, settings, resolve, fail)
 				break
 			case "LZWDecode":
 				bytes = lzw(
 					bytes,
 					integer(settings, "EarlyChange", 1, resolve, fail),
 					fail,
+					check,
 				)
-				bytes = predict(bytes, settings, resolve, fail)
 				break
 			case "ASCIIHexDecode": {
 				const source = binaryText(bytes).replace(/[\x00\t\n\f\r ]/g, "")
@@ -65,19 +69,26 @@ export function decodeStructureStream(
 					fail("Invalid ASCIIHexDecode structural stream")
 				let digits = source.slice(0, -1)
 				if (digits.length % 2) digits += "0"
+				check(digits.length / 2)
 				bytes = Uint8Array.from({ length: digits.length / 2 }, (_, index) =>
 					Number.parseInt(digits.slice(index * 2, index * 2 + 2), 16),
 				)
 				break
 			}
 			case "ASCII85Decode":
-				bytes = ascii85(bytes, fail)
+				bytes = ascii85(bytes, fail, check)
 				break
 			case "RunLengthDecode":
-				bytes = runLength(bytes, fail)
+				bytes = runLength(bytes, fail, check)
 				break
 			default:
 				fail(`Unsupported structural stream filter /${filter.value}`)
+		}
+		budget.charge(bytes.length, offset)
+		if (filter.value === "FlateDecode" || filter.value === "LZWDecode") {
+			const predicted = predict(bytes, settings, resolve, fail, check)
+			if (predicted !== bytes) budget.charge(predicted.length, offset)
+			bytes = predicted
 		}
 	}
 	return bytes
@@ -101,6 +112,7 @@ function predict(
 	params: PdfDictionary | undefined,
 	resolve: Resolve,
 	fail: (message: string) => never,
+	check: (bytes: number) => void,
 ): Uint8Array {
 	const predictor = integer(params, "Predictor", 1, resolve, fail)
 	if (predictor === 1) return bytes
@@ -116,7 +128,9 @@ function predict(
 	const stride = rowBytes + (predictor === 2 ? 0 : 1)
 	if (!Number.isSafeInteger(stride) || bytes.length % stride)
 		fail("Truncated predictor row")
-	const output = new Uint8Array((bytes.length / stride) * rowBytes)
+	const length = (bytes.length / stride) * rowBytes
+	check(length)
+	const output = new Uint8Array(length)
 	if (predictor === 2) {
 		output.set(bytes)
 		// TIFF differences are between component samples, including packed 1/2/4-bit samples.
@@ -180,12 +194,14 @@ function predict(
 function ascii85(
 	bytes: Uint8Array,
 	fail: (message: string) => never,
+	check: (bytes: number) => void,
 ): Uint8Array {
 	const source = binaryText(bytes).replace(/[\x00\t\n\f\r ]/g, "")
 	if (!source.endsWith("~>")) fail("Missing ASCII85Decode end marker")
 	const output: number[] = []
 	let group: number[] = []
 	const emit = (count: number) => {
+		check(output.length + count)
 		while (group.length < 5) group.push(84)
 		const value = group.reduce((value, digit) => value * 85 + digit, 0)
 		if (value > 0xffff_ffff) fail("Invalid ASCII85Decode group")
@@ -194,8 +210,10 @@ function ascii85(
 		group = []
 	}
 	for (const character of source.slice(0, -2)) {
-		if (character === "z" && group.length === 0) output.push(0, 0, 0, 0)
-		else {
+		if (character === "z" && group.length === 0) {
+			check(output.length + 4)
+			output.push(0, 0, 0, 0)
+		} else {
 			const digit = character.charCodeAt(0) - 33
 			if (digit < 0 || digit > 84) fail("Invalid ASCII85Decode character")
 			group.push(digit)
@@ -210,11 +228,13 @@ function ascii85(
 function runLength(
 	bytes: Uint8Array,
 	fail: (message: string) => never,
+	check: (bytes: number) => void,
 ): Uint8Array {
 	const output: number[] = []
 	for (let index = 0; index < bytes.length;) {
 		const length = bytes[index++]!
 		if (length === 128) return Uint8Array.from(output)
+		check(output.length + (length < 128 ? length + 1 : 257 - length))
 		if (length < 128) {
 			if (index + length + 1 > bytes.length)
 				fail("Truncated RunLengthDecode literal")
@@ -233,6 +253,7 @@ function lzw(
 	bytes: Uint8Array,
 	earlyChange: number,
 	fail: (message: string) => never,
+	check: (bytes: number) => void,
 ): Uint8Array {
 	if (earlyChange !== 0 && earlyChange !== 1)
 		fail("Invalid LZW EarlyChange parameter")
@@ -264,6 +285,7 @@ function lzw(
 				? [...previous, previous[0]!]
 				: undefined)
 		if (entry === undefined) fail("Invalid LZW code")
+		check(output.length + entry.length)
 		for (const byte of entry) output.push(byte)
 		if (previous !== undefined && next < 4096) {
 			table[next++] = [...previous, entry[0]!]
@@ -272,4 +294,38 @@ function lzw(
 		previous = entry
 	}
 	return fail("Missing LZWDecode end marker")
+}
+
+/** Fixed-size compressed chunks keep each synchronous inflate step bounded, including its internal buffer. */
+function inflate(
+	bytes: Uint8Array,
+	check: (bytes: number) => void,
+): Uint8Array {
+	const chunks: Uint8Array[] = []
+	let length = 0
+	const decoder = new Unzlib((chunk) => {
+		check(length + chunk.length)
+		if (chunk.length) chunks.push(chunk)
+		length += chunk.length
+	})
+	// DEFLATE back-references expand at most 258 bytes per symbol. Feeding just
+	// 64 compressed bytes bounds transient expansion independently of input size;
+	// fflate retains only its 32 KiB history between pushes (plus a stored block).
+	for (
+		let position = 0;
+		position < bytes.length || position === 0;
+		position += 64
+	) {
+		decoder.push(
+			bytes.subarray(position, position + 64),
+			position + 64 >= bytes.length,
+		)
+	}
+	const output = new Uint8Array(length)
+	let position = 0
+	for (const chunk of chunks) {
+		output.set(chunk, position)
+		position += chunk.length
+	}
+	return output
 }

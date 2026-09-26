@@ -291,6 +291,8 @@ Names and strings preserve their decoded bytes; non-UTF-8 names use `PdfByteName
 
 Parsing reads the object graph without applying Mondrian's authoring validation rules. Use `validatePdf()` separately when preparing a parsed document for serialization. Syntax errors and unsupported structural encodings throw `PdfParseError`, whose `offset` identifies a byte in the original input (the container offset for errors in compressed objects). The parser rejects encryption, external structural streams, malformed cross-references, and nesting deeper than 256 levels; it does not attempt file repair.
 
+`parsePdf(input, options)` limits each structural decoding output to 8 MiB and cumulative structural decoding to 32 MiB by default. Set `maxDecodedStreamBytes` and `maxTotalDecodedBytes` to non-negative safe integers to change these limits. Every intermediate filter and predictor output counts toward the cumulative limit, as do unfiltered structural streams. Decoding stops with `PdfParseError` when a limit is exceeded; Flate is processed in bounded chunks, and other decoders check before growing their output. These are decoded-byte limits, not a bound on the complete input or object graph memory.
+
 Reserializing rebuilds the file layout and cross-reference table. It does not preserve revision history, signature validity, or additional trailer fields outside the `PdfDocument` model.
 
 ## Derived fields

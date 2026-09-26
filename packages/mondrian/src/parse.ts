@@ -18,11 +18,18 @@ import { hexString, indirectObject, reference } from "./objects.ts"
 import { PdfParseError } from "./parser/error.ts"
 import { binaryText, isKind, SyntaxReader } from "./parser/syntax.ts"
 import { decodeStructureStream } from "./parser/filters.ts"
+import { DecodeBudget } from "./parser/limits.ts"
+import type { PdfParseOptions } from "./parser/limits.ts"
+
+export type { PdfParseOptions } from "./parser/limits.ts"
 
 export { PdfParseError } from "./parser/error.ts"
 
 /** Parse an unencrypted PDF. Strings must contain one code unit per original byte. */
-export function parsePdf(input: string | Uint8Array): PdfDocument {
+export function parsePdf(
+	input: string | Uint8Array,
+	options: PdfParseOptions = {},
+): PdfDocument {
 	let source: string
 	if (typeof input === "string") {
 		for (let index = 0; index < input.length; index++) {
@@ -35,7 +42,7 @@ export function parsePdf(input: string | Uint8Array): PdfDocument {
 		source = input
 	} else if (input instanceof Uint8Array) source = binaryText(input)
 	else throw new TypeError("Expected PDF text or a Uint8Array")
-	return new DocumentParser(source).parse()
+	return new DocumentParser(source, options).parse()
 }
 
 type XrefEntry =
@@ -45,6 +52,7 @@ type XrefEntry =
 
 class DocumentParser {
 	readonly source: string
+	readonly budget: DecodeBudget
 	readonly entries = new Map<number, XrefEntry>()
 	readonly objects = new Map<number, PdfIndirectObject>()
 	readonly loading = new Set<number>()
@@ -57,8 +65,9 @@ class DocumentParser {
 		}
 	>()
 
-	constructor(source: string) {
+	constructor(source: string, options: PdfParseOptions) {
 		this.source = source
+		this.budget = new DecodeBudget(options)
 	}
 
 	parse(): PdfDocument {
@@ -412,6 +421,11 @@ class DocumentParser {
 	}
 
 	private decode(stream: PdfStream, offset: number): Uint8Array {
-		return decodeStructureStream(stream, (value) => this.resolve(value), offset)
+		return decodeStructureStream(
+			stream,
+			(value) => this.resolve(value),
+			offset,
+			this.budget,
+		)
 	}
 }

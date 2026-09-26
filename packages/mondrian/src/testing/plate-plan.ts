@@ -174,24 +174,53 @@ export function planPdfPlates(
 				component,
 			}))
 		: []
-	const spots = new Map<string, string>()
-	const canonical = (value: PdfValue | undefined, depth = 0): unknown => {
+	const spots = new Map<string, number>()
+	// Intern shallow node descriptions containing child IDs, not expanded child
+	// values. Equivalent graphs share IDs regardless of reference/layout choices,
+	// and both traversal and key storage stay proportional to unique graph nodes.
+	const nodeIds = new Map<string, number>()
+	const cachedNodes = new WeakMap<object, number>()
+	const activeNodes = new WeakSet<object>()
+	const intern = (description: unknown): number => {
+		const key = JSON.stringify(description)
+		let id = nodeIds.get(key)
+		if (id === undefined) {
+			id = nodeIds.size
+			nodeIds.set(key, id)
+		}
+		return id
+	}
+	const canonical = (value: PdfValue | undefined, depth = 0): number => {
 		if (depth > 50)
 			throw new TypeError("Cyclic or excessively nested spot definition")
 		const resolved = resolve(value)
-		if (resolved === null || typeof resolved !== "object") return resolved
-		if (pdfName(resolved) !== undefined) return pdfName(resolved)
-		if (resolved.kind === "array")
-			return resolved.items.map((item) => canonical(item, depth + 1))
-		if (resolved.kind === "dictionary" || resolved.kind === "stream") {
+		if (resolved === null || typeof resolved !== "object")
+			return intern([typeof resolved, resolved])
+		const cached = cachedNodes.get(resolved)
+		if (cached !== undefined) return cached
+		if (activeNodes.has(resolved)) throw new TypeError("Cyclic spot definition")
+		activeNodes.add(resolved)
+		let id: number
+		const named = pdfName(resolved)
+		if (named !== undefined) id = intern(["name", named])
+		else if (resolved.kind === "array")
+			id = intern([
+				"array",
+				resolved.items.map((item) => canonical(item, depth + 1)),
+			])
+		else if (resolved.kind === "dictionary" || resolved.kind === "stream") {
 			const entries = presentItems(resolved)
 				.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 				.map(([key, item]) => [key, canonical(item, depth + 1)])
-			return resolved.kind === "stream"
-				? { entries, data: Array.from(resolved.data) }
-				: entries
-		}
-		return resolved
+			id = intern(
+				resolved.kind === "stream"
+					? ["stream", entries, Buffer.from(resolved.data).toString("hex")]
+					: ["dictionary", entries],
+			)
+		} else id = intern(resolved)
+		activeNodes.delete(resolved)
+		cachedNodes.set(resolved, id)
+		return id
 	}
 	const colorSpace = (value: PdfValue): Color => {
 		const resolved = resolve(value)
@@ -229,7 +258,7 @@ export function planPdfPlates(
 					"Plate previews require an ordinary named Separation ink",
 				)
 			const name = displayName(inkName)
-			const definition = JSON.stringify(canonical(value))
+			const definition = canonical(value)
 			if (spots.has(inkName) && spots.get(inkName) !== definition)
 				throw new TypeError(`Conflicting definitions for separation ${name}`)
 			if (!spots.has(inkName)) {

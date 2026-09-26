@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vite-plus/test"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
+import { fileURLToPath } from "node:url"
 import { zlibSync } from "fflate"
 import type {
 	PdfDictionary,
@@ -46,6 +49,52 @@ const blue = separation("Blue", {
 	exponent: 1,
 })
 const white = [255, 255, 255, 255]
+
+it("rejects cycles in spot-function graphs", () => {
+	const source = rawDocument((objects) => {
+		const cycle = objects.reserve<PdfDictionary>()
+		cycle.set(
+			dictionary({
+				FunctionType: 3,
+				Domain: array(0, 1),
+				Functions: array(cycle.ref),
+				Bounds: array(),
+				Encode: array(0, 1),
+			}),
+		)
+		return {
+			resources: dictionary({
+				ColorSpace: dictionary({
+					Ink: array(
+						name("Separation"),
+						name("Cyclic"),
+						name("DeviceRGB"),
+						cycle.ref,
+					),
+				}),
+			}),
+			contents: [],
+		}
+	})
+	expect(() => previewPdfPlates(source)).toThrow(/Cyclic spot definition/u)
+})
+
+it(
+	"handles shared spot-function graphs within a bounded heap",
+	{ timeout: 30_000 },
+	async () => {
+		await promisify(execFile)(
+			process.execPath,
+			[
+				"--max-old-space-size=64",
+				fileURLToPath(
+					new URL("./fixtures/plate-spot-graph.ts", import.meta.url),
+				),
+			],
+			{ timeout: 25_000 },
+		)
+	},
+)
 
 it("prunes shadowed inherited Form graphs while retaining other references", async () => {
 	let originals: PdfReference[] = []

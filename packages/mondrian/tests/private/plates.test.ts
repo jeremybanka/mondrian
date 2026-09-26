@@ -50,6 +50,45 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it(
+	"previews documents above the function argument limit",
+	{ timeout: 30_000 },
+	() => {
+		const count = 150_000
+		const built = rawDocument((objects) => {
+			const records = Array.from({ length: count }, (_, index) =>
+				objects.add(index),
+			)
+			const colors = bindColorContent(objects, [
+				colorContent([fillColor(spot(red, 1)), "10 10 60 60 re f"]),
+			])
+			return {
+				resources: colors.resources,
+				page: { PrivateData: { kind: "array", items: records } },
+				contents: [colors.stream],
+			}
+		})
+		const source = { ...built, objects: [...built.objects].reverse() }
+		const highest = source.objects[0]!.objectNumber
+		const [plate] = previewPdfPlates(source, { permitColors: ["spot"] })
+		expect(plate!.name).toBe("Red / # ink")
+		const ids = new Set<number>()
+		let retained = 0
+		let sum = 0
+		for (const object of plate!.document.objects) {
+			ids.add(object.objectNumber)
+			if (typeof object.value === "number") {
+				retained++
+				sum += object.value
+			}
+		}
+		expect(ids.size).toBe(plate!.document.objects.length)
+		expect(ids.has(highest + 1)).toBe(true)
+		expect(retained).toBe(count)
+		expect(sum).toBe((count * (count - 1)) / 2)
+	},
+)
+
 it.each([
 	"[100] TJ",
 	"[] TJ",

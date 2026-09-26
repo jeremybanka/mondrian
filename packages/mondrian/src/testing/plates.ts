@@ -59,10 +59,12 @@ export function previewPdfPlates(
 		throw new TypeError('permitColors must contain only "cmyk" and "spot"')
 	throwForPdfErrors(validatePdf(document))
 	const plan = planPdfPlates(document, new Set(permitted))
+	let highestNumber = 0
+	for (const object of document.objects)
+		highestNumber = Math.max(highestNumber, object.objectNumber)
 	return plan.plates.map((plate) => {
 		const objects: PdfIndirectObject[] = [...document.objects]
-		let nextNumber =
-			Math.max(0, ...objects.map((object) => object.objectNumber)) + 1
+		let nextNumber = highestNumber + 1
 		const add = (value: PdfIndirectValue): PdfReference => {
 			const number = objectNumber(nextNumber++)
 			objects.push(indirectObject(number, value))

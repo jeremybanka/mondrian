@@ -10,7 +10,7 @@ import type {
 	PdfStream,
 	PdfValue,
 } from "../objects.ts"
-import { dictionary } from "../objects.ts"
+import { dictionary, name } from "../objects.ts"
 import { encodePdfName, encodePdfNameBytes } from "../syntax.ts"
 import { parsePlateContent } from "./plate-content.ts"
 import type { ContentInstruction } from "./plate-content.ts"
@@ -76,6 +76,11 @@ const passthrough = new Set(
 )
 const pathPaints = new Set("S s f F f* B B* b b*".split(" "))
 const textPaints = new Set(["Tj", "TJ", "'", '"'])
+const standardBlendModes = new Set(
+	"Normal Compatible Multiply Screen Overlay Darken Lighten ColorDodge ColorBurn HardLight SoftLight Difference Exclusion Hue Saturation Color Luminosity"
+		.split(" ")
+		.map((mode) => `/${mode}`),
+)
 
 export function pdfName(
 	value: PdfIndirectValue | undefined,
@@ -443,8 +448,25 @@ export function planPdfPlates(
 						if (typeof alpha === "number")
 							state[key === "ca" ? "fillOpacity" : "strokeOpacity"] = alpha
 					}
-					if (get("BM") !== undefined && pdfName(get("BM")) !== "/Normal")
-						throw new TypeError("Plate previews support only Normal blending")
+					const blend = get("BM")
+					if (blend !== undefined) {
+						let mode = pdfName(blend)
+						if (
+							blend !== null &&
+							typeof blend === "object" &&
+							blend.kind === "array"
+						) {
+							const modes = blend.items.map((item) => pdfName(resolve(item)))
+							if (modes.some((item) => item === undefined))
+								throw new TypeError("Expected blend-mode names")
+							// Recognize all standard modes before checking our support;
+							// [Multiply Normal] must not silently become Normal.
+							mode =
+								modes.find((item) => standardBlendModes.has(item!)) ?? "/Normal"
+						}
+						if (mode !== "/Normal" && mode !== "/Compatible")
+							throw new TypeError("Plate previews support only Normal blending")
+					}
 					if (get("SMask") !== undefined && pdfName(get("SMask")) !== "/None")
 						throw new TypeError("Soft masks are unsupported in plate previews")
 					states.set(
@@ -456,6 +478,7 @@ export function planPdfPlates(
 							OP: undefined,
 							op: undefined,
 							OPM: undefined,
+							...(blend === undefined ? {} : { BM: name("Normal") }),
 						}),
 					)
 				} else if (op === "Tr") {

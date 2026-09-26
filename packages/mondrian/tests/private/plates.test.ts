@@ -45,6 +45,54 @@ const blue = separation("Blue", {
 })
 const white = [255, 255, 255, 255]
 
+it.each([
+	["Normal"],
+	["FutureMode", "Normal"],
+	["Normal", "Multiply"],
+	["FutureMode"],
+	[],
+	["Compatible"],
+])("resolves Normal blend-mode array fallback %j", async (...modes) => {
+	const source = blendArrayDocument(modes)
+	const cyan = previewPdfPlates(source)[0]!.document
+	expect(
+		await samples(cyan, [
+			[40, 40],
+			[5, 5],
+		]),
+	).toEqual([[128, 214, 247, 255], white])
+	if (modes.length === 1 && modes[0] === "Normal")
+		await expect(serializePdf(cyan)).toMatchPdfArtifact(
+			"normal-blend-mode-array",
+			{ resolution: 72 },
+		)
+})
+
+it.each([
+	["Multiply", "Normal"],
+	["FutureMode", "Multiply", "Normal"],
+])("rejects a recognized non-Normal blend before fallback %j", (...modes) => {
+	expect(() => previewPdfPlates(blendArrayDocument(modes))).toThrow(
+		/Normal blending/u,
+	)
+})
+
+function blendArrayDocument(modes: readonly string[]) {
+	return rawDocument((objects) => ({
+		resources: dictionary({
+			ExtGState: dictionary({
+				Half: dictionary({
+					ca: 0.5,
+					BM: objects.add(
+						array(...modes.map((mode) => objects.add(name(mode)))),
+					),
+				}),
+			}),
+		}),
+		contents: [stream({}, ascii("/Half gs 1 0 0 0 k 10 10 60 60 re f"))],
+	}))
+}
+
 it.each([false, true])(
 	"accepts array CMYK color spaces (indirect: %s)",
 	async (indirect) => {

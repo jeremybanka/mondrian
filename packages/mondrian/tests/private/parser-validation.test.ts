@@ -96,6 +96,32 @@ const utf8Date = (text: string) =>
 const utf16Date = (text: string) =>
 	Buffer.from(`\ufeff${text}`, "utf16le").swap16()
 
+it.each(["Wed Nov 01 13:20:25 2000", "D:20170405061645Z00'00'"])(
+	"can explicitly preserve a nonstandard imported date %s",
+	(date) => {
+		const document = withInfo(`/CreationDate (${date})`)
+		expect(() => serializePdf(document)).toThrow()
+		const options = { preserveInvalidDates: true }
+		expect(validatePdf(document, options)).toContainEqual(
+			expect.objectContaining({
+				code: "invalid-info",
+				path: "info.CreationDate",
+				severity: "warning",
+			}),
+		)
+		expect(parsePdf(serializePdf(document, options))).toEqual(document)
+	},
+)
+
+it("date preservation does not accept invalid encodings or non-string values", () => {
+	for (const body of ["42", "<FEFFD800>"]) {
+		const document = withInfo(`/CreationDate ${body}`)
+		expect(() =>
+			serializePdf(document, { preserveInvalidDates: true }),
+		).toThrow()
+	}
+})
+
 it.each([utf8Date, utf16Date])(
 	"validates encoded Info dates without changing their bytes (%#)",
 	(encode) => {

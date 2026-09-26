@@ -86,6 +86,7 @@ export type { PdfParseOptions } from "./parse.ts"
 export { parsePdf, PdfParseError } from "./parse.ts"
 export { serializePdf, serializePdfObjectBody } from "./serialize.ts"
 export { validatePdf } from "./validate.ts"
+export type { PdfValidationOptions } from "./validate.ts"
 
 export type {
 	PdfColor,

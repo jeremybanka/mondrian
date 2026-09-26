@@ -42,9 +42,18 @@ interface ValidationContext {
 	readonly activeDirectObjects: Set<object>
 	readonly owner: symbol | undefined
 	readonly version: PdfVersion
+	readonly options: PdfValidationOptions
 }
 
-export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
+export interface PdfValidationOptions {
+	/** Report nonstandard Info date syntax as a warning, preserving the imported bytes. Default: false. */
+	readonly preserveInvalidDates?: boolean
+}
+
+export function validatePdf(
+	document: PdfDocument,
+	options: PdfValidationOptions = {},
+): readonly PdfDiagnostic[] {
 	const diagnostics: PdfDiagnostic[] = []
 	if (typeof document !== "object" || document === null) {
 		return [
@@ -65,6 +74,7 @@ export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
 		activeDirectObjects: new Set(),
 		owner,
 		version: document.version,
+		options,
 	}
 
 	if (!versions.has(document.version)) {
@@ -822,6 +832,8 @@ function validateInfoValue(
 			"invalid-info",
 			path,
 			"Info date values must use PDF date-string syntax",
+			undefined,
+			context.options.preserveInvalidDates === true ? "warning" : "error",
 		)
 	}
 }

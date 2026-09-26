@@ -245,19 +245,23 @@ function reachableObjects(
 		objects.map((object) => [object.objectNumber, object]),
 	)
 	const reachable = new Set<number>()
-	const visit = (value: PdfIndirectValue | PdfReference | undefined): void => {
-		if (value === null || typeof value !== "object") return
+	const pending: (PdfIndirectValue | PdfReference | undefined)[] = [
+		document.root,
+		document.info,
+	]
+	while (pending.length > 0) {
+		const value = pending.pop()
+		if (value === null || typeof value !== "object") continue
 		if (value.kind === "reference") {
-			if (reachable.has(value.objectNumber)) return
+			if (reachable.has(value.objectNumber)) continue
 			reachable.add(value.objectNumber)
-			visit(byNumber.get(value.objectNumber)?.value)
-		} else if (value.kind === "array") value.items.forEach(visit)
-		else if (value.kind === "dictionary" || value.kind === "stream") {
-			Object.values(value.entries).forEach(visit)
-			value.byteEntries?.forEach(([, item]) => visit(item))
+			pending.push(byNumber.get(value.objectNumber)?.value)
+		} else if (value.kind === "array") {
+			for (const item of value.items) pending.push(item)
+		} else if (value.kind === "dictionary" || value.kind === "stream") {
+			for (const item of Object.values(value.entries)) pending.push(item)
+			for (const [, item] of value.byteEntries ?? []) pending.push(item)
 		}
 	}
-	visit(document.root)
-	visit(document.info)
 	return objects.filter((object) => reachable.has(object.objectNumber))
 }

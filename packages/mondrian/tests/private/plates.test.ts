@@ -25,6 +25,7 @@ import {
 	serializePdf,
 	spot,
 	stream,
+	textString,
 } from "../../src/index.ts"
 import { previewPdfPlates, readPdf, renderPdf } from "../../src/testing.ts"
 import { parsePlateContent } from "../../src/testing/plate-content.ts"
@@ -43,6 +44,69 @@ const blue = separation("Blue", {
 	exponent: 1,
 })
 const white = [255, 255, 255, 255]
+
+it("preserves long linked bookmark chains without overflowing the call stack", () => {
+	const objects = createPdfObjectBuilder()
+	const pages = objects.reserve<PdfPagesDictionary>()
+	const page = objects.add(
+		dictionary({
+			Type: name("Page"),
+			Parent: pages.ref,
+			MediaBox: array(0, 0, 80, 80),
+			Contents: objects.add(stream({}, ascii("1 0 0 0 k 0 0 80 80 re f"))),
+		}),
+	)
+	pages.set(
+		dictionary({
+			Type: name("Pages"),
+			Kids: array(page),
+			Count: 1,
+			Resources: dictionary({}),
+		}),
+	)
+	const outlines = objects.reserve<PdfDictionary>()
+	const bookmarks = Array.from({ length: 4000 }, () =>
+		objects.reserve<PdfDictionary>(),
+	)
+	bookmarks.forEach((bookmark, index) =>
+		bookmark.set(
+			dictionary({
+				Title: textString(`Bookmark ${index}`),
+				Parent: outlines.ref,
+				Prev: bookmarks[index - 1]?.ref,
+				Next: bookmarks[index + 1]?.ref,
+				Dest: array(page, name("Fit")),
+			}),
+		),
+	)
+	outlines.set(
+		dictionary({
+			Type: name("Outlines"),
+			First: bookmarks[0]!.ref,
+			Last: bookmarks.at(-1)!.ref,
+			Count: bookmarks.length,
+		}),
+	)
+	const root = objects.add(
+		dictionary({
+			Type: name("Catalog"),
+			Pages: pages.ref,
+			Outlines: outlines.ref,
+		}),
+	)
+	const source = objects.build({ root })
+	expect(serializePdf(source).length).toBeGreaterThan(400_000)
+	const numbers = new Set(bookmarks.map(({ ref }) => ref.objectNumber))
+	const expected = source.objects.filter(({ objectNumber }) =>
+		numbers.has(objectNumber),
+	)
+	for (const { document } of previewPdfPlates(source)) {
+		expect(
+			document.objects.filter(({ objectNumber }) => numbers.has(objectNumber)),
+		).toEqual(expected)
+		expect(serializePdf(document).length).toBeGreaterThan(400_000)
+	}
+})
 
 // PDF 1.6 §5.2.7 requires glyph shapes to survive implicit text knockout.
 // PDFium does not distinguish TK in this fixture; this tests the support boundary.

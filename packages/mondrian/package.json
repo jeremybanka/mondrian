@@ -52,7 +52,7 @@
 		"vitest": "catalog:"
 	},
 	"peerDependencies": {
-		"vitest": ">=4.1.3"
+		"vitest": "^4.1.3 || ^5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"vitest": {

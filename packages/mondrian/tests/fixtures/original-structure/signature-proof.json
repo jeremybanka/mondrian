@@ -1,0 +1,21 @@
+{
+	"tool": "OpenSSL 3.6.4 25 Aug 2026 (Library: OpenSSL 3.6.4 25 Aug 2026)",
+	"sourceSha256": "89a1c911c4fb6ce4a47c0854fd90b2315f3206379074e605ce36b7f2f5ea4abc",
+	"pdfsigVersion": "pdfsig version 26.06.0",
+	"pdfVerification": "Digital Signature Info of: signed-receipt.pdf\nSignature #1:\n  - Signature Field Name: OriginalSignature\n  - Signer Certificate Common Name: Mondrian original fixture signer; TEST ONLY\n  - Signer full Distinguished Name: CN=\"Mondrian original fixture signer; TEST ONLY\"\n  - Signing Time: Sep 01 2026 12:00:00\n  - Signing Hash Algorithm: SHA-256\n  - Signature Type: adbe.pkcs7.detached\n  - Signed Ranges: [0 - 1015], [5113 - 5570]\n  - Total document signed\n  - Signature Validation: Signature is Valid.\n",
+	"sha256": "3d58883f95421e028ecbfa436564af020e80bf71be83b17260fbb4670b039093",
+	"signedBytesSha256": "518f22a0d0ac15b1324a6abfaeac77ead3d8cb051146850105832cc2b2d92b45",
+	"certificateSha256": "d89d2abee88e2b992d4e265c30d7b8b5bc5e384f9ba30f3676ab0108710ff75f",
+	"signatureBytes": 1160,
+	"byteRange": [
+		0,
+		1015,
+		5113,
+		457
+	],
+	"verification": "CMS Verification successful",
+	"certificateSubject": "CN=Mondrian original fixture signer\\; TEST ONLY",
+	"notBefore": "Jan  1 00:00:00 2026 GMT",
+	"notAfter": "Jan  1 00:00:00 2126 GMT",
+	"trust": "self-signed test certificate; cryptographic integrity only"
+}

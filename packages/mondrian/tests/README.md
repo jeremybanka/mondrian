@@ -43,6 +43,14 @@ visual proof for nested pages and escaped text has its own inline setup here so
 renderer versions and exact pixel baselines do not become API compatibility
 promises.
 
+## Parser contracts
+
+`public/parse.test.ts` commits to usable `PdfDocument` values, existing object identities, decoded bytes, input-buffer independence, current revisions, metadata, identifiers, readable output, explicit recovery, and configurable decoding limits. It also protects the validation/serialization options needed to retain imported metadata. `public/parse-encryption.test.ts` protects supported AES-256 password handling and independently readable unencrypted output using self-contained original fixtures. These files import the built package and declarations and have no private-fixture dependencies.
+
+Public parser assertions follow references and compare PDF meaning. PDF array order is meaningful; `document.objects` order is not. The literal/hex spelling of a string is not a commitment where either public type is allowed; file identifiers still satisfy their declared `PdfHexString` type. Synthetic object allocation, container retention, dictionary prototypes, complete graph snapshots, diagnostic prose, exact detection positions, and unsupported-feature boundaries stay private. Error classes, original-input offset coordinates, and recovery warning codes remain public. Determinism means repeating serialization of the same model within an implementation, not freezing a byte layout across releases or guaranteeing byte-identical rewriting of arbitrary input.
+
+`private/parser-representation.test.ts` retains representation and diagnostic regressions moved out of the public suite. The other private parser suites retain filter algorithms, checksums, expansion accounting, malformed structures, precision limits, structural revisions, security-handler details, and visual proofs. Supporting more previously unsupported encodings should not require a breaking-change certification. The complete assertion disposition is recorded in [parser-contract-audit.md](parser-contract-audit.md).
+
 ## Plate preview contracts
 
 `public/plates.test.ts` covers discovery order and ink identity, permitted color spaces, per-plate color components and tints, knockout/overprint semantics, and deterministic output. `public/plate-documents.test.ts` covers document versions, identifiers, metadata, page geometry/order, live text placement and fonts, independent fill/stroke coverage, and ownership of mutable preview buffers. These assertions describe consumer capabilities rather than particular resource names, object numbers, stream layouts, or error wording.

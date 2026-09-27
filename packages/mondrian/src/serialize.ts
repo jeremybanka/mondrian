@@ -20,11 +20,15 @@ import {
 } from "./syntax.ts"
 import { throwForPdfErrors } from "./diagnostics.ts"
 import { validatePdf } from "./validate.ts"
+import type { PdfValidationOptions } from "./validate.ts"
 
 const binaryMarker = Uint8Array.of(0x25, 0xe2, 0xe3, 0xcf, 0xd3, 0x0a)
 
-export function serializePdf(document: PdfDocument): Uint8Array {
-	throwForPdfErrors(validatePdf(document))
+export function serializePdf(
+	document: PdfDocument,
+	options: PdfValidationOptions = {},
+): Uint8Array {
+	throwForPdfErrors(validatePdf(document, options))
 
 	const writer = new ByteWriter()
 	writer.writeAscii(`%PDF-${document.version}\n`)

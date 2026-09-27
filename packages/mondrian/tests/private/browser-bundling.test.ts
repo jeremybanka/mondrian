@@ -7,6 +7,7 @@ import { runInNewContext } from "node:vm"
 import { inflateSync } from "node:zlib"
 import { expect, it } from "vite-plus/test"
 import type { PdfDictionary } from "mondrian.pdf"
+import { encryptedPdf } from "../fixtures/encrypted.ts"
 
 const execFileAsync = promisify(execFile)
 
@@ -72,6 +73,40 @@ it("compresses color content in a browser bundle without Node globals", async ()
 		output!.original,
 	)
 	expect(output!.compressed.length).toBeLessThan(output!.original.length)
+})
+
+it("parses PDFs in a browser bundle without Node globals", async () => {
+	const bundle = await browserBundle(`
+		import { createPdfDocument, parsePdf, rectangle, serializePdf } from "mondrian.pdf"
+		const pdf = createPdfDocument()
+		pdf.setPages(pdf.page({ mediaBox: rectangle(0, 0, 100, 100) }))
+		const original = pdf.serialize()
+		const parsed = parsePdf(original)
+		console.log({ version: parsed.version, count: parsed.objects.length, same: serializePdf(parsed).every((byte, index) => byte === original[index]) })
+	`)
+	const output: unknown[] = []
+	runInNewContext(bundle, {
+		TextEncoder,
+		TextDecoder,
+		console: { log: (value: unknown) => output.push(value) },
+	})
+	expect(output).toEqual([{ version: "1.7", count: 4, same: true }])
+})
+
+it("decrypts AES-256 PDFs in a browser bundle without Node globals", async () => {
+	const bundle = await browserBundle(`
+		import { parsePdf, serializePdf } from "mondrian.pdf"
+		const document = parsePdf(${JSON.stringify(encryptedPdf().source)})
+		const info = document.objects.find(object => object.objectNumber === 6).value
+		console.log({ title: new TextDecoder().decode(info.entries.Title.bytes), reparsed: parsePdf(serializePdf(document)).objects.length === document.objects.length })
+	`)
+	const output: unknown[] = []
+	runInNewContext(bundle, {
+		TextEncoder,
+		TextDecoder,
+		console: { log: (value: unknown) => output.push(value) },
+	})
+	expect(output).toEqual([{ title: "Encrypted fixture", reparsed: true }])
 })
 
 async function browserBundle(source: string): Promise<string> {

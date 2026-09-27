@@ -42,9 +42,18 @@ interface ValidationContext {
 	readonly activeDirectObjects: Set<object>
 	readonly owner: symbol | undefined
 	readonly version: PdfVersion
+	readonly options: PdfValidationOptions
 }
 
-export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
+export interface PdfValidationOptions {
+	/** Report nonstandard Info date syntax as a warning, preserving the imported bytes. Default: false. */
+	readonly preserveInvalidDates?: boolean
+}
+
+export function validatePdf(
+	document: PdfDocument,
+	options: PdfValidationOptions = {},
+): readonly PdfDiagnostic[] {
 	const diagnostics: PdfDiagnostic[] = []
 	if (typeof document !== "object" || document === null) {
 		return [
@@ -65,6 +74,7 @@ export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
 		activeDirectObjects: new Set(),
 		owner,
 		version: document.version,
+		options,
 	}
 
 	if (!versions.has(document.version)) {
@@ -247,7 +257,7 @@ export function validatePdf(document: PdfDocument): readonly PdfDiagnostic[] {
 		const info = resolveMatching(document.info, objects)
 		if (info !== undefined) {
 			if (isDictionary(info.value)) {
-				validateInfoDictionary(info.value, context)
+				validateInfoDictionary(info.value, objects, context)
 			} else {
 				add(
 					context,
@@ -713,13 +723,14 @@ function validateRootAndPageTree(
 
 function validateInfoDictionary(
 	info: PdfDictionary,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
 ): void {
 	for (const [key, value] of Object.entries(info.entries)) {
 		if (value === undefined) {
 			continue
 		}
-		validateInfoValue(key, value, `info.${key}`, context)
+		validateInfoValue(key, value, `info.${key}`, objects, context)
 	}
 
 	if (!Array.isArray(info.byteEntries)) {
@@ -741,6 +752,7 @@ function validateInfoDictionary(
 			serialized.slice(1),
 			entry[1],
 			`info.byteEntries[${index}].value`,
+			objects,
 			context,
 		)
 	}
@@ -748,10 +760,17 @@ function validateInfoDictionary(
 
 function validateInfoValue(
 	key: string,
-	value: PdfValue,
+	value: PdfValue | PdfStream,
 	path: string,
+	objects: ReadonlyMap<number, PdfIndirectObject>,
 	context: ValidationContext,
 ): void {
+	if (isReference(value)) {
+		const target = resolveMatching(value, objects)
+		// The general reference pass already reports missing or stale targets.
+		if (target === undefined) return
+		value = target.value
+	}
 	if (key === "Trapped") {
 		if (
 			!isPdfName(value) ||
@@ -782,20 +801,16 @@ function validateInfoValue(
 		return
 	}
 
-	if (key === "CreationDate" || key === "ModDate") {
-		if (!isValidPdfDate(value.bytes)) {
-			add(
-				context,
-				"invalid-info",
-				path,
-				"Info date values must use PDF date-string syntax",
-			)
-		}
-		return
-	}
-
 	if (!hasValidUnicodeEncoding(value.bytes)) {
 		add(context, "invalid-info", path, "Info text string encoding is invalid")
+		return
+	} else if (hasUtf8Bom(value.bytes) && context.version !== "2.0") {
+		add(
+			context,
+			"unsupported-version-feature",
+			path,
+			"UTF-8 text strings require PDF 2.0",
+		)
 	} else if (
 		(context.version === "1.0" || context.version === "1.1") &&
 		value.bytes[0] === 0xfe &&
@@ -808,9 +823,34 @@ function validateInfoValue(
 			"Unicode text strings require PDF 1.2 or later",
 		)
 	}
+	if (
+		(key === "CreationDate" || key === "ModDate") &&
+		!isValidPdfDate(value.bytes)
+	) {
+		add(
+			context,
+			"invalid-info",
+			path,
+			"Info date values must use PDF date-string syntax",
+			undefined,
+			context.options.preserveInvalidDates === true ? "warning" : "error",
+		)
+	}
+}
+
+function hasUtf8Bom(bytes: Uint8Array): boolean {
+	return bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf
 }
 
 function hasValidUnicodeEncoding(bytes: Uint8Array): boolean {
+	if (hasUtf8Bom(bytes)) {
+		try {
+			new TextDecoder("utf-8", { fatal: true }).decode(bytes)
+			return true
+		} catch {
+			return false
+		}
+	}
 	if (bytes[0] !== 0xfe || bytes[1] !== 0xff) {
 		return !(bytes[0] === 0xff && bytes[1] === 0xfe)
 	}
@@ -843,11 +883,14 @@ function hasValidUnicodeEncoding(bytes: Uint8Array): boolean {
 
 function isValidPdfDate(bytes: Uint8Array): boolean {
 	let value = ""
-	for (const byte of bytes) {
-		if (byte > 0x7f) {
-			return false
+	if (hasUtf8Bom(bytes)) value = new TextDecoder("utf-8").decode(bytes)
+	else if (bytes[0] === 0xfe && bytes[1] === 0xff)
+		value = new TextDecoder("utf-16be").decode(bytes)
+	else {
+		for (const byte of bytes) {
+			if (byte > 0x7f) return false
+			value += String.fromCharCode(byte)
 		}
-		value += String.fromCharCode(byte)
 	}
 
 	const match =
@@ -1109,7 +1152,10 @@ function validateLeafPage(
 
 	const contents = entries.Contents
 	if (contents !== undefined) {
-		if (isReference(contents)) {
+		const resolved = isReference(contents)
+			? resolveMatching(contents, objects)?.value
+			: contents
+		if (isReference(contents) && !isPdfArray(resolved)) {
 			validateStreamReference(
 				contents,
 				`${path}.Contents`,
@@ -1117,9 +1163,9 @@ function validateLeafPage(
 				context,
 				resources,
 			)
-		} else if (isPdfArray(contents)) {
-			for (let index = 0; index < contents.items.length; index += 1) {
-				const item = contents.items[index]
+		} else if (isPdfArray(resolved)) {
+			for (let index = 0; index < resolved.items.length; index += 1) {
+				const item = resolved.items[index]
 				if (!isReference(item)) {
 					add(
 						context,

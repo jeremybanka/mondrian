@@ -1,5 +1,10 @@
 import { expect, it } from "vite-plus/test"
-import { createPdfDocument, rectangle } from "../../../src/index.ts"
+import {
+	createPdfDocument,
+	parsePdf,
+	serializePdf,
+	rectangle,
+} from "../../../src/index.ts"
 import { visualArtifactOptions } from "./setup.ts"
 
 it("renders escaped text and rotated pages in a nested page tree", async () => {
@@ -32,7 +37,7 @@ it("renders escaped text and rotated pages in a nested page tree", async () => {
 	})
 	pdf.setPages(cover, pdf.pages(appendix, end))
 
-	await expect(pdf.serialize()).toMatchPdfArtifact(
+	await expect(serializePdf(parsePdf(pdf.serialize()))).toMatchPdfArtifact(
 		"nested-pages-and-escaped-text",
 		visualArtifactOptions,
 	)

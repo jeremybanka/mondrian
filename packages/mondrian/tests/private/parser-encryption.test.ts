@@ -188,6 +188,23 @@ it("uses the embedded-file crypt filter separately from the stream filter", () =
 	})
 })
 
+it.each(["", " /EFF null"])(
+	"inherits the stream crypt filter for absent or null EFF (%j)",
+	(eff) => {
+		const { encryption } = encryptedPdf()
+		const document = parsePdf(
+			encryptedPdf({ embedded: true, extraEncryption: encryption + eff })
+				.source,
+		)
+		for (const result of [document, parsePdf(serializePdf(document))])
+			expect(
+				result.objects.find((o) => o.objectNumber === 7)?.value,
+			).toMatchObject({
+				data: new TextEncoder().encode(plainMetadata),
+			})
+	},
+)
+
 it("does not decrypt document timestamp signature Contents", () => {
 	const doc = parsePdf(encryptedPdf({ signatureType: "DocTimeStamp" }).source)
 	expect(doc.objects.find((o) => o.objectNumber === 9)?.value).toMatchObject({

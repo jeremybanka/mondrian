@@ -168,8 +168,7 @@ export function createDecryption(
 	}
 	const strings = encryptedFilter(entries.StrF)
 	const streams = encryptedFilter(entries.StmF)
-	const embedded =
-		entries.EFF === undefined ? streams : encryptedFilter(entries.EFF)
+	const embedded = entries.EFF == null ? streams : encryptedFilter(entries.EFF)
 	return (value, objectOffset) => {
 		const decrypt = (data: Uint8Array) => {
 			try {

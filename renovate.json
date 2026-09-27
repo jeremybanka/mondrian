@@ -60,7 +60,33 @@
 				"@vitest/*",
 				"@voidzero-dev/vite-plus-core"
 			],
-			"separateMajorMinor": false
+			"separateMajorMinor": false,
+			"groupSingleUpdates": true,
+			"skipArtifactsUpdate": true,
+			"postUpgradeTasks": {
+				"commands": [
+					"node scripts/sync-vite-plus.ts"
+				],
+				"executionMode": "update",
+				"fileFilters": [
+					"package.json",
+					"packages/*/package.json",
+					"pnpm-workspace.yaml",
+					"pnpm-lock.yaml"
+				],
+				"installTools": { "node": {}, "pnpm": {} }
+			}
+		},
+		{
+			"description": "Vite Plus selects the bundled Vite and Vitest versions; the post-upgrade task synchronizes their dependencies",
+			"matchPackageNames": [
+				"vite",
+				"vitest",
+				"@vitest/*",
+				"!@vitest/eslint-plugin",
+				"@voidzero-dev/vite-plus-core"
+			],
+			"enabled": false
 		},
 		{
 			"matchPackageNames": ["vite-plus"],

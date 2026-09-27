@@ -38,6 +38,7 @@ jobs:
           LOG_LEVEL: debug
           RENOVATE_ALLOW_SCRIPTS: "true"
           RENOVATE_ALLOW_PLUGINS: true
+          RENOVATE_ALLOWED_COMMANDS: '["^node scripts/sync-vite-plus\\.ts$"]'
           RENOVATE_REPOSITORIES: ${{ github.repository_owner }}/${{ github.event.repository.name }}
         with:
           configurationFile: renovate.json

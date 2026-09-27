@@ -1,5 +1,20 @@
 # mondrian.pdf
 
+## 0.1.7
+
+### Patch Changes
+
+- de7aee3: Add `parsePdf()` to read raw PDF byte strings or `Uint8Array` inputs into `PdfDocument`, preserving object identities, decoded name and string bytes, encoded streams, metadata, and file identifiers. Support classic and streamed cross-references, hybrid files, incremental revisions, and compressed objects.
+
+  Support AES-256 Standard encryption (revisions 5 and 6) with empty, user, or owner passwords supplied as ASCII strings or prepared UTF-8 bytes. Parsed documents serialize as unencrypted PDFs; full rewriting does not preserve password restrictions, digital signatures, incremental history, or linearization.
+
+  Provide `PdfParseError` with byte offsets, configurable structural decoding limits, and opt-in recovery through `recover` and `onWarning`. Strict parsing remains the default.
+- de7aee3: Accept indirect page content arrays and indirect Info values during validation and serialization, checking their resolved values while retaining the original references.
+
+  Validate UTF-16BE and PDF 2.0 UTF-8 date strings after decoding their text, preserving their original bytes and checking encoding, PDF version, and calendar validity.
+
+  Add the explicit `preserveInvalidDates` option to `validatePdf()` and `serializePdf()` for retaining nonstandard imported Info date strings unchanged. Invalid date syntax becomes a warning with this option; invalid encodings and other structural errors still block serialization.
+
 ## 0.1.6
 
 ### Patch Changes

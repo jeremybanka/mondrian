@@ -62,6 +62,10 @@
 			],
 			"separateMajorMinor": false,
 			"groupSingleUpdates": true,
+			"group": {
+				"commitMessageTopic": "{{{groupName}}}{{#each upgrades}}{{#if (equals depName 'vite-plus')}} to v{{{newVersion}}}{{/if}}{{/each}}",
+				"commitMessageExtra": ""
+			},
 			"skipArtifactsUpdate": true,
 			"postUpgradeTasks": {
 				"commands": [

@@ -7,11 +7,13 @@ import {
 } from "../../src/index.ts"
 import {
 	encryptedPdf,
+	encryptFixtureBytes,
 	plainContent,
 	plainMetadata,
 } from "../fixtures/encrypted.ts"
 import { deflateSync, inflateSync } from "node:zlib"
 import { isDeepStrictEqual } from "node:util"
+import { provePages } from "../fixtures/original-corpus/proof.ts"
 
 it.each([0, 1, 2])(
 	"decrypts AES-256 password vector %s and compressed objects",
@@ -211,6 +213,54 @@ it("does not decrypt document timestamp signature Contents", () => {
 		entries: { Contents: { bytes: Uint8Array.of(1, 2, 3, 4) } },
 	})
 })
+
+it.each(["", "/Type null"])(
+	"preserves signature Contents without an explicit Type (%j)",
+	async (type) => {
+		const reason = encryptFixtureBytes(Buffer.from("Original receipt"))
+		const { source } = encryptedPdf({
+			extraObjects: [
+				[
+					9,
+					`<< ${type} /Filter /Adobe.PPKLite /SubFilter /adbe.pkcs7.detached /ByteRange [0 10 20 30] /Contents <01020304> /Reason <${reason.toString("hex")}> >>`,
+				],
+			],
+		})
+		const expectedPages = await provePages(Buffer.from(source, "latin1"))
+		const document = parsePdf(source)
+		for (const result of [document, parsePdf(serializePdf(document))])
+			expect(
+				result.objects.find((o) => o.objectNumber === 9)?.value,
+			).toMatchObject({
+				entries: {
+					Contents: { bytes: Uint8Array.of(1, 2, 3, 4) },
+					Reason: { bytes: new TextEncoder().encode("Original receipt") },
+				},
+			})
+		expect(await provePages(serializePdf(document))).toEqual(expectedPages)
+	},
+)
+
+it.each(["", "/Type /Annot /ByteRange [0 10 20 30]"])(
+	"still decrypts ordinary Contents strings (%j)",
+	(entries) => {
+		const contents = encryptFixtureBytes(Buffer.from("Ordinary content"))
+		const document = parsePdf(
+			encryptedPdf({
+				extraObjects: [
+					[8, `<< ${entries} /Contents <${contents.toString("hex")}> >>`],
+				],
+			}).source,
+		)
+		expect(
+			document.objects.find((o) => o.objectNumber === 8)?.value,
+		).toMatchObject({
+			entries: {
+				Contents: { bytes: new TextEncoder().encode("Ordinary content") },
+			},
+		})
+	},
+)
 
 it("rejects explicit Crypt filters instead of applying the wrong decryption", () => {
 	for (const streamEntries of [

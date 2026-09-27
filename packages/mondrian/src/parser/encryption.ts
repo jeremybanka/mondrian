@@ -201,8 +201,14 @@ export function createDecryption(
 			)
 				return item
 			const signature =
-				isKind(type, "name") &&
-				(type.value === "Sig" || type.value === "DocTimeStamp")
+				(isKind(type, "name") &&
+					(type.value === "Sig" || type.value === "DocTimeStamp")) ||
+				// Type is optional; byte-range signatures have direct entries and
+				// hexadecimal Contents (ISO 32000-1, Table 252).
+				(type == null &&
+					isKind(item, "dictionary") &&
+					isKind(item.entries.Contents, "hex-string") &&
+					isKind(item.entries.ByteRange, "array"))
 			const field = (name: string, value: PdfValue | undefined) =>
 				value === undefined || (signature && name === "Contents")
 					? value

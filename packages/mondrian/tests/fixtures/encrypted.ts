@@ -8,6 +8,12 @@ import { row } from "./parser.ts"
 export const fileKey = Buffer.from(Array.from({ length: 32 }, (_, i) => i))
 export const plainContent = "q 0.2 0.4 0.8 rg 5 5 20 20 re f Q\n"
 export const plainMetadata = '<x:xmpmeta xmlns:x="adobe:ns:meta/"/>'
+export function encryptFixtureBytes(bytes: Uint8Array): Buffer {
+	const iv = Buffer.alloc(16, 0x42)
+	const aes = createCipheriv("aes-256-cbc", fileKey, iv)
+	return Buffer.concat([iv, aes.update(bytes), aes.final()])
+}
+
 export function encryptedPdf(
 	options: {
 		vector?: number
@@ -30,11 +36,7 @@ export function encryptedPdf(
 	const metadata = options.metadata !== false
 	const strings = options.strings !== false
 	const streams = options.streams !== false
-	const encrypt = (bytes: Buffer) => {
-		const iv = Buffer.alloc(16, 0x42)
-		const aes = createCipheriv("aes-256-cbc", fileKey, iv)
-		return Buffer.concat([iv, aes.update(bytes), aes.final()])
-	}
+	const encrypt = encryptFixtureBytes
 	const text = (value: string) =>
 		`<${(strings ? encrypt(Buffer.from(value)) : Buffer.from(value)).toString("hex")}>`
 	const literal = (value: string) =>

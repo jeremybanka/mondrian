@@ -35,3 +35,13 @@ OPENSSL=/path/to/openssl PDFSIG=/path/to/pdfsig node packages/mondrian/tests/fix
 ```
 
 The initial Poppler verifier was `/nix/store/7wbqrbafwmwza2yj9mng0727bkz70jxb-poppler-utils-26.06.0/bin/pdfsig`. Neither external verifier nor any private signing key is used at runtime by the test suite; tests read only the committed PDF, proof metadata, source description and embedded certificate. The visible page has one reviewed PNG baseline.
+
+## Hundreds of pages, thousands of objects, deep navigation, and large payloads
+
+`scale.ts` generates a **420-page, 3,891-object PDF** with a nested page tree, **504 bookmarks at a maximum depth of 64**, separate resources/metadata/annotations for every page, indirect Contents arrays, and a **31 MiB original uncompressed binary attachment**. The attachment is deterministic xorshift data with deliberately embedded `endstream`, `endobj`, `xref`, header and EOF-looking bytes, so correct stream-length handling matters. Its SHA-256 is `e89129ba4ae1f9f2596fd12a86cfbdc853e4e9543a0be4a6a0fda9ec23bb2289`. The complete file is approximately 31.5 MiB (33,030,810 bytes with the initial Node 26.10.0 generator). No large binary or hundreds of duplicate PNGs are committed.
+
+The private scale test runs the complete parse/validate/serialize/strict-reparse pipeline with full graph equality, payload hash preservation and deterministic second serialization. `outline-proof.ts` uses PDFium's actual bookmark navigation and destination APIs, independently checking every title, nesting level and page destination before and after rewriting. Every record bookmark resolves to the expected one of the 420 pages; the final nested appendix resolves to page 420 at depth 64.
+
+**All 420 pages**, before and after rewriting, are independently compared for valid cross-references, geometry, rotation, text and exact pixel hashes. These pages intentionally alternate between two authored appearances. Every page is additionally required to equal its corresponding one-page representative in **all** those fields; both representatives have reviewed committed PNG baselines. This is exhaustive proof of the repeated appearances, not first/middle/last sampling or an assertion that only some pages look right. Metadata and object graphs remain distinct even when page appearances repeat.
+
+This closes page/object-count, deep-outline-navigation and approximately 31 MB payload parity. It is a bounded correctness regression, not a parser performance benchmark, a native-memory ceiling, an adversarial resource guarantee, or a test of decoding a 31 MB raster. The visible pages are 240×180 points; large-page geometry is separately covered by the original corpus atlas. The large payload is an original attachment rather than copied geospatial data.

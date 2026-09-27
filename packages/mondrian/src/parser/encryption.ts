@@ -236,6 +236,10 @@ export function createDecryption(
 						}),
 			}
 			if (isKind(item, "stream")) {
+				// External-file stream data is outside PDF encryption. The inline
+				// placeholder is ignored, but dictionary strings still decrypt above.
+				if (resolve(item.entries.F) != null)
+					return Object.freeze(mapped) as PdfStream
 				const filter = resolve(item.entries.Filter)
 				const filterList = isKind(filter, "array")
 					? filter.items.map(resolve)

@@ -272,6 +272,70 @@ it("rejects explicit Crypt filters instead of applying the wrong decryption", ()
 		)
 })
 
+it.each([
+	["direct filename", false, false, ""],
+	["direct file specification", false, true, "ignored inline bytes"],
+	["indirect filename", true, false, "ignored inline bytes"],
+	["indirect file specification", true, true, ""],
+] as const)(
+	"preserves external stream placeholders and decrypts the %s",
+	async (_label, indirect, dictionary, placeholder) => {
+		const filename = "original-external-data.bin"
+		const encryptedName = `<${encryptFixtureBytes(Buffer.from(filename)).toString("hex")}>`
+		const specification = dictionary
+			? `<< /Type /Filespec /F ${encryptedName} >>`
+			: encryptedName
+		const { source } = encryptedPdf({
+			extraObjects: [
+				[
+					8,
+					`<< /F ${indirect ? "5 0 R" : specification} /Length ${placeholder.length} >>\nstream\n${placeholder}\nendstream`,
+				],
+				...(indirect ? [[5, specification] as [number, string]] : []),
+			],
+		})
+		const expectedPages = await provePages(Buffer.from(source, "latin1"))
+		const document = parsePdf(source)
+		for (const result of [document, parsePdf(serializePdf(document))]) {
+			const stream = result.objects.find((o) => o.objectNumber === 8)!.value
+			if (!stream || typeof stream !== "object" || stream.kind !== "stream")
+				throw new Error("Missing external stream")
+			expect(stream.data).toEqual(new TextEncoder().encode(placeholder))
+			const file = indirect
+				? result.objects.find((o) => o.objectNumber === 5)!.value
+				: stream.entries.F
+			const expected = { bytes: new TextEncoder().encode(filename) }
+			expect(file).toMatchObject(
+				dictionary ? { entries: { F: expected } } : expected,
+			)
+		}
+		expect(await provePages(serializePdf(document))).toEqual(expectedPages)
+	},
+)
+
+it.each(["null", "5 0 R", "99 0 R"])(
+	"decrypts internal stream data when F resolves to null (%s)",
+	(file) => {
+		const data = encryptFixtureBytes(Buffer.from("Internal stream"))
+		const document = parsePdf(
+			encryptedPdf({
+				extraObjects: [
+					[5, "null"],
+					[
+						8,
+						`<< /F ${file} /Length ${data.length} >>\nstream\n${data.toString("latin1")}\nendstream`,
+					],
+				],
+			}).source,
+		)
+		expect(
+			document.objects.find((o) => o.objectNumber === 8)?.value,
+		).toMatchObject({
+			data: new TextEncoder().encode("Internal stream"),
+		})
+	},
+)
+
 it("charges decrypted structural bytes as well as inflated bytes to the budget", () => {
 	const source = encryptedPdf().source
 	const objectStream = "12 0 << /Text (Inside object stream) >>"

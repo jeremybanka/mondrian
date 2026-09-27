@@ -10,3 +10,4 @@ coverage.sqlite*
 .mise.local.toml
 .env
 *.log
+.vitest/

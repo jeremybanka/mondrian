@@ -9,7 +9,11 @@ const hash = (bytes: Uint8Array) =>
 	createHash("sha256").update(bytes).digest("hex")
 
 /** Independent all-page evidence. No form-fill environment or actions are executed. */
-export async function provePages(bytes: Uint8Array, password = "") {
+export async function provePages(
+	bytes: Uint8Array,
+	password = "",
+	allowRepairedXref = false,
+) {
 	const api = await init({ wasmBinary })
 	api.PDFiumExt_Init()
 	const memory = api.pdfium.wasmExports
@@ -22,6 +26,11 @@ export async function provePages(bytes: Uint8Array, password = "") {
 	try {
 		if (!document)
 			throw new Error(`PDFium rejected fixture: ${api.FPDF_GetLastError()}`)
+		if (
+			!allowRepairedXref &&
+			!api.FPDF_DocumentHasValidCrossReferenceTable(document)
+		)
+			throw new Error("PDFium reported an invalid cross-reference table")
 		const result: {
 			width: number
 			height: number

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 import {
 	gardenCff,
+	gardenFontBounds,
 	gardenGlyphs,
 	gardenTrueType,
 	glyphIndex,
@@ -105,6 +106,7 @@ export function embeddedFontNotebook(blank?: "truetype" | "cff"): Uint8Array {
 		[10, false],
 		[20, true],
 	] as const) {
+		const empty = blank === (cff ? "cff" : "truetype")
 		const name = cff ? "MOSSCC+MossGeometry-CID" : "MOSSTT+MossGeometry-Regular"
 		pdf.add(
 			base,
@@ -116,7 +118,7 @@ export function embeddedFontNotebook(blank?: "truetype" | "cff"): Uint8Array {
 		)
 		pdf.add(
 			base + 2,
-			`<< /Type /FontDescriptor /FontName /${name} /Flags 4 /FontBBox [0 -200 900 900] /ItalicAngle 0 /Ascent 900 /Descent -200 /CapHeight 700 /StemV 58 /FontFile${cff ? 3 : 2} ${base + 3} 0 R >>`,
+			`<< /Type /FontDescriptor /FontName /${name} /Flags 4 /FontBBox [${gardenFontBounds(empty).join(" ")}] /ItalicAngle 0 /Ascent 900 /Descent -200 /CapHeight 700 /StemV 58 /FontFile${cff ? 3 : 2} ${base + 3} 0 R >>`,
 		)
 		const font = cff
 			? gardenCff(blank === "cff")

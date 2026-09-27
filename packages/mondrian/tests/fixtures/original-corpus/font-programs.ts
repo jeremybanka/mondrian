@@ -213,18 +213,43 @@ export function fontChecksum(bytes: Uint8Array): number {
 	return sum
 }
 
+function outlineBounds(
+	contours: readonly Contour[],
+): readonly [number, number, number, number] {
+	const points = contours.flat()
+	return points.length
+		? [
+				Math.min(...points.map(([x]) => x)),
+				Math.min(...points.map(([, y]) => y)),
+				Math.max(...points.map(([x]) => x)),
+				Math.max(...points.map(([, y]) => y)),
+			]
+		: [0, 0, 0, 0]
+}
+
+/** Tight bounds from actual outlines, also used by the CFF and PDF descriptors. */
+export function gardenFontBounds(
+	blank = false,
+): readonly [number, number, number, number] {
+	return outlineBounds(
+		blank ? [] : gardenGlyphs.flatMap((glyph) => glyph.contours),
+	)
+}
+
 /** Standalone TrueType, long loca, Unicode cmap, no hinting or borrowed glyph outlines. */
 export function gardenTrueType(blank = false): Uint8Array {
 	const tables = new Map<string, Buffer>()
 	const locations: number[] = [0]
-	const glyphs = gardenGlyphs.map((glyph) => {
+	const descriptions = gardenGlyphs.map((glyph) => {
 		const contours = blank ? [] : glyph.contours
+		return { contours, bounds: outlineBounds(contours), width: glyph.width }
+	})
+	const outlined = descriptions.filter((glyph) => glyph.contours.length)
+	const bounds = gardenFontBounds(blank)
+	const glyphs = descriptions.map(({ contours, bounds }) => {
 		const points = contours.flat()
 		const xs = points.map((point) => point[0]),
 			ys = points.map((point) => point[1])
-		const bounds = points.length
-			? [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]
-			: [0, 0, 0, 0]
 		let pointCount = 0
 		const ends = contours.map((contour) => (pointCount += contour.length) - 1)
 		const deltas = (values: number[]) =>
@@ -248,9 +273,7 @@ export function gardenTrueType(blank = false): Uint8Array {
 	head.writeUInt16BE(1000, 18)
 	head.writeUInt32BE(3800000000, 24)
 	head.writeUInt32BE(3800000000, 32)
-	head.writeInt16BE(-200, 38)
-	head.writeInt16BE(900, 40)
-	head.writeInt16BE(900, 42)
+	bounds.forEach((value, index) => head.writeInt16BE(value, 36 + index * 2))
 	head.writeUInt16BE(8, 46)
 	head.writeInt16BE(2, 48)
 	head.writeInt16BE(1, 50)
@@ -259,31 +282,48 @@ export function gardenTrueType(blank = false): Uint8Array {
 	hhea.writeUInt32BE(0x10000)
 	hhea.writeInt16BE(900, 4)
 	hhea.writeInt16BE(-200, 6)
-	hhea.writeUInt16BE(900, 10)
-	hhea.writeInt16BE(-50, 12)
-	hhea.writeInt16BE(-50, 14)
-	hhea.writeInt16BE(900, 16)
+	hhea.writeUInt16BE(Math.max(...descriptions.map((glyph) => glyph.width)), 10)
+	hhea.writeInt16BE(
+		outlined.length ? Math.min(...outlined.map((glyph) => glyph.bounds[0])) : 0,
+		12,
+	)
+	hhea.writeInt16BE(
+		outlined.length
+			? Math.min(...outlined.map((glyph) => glyph.width - glyph.bounds[2]))
+			: 0,
+		14,
+	)
+	hhea.writeInt16BE(
+		outlined.length ? Math.max(...outlined.map((glyph) => glyph.bounds[2])) : 0,
+		16,
+	)
 	hhea.writeInt16BE(1, 18)
 	hhea.writeUInt16BE(gardenGlyphs.length, 34)
 	tables.set("hhea", hhea)
 	tables.set(
 		"hmtx",
-		join(
-			...gardenGlyphs.map((glyph) =>
-				words(
-					glyph.width,
-					blank || !glyph.contours.length
-						? 0
-						: Math.min(...glyph.contours.flat().map(([x]) => x)),
-				),
-			),
-		),
+		join(...descriptions.map((glyph) => words(glyph.width, glyph.bounds[0]))),
 	)
 	tables.set(
 		"maxp",
 		join(
 			u32(0x10000),
-			words(gardenGlyphs.length, 256, 64, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0),
+			words(
+				gardenGlyphs.length,
+				Math.max(...descriptions.map((glyph) => glyph.contours.flat().length)),
+				Math.max(...descriptions.map((glyph) => glyph.contours.length)),
+				0,
+				0,
+				1,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+				0,
+			),
 		),
 	)
 	const chars = new Map<number, number>()
@@ -335,7 +375,13 @@ export function gardenTrueType(blank = false): Uint8Array {
 	)
 	tables.set("post", join(u32(0x30000), Buffer.alloc(28)))
 	const os2 = Buffer.alloc(78)
-	os2.writeInt16BE(650, 2)
+	const widths = descriptions
+		.map((glyph) => glyph.width)
+		.filter((width) => width > 0)
+	os2.writeInt16BE(
+		Math.round(widths.reduce((sum, width) => sum + width, 0) / widths.length),
+		2,
+	)
 	os2.writeUInt16BE(400, 4)
 	os2.writeUInt16BE(5, 6)
 	os2.write("MOSS", 58)
@@ -450,10 +496,7 @@ export function gardenCff(blank = false): Uint8Array {
 				Buffer.from([12, 30]),
 				dictInteger(gardenGlyphs.length),
 				Buffer.from([12, 34]),
-				dictInteger(0),
-				dictInteger(-200),
-				dictInteger(900),
-				dictInteger(900),
+				...gardenFontBounds(blank).map(dictInteger),
 				Buffer.from([5]),
 				dictInteger(charsetOffset),
 				Buffer.from([15]),

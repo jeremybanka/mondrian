@@ -24,7 +24,8 @@ export interface PdfArtifactMatcherOptions extends PdfRenderOptions {
 }
 
 declare module "vitest" {
-	interface Assertion<T = any> {
+	// Leave Vitest's version-specific type parameters intact; this matcher is always async.
+	interface Assertion {
 		toMatchPdfArtifact(
 			name?: string,
 			options?: PdfArtifactMatcherOptions,

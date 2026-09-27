@@ -9,7 +9,20 @@ import {
 	renderPdf,
 } from "mondrian.pdf/testing"
 import { installPdfArtifactMatchers } from "mondrian.pdf/vitest"
-import { createExpect } from "vitest"
+import { createExpect, expectTypeOf } from "vitest"
+
+it("keeps PDF artifact assertions asynchronous for direct and resolved values", () => {
+	const consumerExpect = createExpect()
+	const bytes = new Uint8Array()
+	const direct = consumerExpect(bytes)
+	const resolved = consumerExpect(Promise.resolve(bytes)).resolves
+	expectTypeOf<typeof direct.toMatchPdfArtifact>().returns.toEqualTypeOf<
+		Promise<void>
+	>()
+	type ResolvedResult = ReturnType<typeof resolved.toMatchPdfArtifact>
+	expectTypeOf<ResolvedResult>().toExtend<PromiseLike<unknown>>()
+	expectTypeOf<Awaited<ResolvedResult>>().toEqualTypeOf<void>()
+})
 
 it("renders each page at the requested resolution and background", async () => {
 	const pdf = createPdfDocument()

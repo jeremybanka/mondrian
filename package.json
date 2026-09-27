@@ -25,14 +25,15 @@
 		"@dprint/markdown": "0.24.0",
 		"@dprint/oxc": "0.41.0",
 		"@dprint/toml": "0.8.0",
-		"@types/node": "26.6.2",
-		"@vitest/coverage-v8": "4.1.11",
+		"@types/node": "26.6.3",
+		"@vitest/coverage-v8": "catalog:",
 		"dprint": "0.57.4",
 		"dprint-plugin-malva": "0.16.0",
 		"dprint-plugin-markup": "0.27.5",
 		"dprint-plugin-yaml": "0.6.0",
 		"typescript": "7.0.2",
-		"vite-plus": "0.3.3"
+		"vite-plus": "catalog:",
+		"vitest": "catalog:"
 	},
 	"packageManager": "pnpm@12.6.0",
 	"engines": {

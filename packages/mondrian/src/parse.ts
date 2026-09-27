@@ -249,11 +249,7 @@ class DocumentParser {
 		return Object.freeze({
 			version,
 			root: reference<PdfCatalogDictionary>(root.objectNumber, root.generation),
-			objects: Object.freeze(
-				[...this.objects.values()].sort(
-					(a, b) => a.objectNumber - b.objectNumber,
-				),
-			),
+			objects: Object.freeze([...this.objects.values()]),
 			...(info == null
 				? {}
 				: {

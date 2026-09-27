@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { isDeepStrictEqual } from "node:util"
+import { samePdfGraph } from "./pdf-graph.ts"
 import { expect, it } from "vite-plus/test"
 import { parsePdf, serializePdf, validatePdf } from "../../src/index.ts"
 import {
@@ -33,7 +33,7 @@ it("cryptographically verifies the original signature before parsing its graph",
 	expect(validatePdf(document)).toEqual([])
 	const output = serializePdf(document),
 		reparsed = parsePdf(output)
-	expect(isDeepStrictEqual(reparsed, document)).toBe(true)
+	expect(samePdfGraph(reparsed, document)).toBe(true)
 	expect(serializePdf(reparsed)).toEqual(output)
 	// Rewriting retains signature dictionary bytes, not the original signed byte layout.
 	const rewritten = verifyReceiptSignature(output)

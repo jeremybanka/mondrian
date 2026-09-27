@@ -1,6 +1,6 @@
 # Parser semver contract audit
 
-The parser is an unshipped feature on this branch. Public tests are replayed by Break Check against future implementations, so an assertion belongs there only when its failure represents lost consumer behavior. This audit covers every assertion in the original public parser suite, the added parser option/encryption contracts, and the disposition of the private parser suites. Production parsing, validation, serialization, and visual baselines are unchanged.
+The parser is an unshipped feature on this branch. Public tests are replayed by Break Check against future implementations, so an assertion belongs there only when its failure represents lost consumer behavior. This audit covers every assertion in the original public parser suite, the added parser option/encryption contracts, and the disposition of the private parser suites. Dictionary prototypes and object-array ordering remain private implementation choices; complete graph comparisons normalize only object-array ordering and retain every object identity, value, and byte.
 
 ## Public assertions
 
@@ -30,18 +30,20 @@ The parser is an unshipped feature on this branch. Public tests are replayed by 
 
 ## Private assertions retained
 
-| Suite                                   | Why its detailed assertions stay private                                                                                                                                                                       |
-| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `parser-representation`                 | Current string/name variants, byte-identical rewriting, model equality, direct Info allocation, and diagnostic formatting.                                                                                     |
-| `parse`                                 | Lexical implementation, exact structural bookkeeping, malformed-input diagnosis, hybrid and object-stream internals, and current unsupported syntax. Public tests cover representative supported capabilities. |
-| `parser-filters`                        | Individual codecs, predictor algorithms, checksum verification, malformed filter data, and exact decoder error locations.                                                                                      |
-| `parser-limits`                         | Per-filter boundary arithmetic, intermediate output charges, shared budgets, invalid option diagnostics, and early stopping.                                                                                   |
-| `parser-numbers`, `parser-size`         | Precision boundaries, token offsets, large flat containers, JavaScript engine limits, and freeze/prototype choices.                                                                                            |
-| `parser-references`, `parser-revisions` | Detailed reference-resolution and revision precedence cases, retained bookkeeping, and current external-stream limitations.                                                                                    |
-| `parser-validation`                     | Full graph equality, particular diagnostic paths, malformed dates/references, and version boundary cases. Public contracts separately cover imported-data capabilities.                                        |
-| `parser-recovery`                       | Exact recovery bounds, callback sequences, offsets within malformed constructs, and unrepairable inputs.                                                                                                       |
-| `parser-encryption`                     | Crypt filters, permission records, malformed ciphertext, signature exceptions, object-stream charging, exact graph shapes, and current unsupported handlers.                                                   |
-| Browser and visual suites               | Bundler/runtime integration and exact PDFium pixel baselines can evolve without becoming release compatibility promises.                                                                                       |
+| Suite                                   | Why its detailed assertions stay private                                                                                                                                                                          |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parser-representation`                 | Current string/name variants, byte-identical rewriting, model equality, direct Info allocation, and diagnostic formatting.                                                                                        |
+| `parse`                                 | Lexical implementation, exact structural bookkeeping, malformed-input diagnosis, hybrid and object-stream internals, and current unsupported syntax. Public tests cover representative supported capabilities.    |
+| `parser-filters`                        | Individual codecs, predictor algorithms, checksum verification, malformed filter data, and exact decoder error locations.                                                                                         |
+| `parser-limits`                         | Per-filter boundary arithmetic, intermediate output charges, shared budgets, invalid option diagnostics, and early stopping.                                                                                      |
+| `parser-numbers`, `parser-size`         | Precision boundaries, token offsets, large flat containers, JavaScript engine limits, and freeze/prototype choices.                                                                                               |
+| `parser-references`, `parser-revisions` | Detailed reference-resolution and revision precedence cases, retained bookkeeping, and current external-stream limitations.                                                                                       |
+| `parser-validation`                     | Full graph equality, particular diagnostic paths, malformed dates/references, and version boundary cases. Public contracts separately cover imported-data capabilities.                                           |
+| `parser-recovery`                       | Exact recovery bounds, callback sequences, offsets within malformed constructs, and unrepairable inputs.                                                                                                          |
+| `parser-encryption`                     | Crypt filters, permission records, malformed ciphertext, signature exceptions, object-stream charging, exact graph shapes, and current unsupported handlers.                                                      |
+| `parser-dictionaries`                   | Consistent internal entry-map construction, ownership of special keys, freezing, and byte-name/string preservation through decryption and serialization.                                                          |
+| `parser-cache-phases`                   | Combined revision lookup, indirect crypt-filter setup, object-stream replacement, and final decryption. A controlled removal of the revision cache reset makes both AES-256 variants fail on retained ciphertext. |
+| Browser and visual suites               | Bundler/runtime integration and exact PDFium pixel baselines can evolve without becoming release compatibility promises.                                                                                          |
 
 ## Controlled mutation checks
 

@@ -1,4 +1,5 @@
 import { expect, it } from "vitest"
+import { samePdfGraph } from "./pdf-graph.ts"
 import { classic, row, structuralPdf } from "../fixtures/parser.ts"
 import { parsePdf, PdfParseError, serializePdf } from "../../src/index.ts"
 import { SyntaxReader } from "../../src/parser/syntax.ts"
@@ -119,7 +120,7 @@ it("decodes Flate cross-references with PNG Up prediction and compressed objects
 	expect(
 		document.objects.find((object) => object.objectNumber === 4)?.value,
 	).toMatchObject({ entries: { Answer: 42 } })
-	expect(parsePdf(serializePdf(document)).objects).toEqual(document.objects)
+	expect(samePdfGraph(parsePdf(serializePdf(document)), document)).toBe(true)
 })
 
 it("uses a newer uncompressed object over an older compressed revision", () => {

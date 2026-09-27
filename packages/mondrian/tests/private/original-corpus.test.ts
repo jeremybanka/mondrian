@@ -1,5 +1,5 @@
 import { inflateSync } from "node:zlib"
-import { isDeepStrictEqual } from "node:util"
+import { samePdfGraph } from "./pdf-graph.ts"
 import { describe, expect, it } from "vite-plus/test"
 import {
 	parsePdf,
@@ -75,7 +75,7 @@ describe.each(originalFixtures)("original corpus: $id", (fixture) => {
 			expect(names(document), expected).toContain(expected)
 		const output = serializePdf(document, fixture.validationOptions)
 		const reparsed = parsePdf(output)
-		expect(isDeepStrictEqual(reparsed, document)).toBe(true)
+		expect(samePdfGraph(reparsed, document)).toBe(true)
 		expect(serializePdf(reparsed, fixture.validationOptions)).toEqual(output)
 	})
 })

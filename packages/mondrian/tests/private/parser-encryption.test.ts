@@ -12,7 +12,7 @@ import {
 	plainMetadata,
 } from "../fixtures/encrypted.ts"
 import { deflateSync, inflateSync } from "node:zlib"
-import { isDeepStrictEqual } from "node:util"
+import { samePdfGraph } from "./pdf-graph.ts"
 import { provePages } from "../fixtures/original-corpus/proof.ts"
 
 it.each([0, 1, 2])(
@@ -66,7 +66,7 @@ it.each([0, 1, 2])(
 			entries: { Contents: { bytes: Uint8Array.of(1, 2, 3, 4) } },
 		})
 		const serialized = serializePdf(document)
-		expect(isDeepStrictEqual(parsePdf(serialized), document)).toBe(true)
+		expect(samePdfGraph(parsePdf(serialized), document)).toBe(true)
 		expect(serializePdf(parsePdf(serialized))).toEqual(serialized)
 	},
 )

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { isDeepStrictEqual } from "node:util"
+import { samePdfGraph } from "../pdf-graph.ts"
 import { expect, it } from "vite-plus/test"
 import { parsePdf, serializePdf, validatePdf } from "../../../src/index.ts"
 import { provePages } from "../../fixtures/original-corpus/proof.ts"
@@ -41,7 +41,7 @@ it(
 		)
 		const output = serializePdf(document),
 			reparsed = parsePdf(output)
-		expect(isDeepStrictEqual(reparsed, document)).toBe(true)
+		expect(samePdfGraph(reparsed, document)).toBe(true)
 		expect(Buffer.from(serializePdf(reparsed)).equals(output)).toBe(true)
 		const outlines = await proveOutlines(source)
 		expect(await proveOutlines(output)).toEqual(outlines)

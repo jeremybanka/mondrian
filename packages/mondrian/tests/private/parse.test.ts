@@ -302,6 +302,9 @@ it("rejects damaged compressed structures without scanning for replacement objec
 	)
 	expect(() => parsePdf(source.replace("/N 1", "/N 9"))).toThrow(PdfParseError)
 	expect(() => parsePdf(source.replace("/First 4", "/First 9"))).toThrow(
+		PdfParseError,
+	)
+	expect(() => parsePdf(source.replace("/First 4", "/First 2"))).toThrow(
 		/First/,
 	)
 })

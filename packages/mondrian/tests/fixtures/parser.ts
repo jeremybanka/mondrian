@@ -27,6 +27,7 @@ export function structuralPdf(options: {
 	indirectType?: boolean
 	indirectOffset?: boolean
 	objectStreamEntries?: string
+	objectStreamGap?: string
 	extraObjects?: [number, string][]
 }): string {
 	let source = "%PDF-1.7\n"
@@ -46,11 +47,12 @@ export function structuralPdf(options: {
 	const offsetNumber = options.indirectType ? 8 : 7
 	if (options.indirectOffset) add(offsetNumber, "0000000000")
 	const count = Math.max(6, ...offsets.keys()) + 1
-	const objects = "4 0 << /Answer 42 >>"
+	const gap = options.objectStreamGap ?? ""
+	const objects = `4 0 ${gap}<< /Answer 42 >>`
 	const compressed = binaryText(deflateSync(objects))
 	add(
 		5,
-		`<< /Type ${options.indirectType ? "7 0 R" : "/ObjStm"} /N 1 /First 4 /Filter /FlateDecode ${options.objectStreamEntries ?? ""} /Length ${compressed.length} >>\nstream\n${compressed}\nendstream`,
+		`<< /Type ${options.indirectType ? "7 0 R" : "/ObjStm"} /N 1 /First ${4 + gap.length} /Filter /FlateDecode ${options.objectStreamEntries ?? ""} /Length ${compressed.length} >>\nstream\n${compressed}\nendstream`,
 	)
 	offsets.set(6, source.length)
 	const records = new Uint8Array(count * 7)

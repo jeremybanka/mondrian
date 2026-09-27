@@ -489,9 +489,9 @@ class DocumentParser {
 					reader.integer("compressed object number"),
 					reader.integer("compressed object offset"),
 				])
-			reader.skip()
-			if (reader.position !== first)
-				reader.fail("Object stream First does not match its header")
+			// Extension data may separate the header pairs from the first object.
+			if (reader.position > first)
+				reader.fail("Object stream First overlaps its header")
 			container = { source, first, offsets }
 			this.objectStreams.set(entry.stream, container)
 		}

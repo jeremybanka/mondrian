@@ -2,6 +2,34 @@ import { expect, it } from "vitest"
 import { parsePdf, PdfParseError, serializePdf } from "../../src/index.ts"
 import { readPdf } from "../../src/testing/inspection/read-pdf.ts"
 import { classic, row, structuralPdf } from "../fixtures/parser.ts"
+import { provePages } from "../fixtures/original-corpus/proof.ts"
+
+it.each(["EXTRA ", "opaque\u0000extension\n"])(
+	"honors First after object-stream extension bytes (%j)",
+	async (objectStreamGap) => {
+		const source = structuralPdf({ objectStreamGap })
+		const expectedPages = await provePages(Buffer.from(source, "latin1"))
+		const document = parsePdf(source)
+		expect(
+			document.objects.find((o) => o.objectNumber === 4)?.value,
+		).toMatchObject({
+			entries: { Answer: 42 },
+		})
+		expect(await provePages(serializePdf(document))).toEqual(expectedPages)
+	},
+)
+
+it("allows First to include the first object's leading whitespace", () => {
+	const source = structuralPdf({ objectStreamGap: "  " }).replace(
+		"/First 6",
+		"/First 4",
+	)
+	expect(
+		parsePdf(source).objects.find((o) => o.objectNumber === 4)?.value,
+	).toMatchObject({
+		entries: { Answer: 42 },
+	})
+})
 
 it.each(["missing", "free", "null", "stale generation"])(
 	"treats an optional reference to a %s object as null",

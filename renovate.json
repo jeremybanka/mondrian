@@ -52,13 +52,20 @@
 		},
 		{
 			"groupName": "vite-plus",
-			"matchDepNames": ["vite", "vitest", "vite-plus", "viteplus"],
 			"matchPackageNames": [
+				"vite",
+				"vitest",
 				"vite-plus",
-				"viteplus",
-				"@voidzero-dev/vite-plus-core",
-				"@voidzero-dev/vite-plus-test"
-			]
+				"@vitejs/*",
+				"@vitest/*",
+				"@voidzero-dev/vite-plus-core"
+			],
+			"separateMajorMinor": false
+		},
+		{
+			"matchPackageNames": ["vite-plus"],
+			"ignoreUnstable": false,
+			"respectLatest": false
 		},
 		{
 			"matchManagers": ["github-actions"],

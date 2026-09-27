@@ -21,9 +21,7 @@ async function verifyMesh(bytes: Uint8Array) {
 		PDFDict,
 	)
 	expect(annotation.get(PDFName.of("Subtype"))).toBe(PDFName.of("3D"))
-	const model = independent.context.lookup(
-		annotation.get(PDFName.of("3DD")),
-	)
+	const model = independent.context.lookup(annotation.get(PDFName.of("3DD")))
 	if (!(model instanceof PDFRawStream)) throw new Error("Missing PRC stream")
 	expect(model.dict.get(PDFName.of("Subtype"))).toBe(PDFName.of("PRC"))
 	expect(model.dict.get(PDFName.of("Filter"))).toBe(PDFName.of("FlateDecode"))

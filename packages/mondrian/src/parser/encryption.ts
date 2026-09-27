@@ -12,6 +12,7 @@ import type {
 import { PdfParseError } from "./error.ts"
 import type { DecodeBudget } from "./limits.ts"
 import { isKind } from "./syntax.ts"
+import { dictionaryEntries } from "./dictionary.ts"
 
 // ISO 32000-2, 7.6.4: algorithms 2.A/2.B and the AESV3 crypt filter.
 // The PDF format specifies CBC/ECB here; these are format compatibility operations.
@@ -213,15 +214,12 @@ export function createDecryption(
 				value === undefined || (signature && name === "Contents")
 					? value
 					: (visit(value) as PdfValue)
-			const mappedEntries = Object.fromEntries(
+			const mappedEntries = dictionaryEntries(
 				Object.entries(item.entries).map(([name, value]) => [
 					name,
 					field(name, value),
 				]),
 			)
-			// Dictionary entries have a null prototype; parsed stream entries have
-			// an ordinary prototype after removing Length. Preserve both shapes.
-			Object.setPrototypeOf(mappedEntries, Object.getPrototypeOf(item.entries))
 			const mapped = {
 				...item,
 				entries: Object.freeze(mappedEntries),

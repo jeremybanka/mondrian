@@ -18,6 +18,7 @@ import {
 	reference,
 } from "../objects.ts"
 import { PdfParseError } from "./error.ts"
+import { dictionaryEntries } from "./dictionary.ts"
 
 const whitespace = /[\x00\t\n\f\r ]/
 // Braces delimit Type 4 calculator functions, not ordinary PDF objects.
@@ -190,7 +191,8 @@ export class SyntaxReader {
 			const data = binaryBytes(this.source.slice(this.position, end))
 			this.position = end
 			this.expect("endstream")
-			const { Length: _length, ...entries } = value.entries
+			const entries = dictionaryEntries(Object.entries(value.entries))
+			delete entries.Length
 			// These bytes and entries are newly parsed and already owned by this graph.
 			value = Object.freeze({
 				kind: "stream",
@@ -232,7 +234,7 @@ export class SyntaxReader {
 	}
 
 	private dictionary(depth: number): PdfDictionary {
-		const entries: Record<string, PdfValue> = Object.create(null)
+		const entries = dictionaryEntries()
 		const byteEntries: PdfDictionaryByteEntry[] = []
 		const keys = new Set<string>()
 		while (!this.take(">>")) {

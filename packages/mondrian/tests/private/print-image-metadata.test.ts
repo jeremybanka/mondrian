@@ -11,6 +11,54 @@ const fixture = (file: string) =>
 	)
 const destinationProfile = fixture("CGATS21_CRPC6.icc")
 
+it.each([
+	{ bytes: null, diagnostic: /Expected PNG or JPEG bytes/ },
+	{ bytes: Uint8Array.of(1, 2, 3), diagnostic: /supports PNG and JPEG/ },
+	{ bytes: Uint8Array.of(255, 216, 0), diagnostic: /Invalid JPEG marker/ },
+	{
+		bytes: Uint8Array.of(255, 216, 255, 224),
+		diagnostic: /Truncated JPEG marker/,
+	},
+	{
+		bytes: Uint8Array.of(255, 216, 255, 224, 0, 1),
+		diagnostic: /marker length/,
+	},
+	{
+		bytes: Uint8Array.of(255, 216, 255, 224, 0, 10),
+		diagnostic: /marker length/,
+	},
+	{
+		bytes: Uint8Array.of(255, 216, 255, 192, 0, 8, 16, 0, 1, 0, 1, 3),
+		diagnostic: /Only 8-bit RGB or grayscale/,
+	},
+	{
+		bytes: Uint8Array.of(255, 216, 255, 192, 0, 8, 8, 0, 1, 0, 1, 4),
+		diagnostic: /Only 8-bit RGB or grayscale/,
+	},
+	{
+		bytes: Uint8Array.of(255, 216, 255, 1, 255, 217),
+		diagnostic: /Image dimensions/,
+	},
+])(
+	"rejects malformed image envelopes before decoding: $diagnostic",
+	({ bytes, diagnostic }) => {
+		expect(() => decodeImage(bytes as Uint8Array)).toThrow(diagnostic)
+	},
+)
+
+it("rejects trailing PNG payloads and incomplete chunk envelopes", () => {
+	const original = fixture("rgba.png")
+	expect(() =>
+		decodeImage(Buffer.concat([original, Uint8Array.of(0)])),
+	).toThrow(/Invalid PNG end/)
+	expect(() => decodeImage(original.subarray(0, 34))).toThrow(
+		/Truncated PNG chunk/,
+	)
+	expect(() => decodeImage(original.subarray(0, 45))).toThrow(
+		/Truncated PNG chunk/,
+	)
+})
+
 function chunk(kind: string, data: Uint8Array) {
 	const result = Buffer.alloc(12 + data.length)
 	result.writeUInt32BE(data.length)

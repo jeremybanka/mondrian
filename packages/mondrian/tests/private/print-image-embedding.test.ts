@@ -71,6 +71,16 @@ it("rejects missing or conflicting image output profiles and unsupported PDF ver
 	})
 	expect(() => pdf.image({ ...input, destinationProfile: other })).toThrow()
 	expect(() => pdf.image({ ...input, alpha: new Uint8Array(2) })).toThrow()
+	expect(() => pdf.image({ ...input, data: new Uint8Array(3) })).toThrow(
+		/four bytes per pixel/,
+	)
+	expect(() => pdf.image({ ...input, data: [0, 0, 0, 0] as never })).toThrow(
+		/four bytes per pixel/,
+	)
+	expect(() => pdf.image({ ...input, width: 1.5 })).toThrow(/dimensions/)
+	expect(() =>
+		createPdfDocument({ outputIntent: { profile, identifier: " " } }),
+	).toThrow(/identifier/)
 	expect(() =>
 		createPdfDocument({
 			version: "1.3",

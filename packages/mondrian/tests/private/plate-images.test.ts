@@ -218,6 +218,8 @@ it.each([
 	{ entries: { Mask: array(0, 0, 0, 0, 0, 0, 0, 0) } },
 	{ entries: { DecodeParms: dictionary({ Predictor: 15 }) } },
 	{ entries: { ColorSpace: name("DeviceRGB") } },
+	{ entries: { ColorSpace: null } },
+	{ entries: { Subtype: name("Other") } },
 	{ entries: { Width: 4 } },
 	{ maskEntries: { Width: 2 } },
 	{ maskEntries: { Width: 1, Height: 3 } },

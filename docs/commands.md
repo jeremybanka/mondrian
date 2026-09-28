@@ -35,4 +35,4 @@ Coverage comparison requires a captured default-branch baseline or access to the
 
 ## Migration
 
-Use `check:fmt` for formatting validation and `check:<tool>` for static checks. Existing non-conflicting aliases remain available, but CI and maintainer documentation use the canonical commands.
+Use `check:fmt` for formatting validation and `check:<tool>` for static checks. Use the canonical commands directly; superseded names have been removed.

@@ -36,10 +36,7 @@
 		"build": "vp pack",
 		"cov": "pnpm build && vp test run --coverage",
 		"cov:check": "pnpm run cov && recoverage",
-		"coverage": "pnpm run cov",
-		"coverage:track": "pnpm run cov:check",
 		"test": "pnpm build && vp test",
-		"test:once:public": "pnpm run test:public",
 		"test:public": "pnpm build && tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
 		"test:semver": "pnpm run test:public && break-check",
 		"test:watch": "pnpm build && vp test watch"

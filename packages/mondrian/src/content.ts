@@ -5,6 +5,8 @@ import { colorBuilder } from "./color.ts"
 
 import type { PdfLiteralString } from "./objects.ts"
 import { literalString } from "./objects.ts"
+import type { PdfCmykImageData } from "./print-image.ts"
+import { imagePixelCount } from "./print-image.ts"
 
 declare const pdfFontBrand: unique symbol
 declare const pdfImageBrand: unique symbol
@@ -43,7 +45,7 @@ export type StandardFontName =
 
 export type PdfImageBitsPerComponent = 8
 
-export type PdfImageColorSpace = "DeviceGray" | "DeviceRGB"
+export type PdfImageColorSpace = "DeviceGray" | "DeviceRGB" | "DeviceCMYK"
 
 export interface PdfTextBuilder extends PdfColorBuilder<PdfTextBuilder> {
 	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both, 3 invisible. Clipping is unsupported. */
@@ -213,6 +215,7 @@ export interface PdfImageRecord {
 	readonly height: number
 	readonly bitsPerComponent: PdfImageBitsPerComponent
 	readonly colorSpace: PdfImageColorSpace
+	readonly alpha?: Uint8Array
 }
 
 export interface PdfTextContentRecord {
@@ -313,6 +316,37 @@ export function createImageHandle(owner: symbol, bytes: Uint8Array): PdfImage {
 			owner,
 			bytes: bytes.slice(),
 			...metadata,
+		}),
+	)
+	return image
+}
+
+export function createCmykImageHandle(
+	owner: symbol,
+	input: PdfCmykImageData,
+): PdfImage {
+	assertOwner(owner)
+	const pixels = imagePixelCount(input.width, input.height)
+	if (!(input.data instanceof Uint8Array) || input.data.length !== pixels * 4)
+		throw new TypeError("CMYK data must contain four bytes per pixel")
+	if (
+		input.alpha !== undefined &&
+		(!(input.alpha instanceof Uint8Array) || input.alpha.length !== pixels)
+	)
+		throw new TypeError("Image alpha must contain one byte per pixel")
+	const image = Object.freeze({}) as PdfImage
+	imageRecords.set(
+		image,
+		Object.freeze({
+			owner,
+			width: input.width,
+			height: input.height,
+			bitsPerComponent: 8,
+			colorSpace: "DeviceCMYK",
+			bytes: Uint8Array.from(input.data),
+			...(input.alpha === undefined
+				? {}
+				: { alpha: Uint8Array.from(input.alpha) }),
 		}),
 	)
 	return image

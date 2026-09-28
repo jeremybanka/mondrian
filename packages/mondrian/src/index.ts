@@ -20,6 +20,7 @@ export type {
 	PdfRectangle,
 } from "./document-builder.ts"
 export { createPdfDocument, pageSizes, rectangle } from "./document-builder.ts"
+export type { PdfCmykImageData, PdfOutputIntent } from "./print-image.ts"
 export type {
 	PdfDiagnostic,
 	PdfDiagnosticCode,

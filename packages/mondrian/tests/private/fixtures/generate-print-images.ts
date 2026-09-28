@@ -88,6 +88,35 @@ png(
 	],
 )
 png("gray.png", 4, 4, [40, 0, 40, 64, 40, 128, 40, 255])
+const transparentRgb = [210, 85, 35, 211, 85, 35, 210, 85, 35, 210, 86, 35]
+png("rgb-trns.png", 2, 4, transparentRgb, [
+	chunk("sRGB", Uint8Array.of(0)),
+	chunk("tRNS", Uint8Array.of(0, 210, 0, 85, 0, 35)),
+])
+png(
+	"rgb-trns-reference.png",
+	6,
+	4,
+	[0, 255, 0, 255].flatMap((alpha, pixel) => [
+		...transparentRgb.slice(pixel * 3, pixel * 3 + 3),
+		alpha,
+	]),
+	[chunk("sRGB", Uint8Array.of(0))],
+)
+png(
+	"gray-trns.png",
+	0,
+	4,
+	[40, 41, 40, 41],
+	[chunk("sRGB", Uint8Array.of(0)), chunk("tRNS", Uint8Array.of(0, 40))],
+)
+png(
+	"gray-trns-reference.png",
+	4,
+	4,
+	[40, 0, 41, 255, 40, 0, 41, 255],
+	[chunk("sRGB", Uint8Array.of(0))],
+)
 writeFileSync(
 	new URL("rgb.jpg", directory),
 	jpeg.encode({ width: 4, height: 1, data: Buffer.from(rgba) }, 95).data,

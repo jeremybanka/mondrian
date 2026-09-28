@@ -48,7 +48,7 @@ JPEG decoding honors Adobe's RGB/YCbCr transform declaration before ICC conversi
 
 ## Transparent PNGs
 
-RGBA, grayscale with alpha, and palette/transparency PNGs preserve their per-pixel alpha. Color conversion never transforms alpha, multiplies color by alpha, or flattens the image onto white. In the PDF, alpha becomes an independent grayscale image soft mask. Fully transparent pixels leave underlying content untouched; partially transparent edges cover it proportionally. The opaque case needs no mask.
+RGBA, grayscale with alpha, and palette/transparency PNGs preserve their per-pixel alpha. RGB and grayscale `tRNS` color keys preserve the original color samples even where alpha is zero, consistently with equivalent explicit-alpha PNGs. Color conversion never transforms alpha, multiplies color by alpha, or flattens the image onto white. In the PDF, alpha becomes an independent grayscale image soft mask. Fully transparent pixels leave underlying content untouched; partially transparent edges cover it proportionally. The opaque case needs no mask.
 
 Normal knockout images remove underlying spot coverage according to their opacity. With `fillOverprint: true`, the CMYK image leaves spot plates untouched. Images always paint their process components, including zeros, in both overprint modes: the mode-1 zero-component exception applies to vector/text painting, not images.
 

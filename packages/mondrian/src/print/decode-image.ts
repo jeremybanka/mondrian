@@ -58,6 +58,13 @@ function decodePng(bytes: Buffer): DecodedImage {
 	)
 		throw new TypeError("Unsupported PNG encoding")
 	const imageData: Buffer[] = []
+	let transparent:
+		| {
+				readonly color: readonly [number, number, number]
+				readonly start: number
+				readonly end: number
+		  }
+		| undefined
 	let profile: Uint8Array | undefined
 	let srgb = false
 	let cicp = false
@@ -75,7 +82,7 @@ function decodePng(bytes: Buffer): DecodedImage {
 		)
 			throw new TypeError("Invalid PNG chunk checksum")
 		if (
-			["IHDR", "PLTE", "iCCP", "sRGB", "gAMA", "cHRM", "cICP"].includes(
+			["IHDR", "PLTE", "iCCP", "sRGB", "gAMA", "cHRM", "cICP", "tRNS"].includes(
 				kind,
 			)
 		) {
@@ -109,6 +116,27 @@ function decodePng(bytes: Buffer): DecodedImage {
 			srgb = true
 		}
 		if (kind === "cICP") cicp = true
+		if (kind === "tRNS" && (type === 0 || type === 2)) {
+			if (data.length !== (type === 0 ? 2 : 6))
+				throw new TypeError("Invalid PNG transparency key")
+			if (imageData.length !== 0)
+				throw new TypeError("PNG transparency must precede image data")
+			const max = 2 ** depth - 1
+			// PNG requires masking unused high bits. At supported depths, scaling
+			// to 8 bits is injective, so the comparison retains exact source matches.
+			const sample = (channel: number) =>
+				Math.round(((data.readUInt16BE(channel * 2) & max) * 255) / max)
+			const red = sample(0)
+			transparent = {
+				color: [
+					red,
+					type === 0 ? red : sample(1),
+					type === 0 ? red : sample(2),
+				],
+				start: offset,
+				end,
+			}
+		}
 		if (kind === "IDAT") imageData.push(data)
 		if (kind === "IEND") {
 			if (length !== 0 || end !== bytes.length)
@@ -128,9 +156,26 @@ function decodePng(bytes: Buffer): DecodedImage {
 			.length !== expected
 	)
 		throw new TypeError("PNG scanline length does not match its dimensions")
-	// The decoder expands palettes/tRNS and grayscale, without applying gamma,
-	// profiles, background matting, or premultiplication to the stored samples.
-	const decoded = PNG.sync.read(bytes)
+	// pngjs zeros colors matching a grayscale/RGB tRNS key. Decode those samples
+	// without the key, then derive only alpha; palette transparency stays native.
+	const decoded = PNG.sync.read(
+		transparent === undefined
+			? bytes
+			: Buffer.concat([
+					bytes.subarray(0, transparent.start),
+					bytes.subarray(transparent.end),
+				]),
+	)
+	if (transparent !== undefined) {
+		const [red, green, blue] = transparent.color
+		for (let offset = 0; offset < decoded.data.length; offset += 4)
+			if (
+				decoded.data[offset] === red &&
+				decoded.data[offset + 1] === green &&
+				decoded.data[offset + 2] === blue
+			)
+				decoded.data[offset + 3] = 0
+	}
 	const sourceProfile = cicp
 		? undefined
 		: (profile ?? (srgb ? "srgb" : undefined))

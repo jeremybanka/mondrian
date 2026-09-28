@@ -6,6 +6,23 @@ const fixture = (file: string) =>
 	readFileSync(new URL(`./fixtures/print-images/${file}`, import.meta.url))
 const destinationProfile = fixture("CGATS21_CRPC6.icc")
 
+it.each(["rgb", "gray"])(
+	"preserves both colors and alpha across equivalent %s transparency encodings",
+	async (kind) => {
+		const keyed = await prepareCmykImage(fixture(`${kind}-trns.png`), {
+			destinationProfile,
+		})
+		const explicit = await prepareCmykImage(
+			fixture(`${kind}-trns-reference.png`),
+			{ destinationProfile },
+		)
+		expect([keyed.width, keyed.height]).toEqual([4, 1])
+		expect(keyed.data).toEqual(explicit.data)
+		expect(Array.from(keyed.alpha!)).toEqual([0, 255, 0, 255])
+		expect(keyed.alpha).toEqual(explicit.alpha)
+	},
+)
+
 it.each(["adobe-rgb.jpg", "component-rgb.jpg"])(
 	"prepares RGB-encoded JPEG colors consistently with equivalent PNG samples: %s",
 	async (file) => {

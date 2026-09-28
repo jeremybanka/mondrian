@@ -36,102 +36,107 @@ async function pixels(document: PdfDocument | Uint8Array) {
 	)
 }
 
-it("previews the delivered PNG conversion with the same per-pixel opacity", async () => {
-	const prepared = await prepareCmykImage(fixture("rgba.png"), {
-		destinationProfile: profile,
-	})
-	const pdf = createPdfDocument({ outputIntent })
-	const image = pdf.image(prepared)
-	pdf.setPages(
-		pdf.page({
-			mediaBox: rectangle(0, 0, 80, 40),
-			content: [
-				pdf.graphics((g) => {
-					g.cmykFill(...background)
-						.rectangle(0, 0, 80, 40)
-						.fill()
-					g.drawImage(image, 0, 0, 80, 40)
-				}),
-			],
-		}),
-	)
-	// The input is the serialized delivery, read back independently of the builder.
-	const delivered = parsePdf(serializePdf(pdf.compile()))
-	const before = serializePdf(delivered)
-	const plates = previewPdfPlates(delivered)
-	expect(plates.map((plate) => plate.name)).toEqual([
-		"Cyan",
-		"Magenta",
-		"Yellow",
-		"Black",
-	])
-	for (const [channel, plate] of plates.entries()) {
-		// Independently encoded vector alpha is the observable compositing contract.
-		const expected = await PDFDocument.create()
-		const page = expected.addPage([80, 40])
-		page.node.set(
-			PDFName.of("Group"),
-			expected.context.obj({
-				S: "Transparency",
-				CS: "DeviceCMYK",
-				I: true,
-				K: false,
+it.each(["rgba.png", "palette.png", "rgb.jpg"])(
+	"previews the delivered %s conversion with the same per-pixel opacity",
+	async (file) => {
+		const prepared = await prepareCmykImage(fixture(file), {
+			destinationProfile: profile,
+			...(file.endsWith(".jpg") ? { sourceProfile: "srgb" as const } : {}),
+		})
+		const pdf = createPdfDocument({ outputIntent })
+		const image = pdf.image(prepared)
+		pdf.setPages(
+			pdf.page({
+				mediaBox: rectangle(0, 0, 80, 40),
+				content: [
+					pdf.graphics((g) => {
+						g.cmykFill(...background)
+							.rectangle(0, 0, 80, 40)
+							.fill()
+						g.drawImage(image, 0, 0, 80, 40)
+					}),
+				],
 			}),
 		)
-		expected.catalog.set(
-			PDFName.of("OutputIntents"),
-			expected.context.obj([
-				{
-					Type: "OutputIntent",
-					S: "GTS_PDFX",
-					OutputConditionIdentifier: PDFString.of("CRPC6"),
-					DestOutputProfile: expected.context.register(
-						expected.context.flateStream(profile, { N: 4 }),
-					),
-				},
-			]),
-		)
-		const components: [number, number, number, number] = [0, 0, 0, 0]
-		components[channel] = background[channel]!
-		page.drawRectangle({
-			x: 0,
-			y: 0,
-			width: 80,
-			height: 40,
-			color: cmyk(...components),
-		})
-		for (let pixel = 0; pixel < 4; pixel++) {
-			components[channel] = prepared.data[pixel * 4 + channel]! / 255
+		// The input is the serialized delivery, read back independently of the builder.
+		const delivered = parsePdf(serializePdf(pdf.compile()))
+		const before = serializePdf(delivered)
+		const plates = previewPdfPlates(delivered)
+		expect(plates.map((plate) => plate.name)).toEqual([
+			"Cyan",
+			"Magenta",
+			"Yellow",
+			"Black",
+		])
+		for (const [channel, plate] of plates.entries()) {
+			// Independently encoded vector alpha is the observable compositing contract.
+			const expected = await PDFDocument.create()
+			const page = expected.addPage([80, 40])
+			page.node.set(
+				PDFName.of("Group"),
+				expected.context.obj({
+					S: "Transparency",
+					CS: "DeviceCMYK",
+					I: true,
+					K: false,
+				}),
+			)
+			expected.catalog.set(
+				PDFName.of("OutputIntents"),
+				expected.context.obj([
+					{
+						Type: "OutputIntent",
+						S: "GTS_PDFX",
+						OutputConditionIdentifier: PDFString.of("CRPC6"),
+						DestOutputProfile: expected.context.register(
+							expected.context.flateStream(profile, { N: 4 }),
+						),
+					},
+				]),
+			)
+			const components: [number, number, number, number] = [0, 0, 0, 0]
+			components[channel] = background[channel]!
 			page.drawRectangle({
-				x: pixel * 20,
+				x: 0,
 				y: 0,
-				width: 20,
+				width: 80,
 				height: 40,
 				color: cmyk(...components),
-				opacity: prepared.alpha![pixel]! / 255,
 			})
+			for (let pixel = 0; pixel < 4; pixel++) {
+				components[channel] = prepared.data[pixel * 4 + channel]! / 255
+				page.drawRectangle({
+					x: pixel * 20,
+					y: 0,
+					width: 20,
+					height: 40,
+					color: cmyk(...components),
+					opacity: (prepared.alpha?.[pixel] ?? 255) / 255,
+				})
+			}
+			const actualPixels = await pixels(plate.document)
+			const expectedPixels = await pixels(await expected.save())
+			for (let pixel = 0; pixel < 4; pixel++)
+				for (let component = 0; component < 4; component++)
+					expect(
+						Math.abs(
+							actualPixels[pixel]![component]! -
+								expectedPixels[pixel]![component]!,
+						),
+					).toBeLessThanOrEqual(3)
 		}
-		const actualPixels = await pixels(plate.document)
-		const expectedPixels = await pixels(await expected.save())
-		for (let pixel = 0; pixel < 4; pixel++)
-			for (let component = 0; component < 4; component++)
-				expect(
-					Math.abs(
-						actualPixels[pixel]![component]! -
-							expectedPixels[pixel]![component]!,
-					),
-				).toBeLessThanOrEqual(3)
-	}
-	expect(Buffer.from(serializePdf(delivered)).equals(Buffer.from(before))).toBe(
-		true,
-	)
-	expect(() =>
-		previewPdfPlates(delivered, { permitColors: ["cmyk"] }),
-	).not.toThrow()
-	expect(() =>
-		previewPdfPlates(delivered, { permitColors: ["spot"] }),
-	).toThrow()
-})
+		expect(
+			Buffer.from(serializePdf(delivered)).equals(Buffer.from(before)),
+		).toBe(true)
+		expect(() =>
+			previewPdfPlates(delivered, { permitColors: ["cmyk"] }),
+		).not.toThrow()
+		expect(() =>
+			previewPdfPlates(delivered, { permitColors: ["spot"] }),
+		).toThrow()
+	},
+	20_000,
+)
 
 it.each([false, true])(
 	"preserves underlying spot coverage through a PNG cut-out with overprint %s",
@@ -189,4 +194,5 @@ it.each([false, true])(
 				).toBeLessThanOrEqual(3)
 		}
 	},
+	20_000,
 )

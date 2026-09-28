@@ -220,6 +220,7 @@ it.each([
 	{ entries: { ColorSpace: name("DeviceRGB") } },
 	{ entries: { Width: 4 } },
 	{ maskEntries: { Width: 2 } },
+	{ maskEntries: { Width: 1, Height: 3 } },
 	{ maskEntries: { ColorSpace: name("DeviceRGB") } },
 	{ maskEntries: { Matte: array(0, 0, 0, 0) } },
 	{ maskEntries: { SMask: reference(1) } },
@@ -231,3 +232,55 @@ it.each([
 		expect(() => previewPdfPlates(imageDocument(options))).toThrow()
 	},
 )
+
+it("resolves image color aliases and retains clipping and transforms across reused images", async () => {
+	const document = rawDocument((objects) => {
+		const image = objects.add(
+			stream(
+				{
+					Type: name("XObject"),
+					Subtype: name("Image"),
+					Width: 1,
+					Height: 1,
+					ColorSpace: name("Print"),
+					BitsPerComponent: 8,
+					SMask: objects.add(null),
+				},
+				Uint8Array.of(255, 0, 0, 0),
+			),
+		)
+		return {
+			resources: dictionary({
+				ColorSpace: dictionary({
+					Print: objects.add(array(name("DeviceCMYK"))),
+				}),
+				XObject: dictionary({ Photo: image }),
+			}),
+			contents: [
+				stream(
+					{},
+					ascii(
+						"q 10 10 20 20 re W n 40 0 0 40 0 0 cm /Photo Do Q q 20 0 0 20 50 50 cm /Photo Do Q",
+					),
+				),
+			],
+		}
+	})
+	const [cyan, magenta] = previewPdfPlates(document)
+	expect(
+		await samples(cyan!.document, [
+			[5, 5],
+			[15, 15],
+			[35, 35],
+			[60, 60],
+			[75, 75],
+		]),
+	).toEqual([white, [0, 174, 239, 255], white, [0, 174, 239, 255], white])
+	expect(
+		await samples(magenta!.document, [
+			[15, 15],
+			[60, 60],
+		]),
+	).toEqual([white, white])
+	expect(imageStreams(cyan!.document, "/DeviceCMYK")).toHaveLength(1)
+})

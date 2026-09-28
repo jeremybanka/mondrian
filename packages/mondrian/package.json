@@ -50,7 +50,7 @@
 	},
 	"devDependencies": {
 		"break-check": "0.8.0",
-		"recoverage": "0.1.17",
+		"recoverage": "0.1.18",
 		"vitest": "catalog:"
 	},
 	"peerDependencies": {

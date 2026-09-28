@@ -36,7 +36,7 @@ async function pixels(document: PdfDocument | Uint8Array) {
 	)
 }
 
-it.each(["rgba.png", "palette.png", "rgb.jpg"])(
+it.each(["rgba.png", "palette.png", "rgb.jpg", "adobe-rgb.jpg"])(
 	"previews the delivered %s conversion with the same per-pixel opacity",
 	async (file) => {
 		const prepared = await prepareCmykImage(fixture(file), {

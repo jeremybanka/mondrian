@@ -42,6 +42,8 @@ An embedded PNG `iCCP` or JPEG ICC profile supplies the source color interpretat
 
 Rendering intents are `"perceptual"`, `"relative-colorimetric"`, `"saturation"`, and `"absolute-colorimetric"`. Preparation converts straight color samples through the selected profiles and returns interleaved 8-bit CMYK samples, with 0 meaning no ink and 255 full ink. It snapshots input/profile buffers and returns independently owned buffers. Exact separation values depend on the profiles and conversion engine; they are not a fixed cross-version numerical contract.
 
+JPEG decoding honors Adobe's RGB/YCbCr transform declaration before ICC conversion. JFIF identifies YCbCr; without either marker, R/G/B component identifiers select RGB and other identifiers retain the conventional YCbCr interpretation. Contradictory Adobe/JFIF declarations and unsupported Adobe transforms are rejected.
+
 `pdf.image()` accepts `PdfCmykImageData`, requires a document output intent with identical profile bytes, and snapshots the prepared buffers. Reuse its owned image handle to place the image more than once. The core emits lossless DeviceCMYK samples, embeds the output profile, and specifies a CMYK page blending space. Output intents require PDF 1.4 or later. Declaring an output intent alone does not certify PDF/X conformance.
 
 ## Transparent PNGs

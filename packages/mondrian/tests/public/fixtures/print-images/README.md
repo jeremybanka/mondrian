@@ -5,3 +5,5 @@
 `DisplayP3-v4.icc` comes from [Compact ICC Profiles](https://github.com/saucecontrol/Compact-ICC-Profiles), under the included CC0 license. It exercises embedded wide-gamut source color information.
 
 These fixtures live with the public tests so historical compatibility runs retain their original inputs. Exact decoder, conversion-engine, and serialized-encoding regressions belong in the private suite.
+
+`rgb.jpg` uses conventional JFIF YCbCr encoding. `adobe-rgb.jpg` retains its component coefficients, removes JFIF, and declares Adobe transform 0; `component-rgb.jpg` instead identifies the planes as R/G/B in both the frame and scan headers. These two RGB-encoded fixtures independently decode to [117, 82, 195] for each pixel, matching `rgb-encoded-reference.png`. The explicit generator lives in `tests/private/fixtures/generate-print-images.ts`; tests consume the committed bytes.

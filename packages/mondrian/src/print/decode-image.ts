@@ -176,6 +176,9 @@ function pngScanlineLength(
 function decodeJpeg(bytes: Buffer): DecodedImage {
 	const chunks = new Map<number, Uint8Array>()
 	let total: number | undefined
+	let adobeTransform: number | undefined
+	let jfif = false
+	let rgbComponents = false
 	let gray = false
 	let width = 0
 	let height = 0
@@ -194,6 +197,15 @@ function decodeJpeg(bytes: Buffer): DecodedImage {
 		if (length < 2 || offset + length > bytes.length)
 			throw new TypeError("Invalid JPEG marker length")
 		const data = bytes.subarray(offset + 2, offset + length)
+		if (marker === 0xe0 && data.subarray(0, 5).toString("latin1") === "JFIF\0")
+			jfif = true
+		if (marker === 0xee && data.subarray(0, 5).toString("latin1") === "Adobe") {
+			if (data.length !== 12 || (data[11] !== 0 && data[11] !== 1))
+				throw new TypeError("Unsupported JPEG Adobe color transform")
+			if (adobeTransform !== undefined && adobeTransform !== data[11])
+				throw new TypeError("Conflicting JPEG Adobe color transforms")
+			adobeTransform = data[11]
+		}
 		if (
 			marker === 0xe2 &&
 			data.subarray(0, 12).toString("ascii") === "ICC_PROFILE\0"
@@ -218,10 +230,16 @@ function decodeJpeg(bytes: Buffer): DecodedImage {
 			height = data.readUInt16BE(1)
 			imagePixelCount(width, height)
 			gray = data[5] === 1
+			if (data.length !== 6 + data[5] * 3)
+				throw new TypeError("Invalid JPEG frame component table")
+			rgbComponents =
+				!gray && data[6] === 82 && data[9] === 71 && data[12] === 66
 		}
 		offset += length
 	}
 	imagePixelCount(width, height)
+	if (!gray && jfif && adobeTransform === 0)
+		throw new TypeError("Conflicting JPEG JFIF and Adobe color declarations")
 	if (total !== undefined && chunks.size !== total)
 		throw new TypeError("Incomplete JPEG ICC profile")
 	const profile =
@@ -231,6 +249,12 @@ function decodeJpeg(bytes: Buffer): DecodedImage {
 					Array.from({ length: total }, (_, i) => chunks.get(i + 1)!),
 				)
 	const decoded = jpeg.decode(bytes, {
+		// jpeg-js otherwise assumes YCbCr even for Adobe transform-0 RGB.
+		// Without Adobe/JFIF metadata, RGB component IDs identify RGB samples.
+		colorTransform:
+			adobeTransform === undefined
+				? jfif || !rgbComponents
+				: adobeTransform === 1,
 		useTArray: true,
 		formatAsRGBA: true,
 		tolerantDecoding: false,

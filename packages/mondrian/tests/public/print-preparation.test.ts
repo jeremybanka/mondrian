@@ -54,7 +54,10 @@ it("prepares JPEGs and keeps returned buffers independently owned", async () => 
 	const first = await prepareCmykImage(fixture("rgb.jpg"), options)
 	const second = await prepareCmykImage(fixture("rgb.jpg"), options)
 	expect(first.data).toEqual(second.data)
-	expect(first.alpha).toBeUndefined()
+	expect([first.width, first.height]).toEqual([4, 1])
+	expect(Array.from(first.alpha ?? new Uint8Array(4).fill(255))).toEqual([
+		255, 255, 255, 255,
+	])
 	first.data.fill(0)
 	first.destinationProfile.fill(0)
 	expect(second.data.some((value) => value > 0)).toBe(true)

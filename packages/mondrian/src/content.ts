@@ -45,8 +45,6 @@ export type StandardFontName =
 
 export type PdfImageBitsPerComponent = 8
 
-export type PdfImageColorSpace = "DeviceGray" | "DeviceRGB" | "DeviceCMYK"
-
 export interface PdfTextBuilder extends PdfColorBuilder<PdfTextBuilder> {
 	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both, 3 invisible. Clipping is unsupported. */
 	renderingMode(mode: 0 | 1 | 2 | 3): PdfTextBuilder
@@ -208,15 +206,33 @@ export interface PdfFontRecord {
 	readonly baseFont: StandardFontName
 }
 
-export interface PdfImageRecord {
+interface PdfImageRecordBase {
 	readonly owner: symbol
 	readonly bytes: Uint8Array
 	readonly width: number
 	readonly height: number
 	readonly bitsPerComponent: PdfImageBitsPerComponent
-	readonly colorSpace: PdfImageColorSpace
-	readonly alpha?: Uint8Array
 }
+
+/** Byte encoding determines compression; color space describes the samples. */
+export type PdfImageRecord = PdfImageRecordBase &
+	(
+		| {
+				readonly encoding: "jpeg"
+				readonly colorSpace: "DeviceGray" | "DeviceRGB"
+				readonly alpha?: never
+		  }
+		| {
+				readonly encoding: "raw"
+				readonly colorSpace: "DeviceCMYK"
+				readonly alpha?: Uint8Array
+		  }
+	)
+
+type JpegMetadata = Pick<
+	Extract<PdfImageRecord, { encoding: "jpeg" }>,
+	"width" | "height" | "bitsPerComponent" | "colorSpace"
+>
 
 export interface PdfTextContentRecord {
 	readonly owner: symbol
@@ -314,6 +330,7 @@ export function createImageHandle(owner: symbol, bytes: Uint8Array): PdfImage {
 		image,
 		Object.freeze({
 			owner,
+			encoding: "jpeg",
 			bytes: bytes.slice(),
 			...metadata,
 		}),
@@ -339,6 +356,7 @@ export function createCmykImageHandle(
 		image,
 		Object.freeze({
 			owner,
+			encoding: "raw",
 			width: input.width,
 			height: input.height,
 			bitsPerComponent: 8,
@@ -352,7 +370,7 @@ export function createCmykImageHandle(
 	return image
 }
 
-function parseJpeg(bytes: Uint8Array): Omit<PdfImageRecord, "owner" | "bytes"> {
+function parseJpeg(bytes: Uint8Array): JpegMetadata {
 	if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
 		throw new TypeError("JPEG data must start with an SOI marker")
 	}
@@ -368,7 +386,7 @@ function parseJpeg(bytes: Uint8Array): Omit<PdfImageRecord, "owner" | "bytes"> {
 	const dcHuffmanTables = new Set<number>()
 	const acHuffmanTables = new Set<number>()
 	let frameComponents: ReadonlyMap<number, number> | undefined
-	let metadata: Omit<PdfImageRecord, "owner" | "bytes"> | undefined
+	let metadata: JpegMetadata | undefined
 
 	while (offset < bytes.length) {
 		if (bytes[offset] !== 0xff) {

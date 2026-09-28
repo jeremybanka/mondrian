@@ -348,13 +348,11 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						ColorSpace: name(record.colorSpace),
 						BitsPerComponent: record.bitsPerComponent,
 						Filter: name(
-							record.colorSpace === "DeviceCMYK" ? "FlateDecode" : "DCTDecode",
+							record.encoding === "raw" ? "FlateDecode" : "DCTDecode",
 						),
 						...(mask === undefined ? {} : { SMask: mask }),
 					},
-					record.colorSpace === "DeviceCMYK"
-						? zlibSync(record.bytes)
-						: record.bytes,
+					record.encoding === "raw" ? zlibSync(record.bytes) : record.bytes,
 				),
 			)
 			imageReferences.set(image, result)

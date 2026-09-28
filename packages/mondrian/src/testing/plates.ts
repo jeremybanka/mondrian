@@ -56,6 +56,15 @@ export function previewPdfPlates(
 	document: PdfDocument,
 	options: PdfPlateOptions = {},
 ): readonly PdfPlatePreview[] {
+	return projectPdfPlates(document, options, "ink")
+}
+
+/** Shared painting semantics; coverage substitutes scalar gray before any display transform. */
+export function projectPdfPlates(
+	document: PdfDocument,
+	options: PdfPlateOptions,
+	appearance: "ink" | "coverage",
+): readonly PdfPlatePreview[] {
 	const permitted = options.permitColors ?? ["cmyk", "spot"]
 	if (
 		!Array.isArray(permitted) ||
@@ -115,14 +124,20 @@ export function previewPdfPlates(
 			}
 			// Image OPM never skips zero-valued process components. Preserve the
 			// alpha separately so even zero ink can occlude the existing plate.
-			const data = new Uint8Array(source.data.length)
-			if (plate.colorSpace === "cmyk")
+			const coverage = appearance === "coverage"
+			const data = new Uint8Array(source.data.length / (coverage ? 4 : 1))
+			if (coverage) {
+				data.fill(255)
+				if (plate.colorSpace === "cmyk")
+					for (let pixel = 0; pixel < data.length; pixel++)
+						data[pixel] = 255 - source.data[pixel * 4 + plate.component]!
+			} else if (plate.colorSpace === "cmyk")
 				for (let offset = plate.component; offset < data.length; offset += 4)
 					data[offset] = source.data[offset]!
 			const result = add(
 				stream(
 					{
-						...rasterEntries(source, "DeviceCMYK"),
+						...rasterEntries(source, coverage ? "DeviceGray" : "DeviceCMYK"),
 						...(mask === undefined ? {} : { SMask: mask }),
 					},
 					zlibSync(data),
@@ -140,6 +155,12 @@ export function previewPdfPlates(
 			let spotDefinition: PdfValue | undefined
 			const color = (paint: ProjectedPaint, stroke: boolean): void => {
 				if (paint.kind === "skip") return
+				if (appearance === "coverage") {
+					commands.push(
+						`${formatPdfNumber(1 - paint.coverage)} ${stroke ? "G" : "g"}`,
+					)
+					return
+				}
 				const { color } = paint
 				if (color.space === "spot") {
 					spotDefinition = color.definition
@@ -241,6 +262,16 @@ export function previewPdfPlates(
 			const value = replaceEntries(page.source, {
 				Contents: add(stream({}, content.data)),
 				Resources: content.resources,
+				...(appearance === "coverage"
+					? {
+							Group: dictionary({
+								S: name("Transparency"),
+								CS: name("DeviceGray"),
+								I: true,
+								K: false,
+							}),
+						}
+					: {}),
 			})
 			// Existing slots stay fixed; each plate only appends new objects.
 			const index = objectIndices.get(page.reference.objectNumber)!
@@ -255,11 +286,26 @@ export function previewPdfPlates(
 					...object,
 					value: replaceEntries(branch, { Resources: undefined }),
 				}
+			// The measurement document has a scalar blending space, not a press profile.
+			if (
+				appearance === "coverage" &&
+				object.objectNumber === document.root.objectNumber &&
+				object.value !== null &&
+				typeof object.value === "object" &&
+				object.value.kind === "dictionary"
+			)
+				objects[index] = {
+					...object,
+					value: replaceEntries(object.value, { OutputIntents: undefined }),
+				}
 		}
 		// Copy all retained bytes and dictionaries, including fonts and metadata.
 		// Pruning also removes the original, now unreferenced content streams.
 		const preview = structuredClone({
 			...document,
+			...(appearance === "coverage" && Number(document.version) < 1.4
+				? { version: "1.4" as const }
+				: {}),
 			objects: reachableObjects(document, objects),
 		})
 		throwForPdfErrors(validatePdf(preview))

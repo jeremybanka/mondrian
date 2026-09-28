@@ -23,6 +23,14 @@ export { pdfArtifactRenderer, renderPdf } from "./testing/render.ts"
 export type { PdfPlateOptions, PdfPlatePreview } from "./testing/plates.ts"
 export { previewPdfPlates } from "./testing/plates.ts"
 
+export type {
+	PdfPlateCoverageOptions,
+	PdfPlateCoveragePage,
+	PdfPlateCoverage,
+	RenderedPdfPlateCoverage,
+} from "./testing/plate-coverage.ts"
+export { renderPdfPlateCoverage } from "./testing/plate-coverage.ts"
+
 export { readPdf } from "./testing/inspection/read-pdf.ts"
 export { readPdfMetadata } from "./testing/inspection/read-metadata.ts"
 export { readPdfObject } from "./testing/inspection/read-object.ts"

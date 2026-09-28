@@ -22,25 +22,47 @@ function png(
 	width: number,
 	samples: number[],
 	metadata: Buffer[] = [],
+	interlace = 0,
 ) {
 	const header = Buffer.alloc(13)
 	header.writeUInt32BE(width)
 	header.writeUInt32BE(1, 4)
 	header[8] = 8
 	header[9] = colorType
+	header[12] = interlace
 	writeFileSync(
 		new URL(file, directory),
 		Buffer.concat([
 			Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
 			chunk("IHDR", header),
 			...metadata,
-			chunk("IDAT", deflateSync(Buffer.from([0, ...samples]))),
+			chunk(
+				"IDAT",
+				deflateSync(Buffer.from(interlace ? samples : [0, ...samples])),
+			),
 			chunk("IEND", new Uint8Array()),
 		]),
 	)
 }
 const rgba = [0, 64, 128, 255].flatMap((alpha) => [210, 85, 35, alpha])
 png("rgba.png", 6, 4, rgba, [chunk("sRGB", Uint8Array.of(0))])
+// A 4x1 Adam7 image has rows only in passes 1, 4, and 6.
+png(
+	"rgba-interlaced.png",
+	6,
+	4,
+	[
+		0,
+		...rgba.slice(0, 4),
+		0,
+		...rgba.slice(8, 12),
+		0,
+		...rgba.slice(4, 8),
+		...rgba.slice(12),
+	],
+	[chunk("sRGB", Uint8Array.of(0))],
+	1,
+)
 png("untagged.png", 6, 4, rgba)
 png("p3.png", 6, 4, rgba, [
 	chunk(

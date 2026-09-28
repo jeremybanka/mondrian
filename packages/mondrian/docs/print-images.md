@@ -52,7 +52,7 @@ Normal knockout images remove underlying spot coverage according to their opacit
 
 ## Supported inputs and preview boundaries
 
-Preparation supports PNG sample depths up to 8 bits (including palette PNGs), and 8-bit RGB/grayscale JPEGs supported by the decoder. It rejects animated PNGs, 16-bit PNGs, CMYK JPEGs, unsupported profiles, and malformed color metadata. Inputs are bounded to 256 MiB, 32 million pixels, and 16 MiB per ICC profile. The existing `pdf.jpeg()` still embeds original RGB/gray JPEG data without conversion; use preparation when you need CMYK plate previews.
+Preparation supports PNG sample depths up to 8 bits (including palette and Adam7-interlaced PNGs), and 8-bit RGB/grayscale JPEGs supported by the decoder. It rejects animated PNGs, 16-bit PNGs, CMYK JPEGs, unsupported profiles, and malformed color metadata. Inputs are bounded to 256 MiB, 32 million pixels, and 16 MiB per ICC profile. PNG scanline expansion is bounded to the exact declared layout before decoding. The existing `pdf.jpeg()` still embeds original RGB/gray JPEG data without conversion; use preparation when you need CMYK plate previews.
 
 Plate previews support 8-bit DeviceCMYK Image XObjects with unfiltered or Flate-compressed samples, optional same-sized 8-bit DeviceGray image soft masks, and default or inverted Decode ranges. They preserve image placement, clipping, interpolation, and constant opacity with Normal blending. Explicit CMYK page transparency groups without knockout are supported. Other image codecs, predictors, color-key/stencil masks, matte colors, graphics-state soft masks, and Form transparency groups remain unsupported and fail during discovery.
 

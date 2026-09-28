@@ -25,7 +25,11 @@ export function decodeImage(input: Uint8Array): DecodedImage {
 }
 
 function decodePng(bytes: Buffer): DecodedImage {
-	if (bytes.length < 33 || bytes.toString("ascii", 12, 16) !== "IHDR")
+	if (
+		bytes.length < 33 ||
+		bytes.toString("ascii", 12, 16) !== "IHDR" ||
+		bytes.readUInt32BE(8) !== 13
+	)
 		throw new TypeError("Invalid PNG header")
 	const width = bytes.readUInt32BE(16)
 	const height = bytes.readUInt32BE(20)
@@ -36,6 +40,24 @@ function decodePng(bytes: Buffer): DecodedImage {
 		throw new TypeError(
 			"Print preparation supports PNG sample depths up to 8 bits",
 		)
+	const components: Readonly<Record<number, number>> = {
+		0: 1,
+		2: 3,
+		3: 1,
+		4: 2,
+		6: 4,
+	}
+	const channels = components[type]
+	const interlace = bytes[28]!
+	if (
+		channels === undefined ||
+		!([0, 3].includes(type) ? [1, 2, 4, 8] : [8]).includes(depth) ||
+		bytes[26] !== 0 ||
+		bytes[27] !== 0 ||
+		(interlace !== 0 && interlace !== 1)
+	)
+		throw new TypeError("Unsupported PNG encoding")
+	const imageData: Buffer[] = []
 	let profile: Uint8Array | undefined
 	let srgb = false
 	let cicp = false
@@ -52,13 +74,27 @@ function decodePng(bytes: Buffer): DecodedImage {
 			crc32(bytes.subarray(offset + 4, end - 4)) !== bytes.readUInt32BE(end - 4)
 		)
 			throw new TypeError("Invalid PNG chunk checksum")
-		if (["IHDR", "iCCP", "sRGB", "gAMA", "cHRM", "cICP"].includes(kind)) {
+		if (
+			["IHDR", "PLTE", "iCCP", "sRGB", "gAMA", "cHRM", "cICP"].includes(
+				kind,
+			)
+		) {
 			if (singletons.has(kind))
 				throw new TypeError(`Duplicate PNG ${kind} chunk`)
 			singletons.add(kind)
 		}
 		if (kind === "acTL")
 			throw new TypeError("Animated PNGs are unsupported in print preparation")
+		if (
+			kind === "PLTE" &&
+			(length === 0 ||
+				length % 3 !== 0 ||
+				length > 768 ||
+				(type === 3 && length > 3 * 2 ** depth) ||
+				type === 0 ||
+				type === 4)
+		)
+			throw new TypeError("Invalid PNG palette")
 		if (kind === "iCCP") {
 			const separator = data.indexOf(0)
 			if (separator < 1 || separator > 79 || data[separator + 1] !== 0)
@@ -73,6 +109,7 @@ function decodePng(bytes: Buffer): DecodedImage {
 			srgb = true
 		}
 		if (kind === "cICP") cicp = true
+		if (kind === "IDAT") imageData.push(data)
 		if (kind === "IEND") {
 			if (length !== 0 || end !== bytes.length)
 				throw new TypeError("Invalid PNG end")
@@ -83,6 +120,14 @@ function decodePng(bytes: Buffer): DecodedImage {
 	if (!ended) throw new TypeError("PNG is missing IEND")
 	if (profile !== undefined && srgb)
 		throw new TypeError("PNG contains conflicting ICC and sRGB declarations")
+	// pngjs does not bound interlaced inflation. Validate the complete IDAT
+	// stream before that decoder can allocate, including filter bytes per pass.
+	const expected = pngScanlineLength(width, height, depth * channels, interlace)
+	if (
+		inflateSync(Buffer.concat(imageData), { maxOutputLength: expected })
+			.length !== expected
+	)
+		throw new TypeError("PNG scanline length does not match its dimensions")
 	// The decoder expands palettes/tRNS and grayscale, without applying gamma,
 	// profiles, background matting, or premultiplication to the stored samples.
 	const decoded = PNG.sync.read(bytes)
@@ -96,6 +141,36 @@ function decodePng(bytes: Buffer): DecodedImage {
 		gray: type === 0 || type === 4,
 		...(sourceProfile === undefined ? {} : { sourceProfile }),
 	}
+}
+
+function pngScanlineLength(
+	width: number,
+	height: number,
+	bitsPerPixel: number,
+	interlace: number,
+): number {
+	// Adam7 start coordinates and strides; empty passes have no filter bytes.
+	// https://www.w3.org/TR/png-3/#8Interlace
+	const passes =
+		interlace === 0
+			? [[0, 0, 1, 1] as const]
+			: ([
+					[0, 0, 8, 8],
+					[4, 0, 8, 8],
+					[0, 4, 4, 8],
+					[2, 0, 4, 4],
+					[0, 2, 2, 4],
+					[1, 0, 2, 2],
+					[0, 1, 1, 2],
+				] as const)
+	let total = 0
+	for (const [x, y, dx, dy] of passes) {
+		const columns = Math.max(0, Math.ceil((width - x) / dx))
+		const rows = Math.max(0, Math.ceil((height - y) / dy))
+		if (columns > 0)
+			total += rows * (1 + Math.ceil((columns * bitsPerPixel) / 8))
+	}
+	return total
 }
 
 function decodeJpeg(bytes: Buffer): DecodedImage {

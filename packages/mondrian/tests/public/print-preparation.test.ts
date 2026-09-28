@@ -6,7 +6,7 @@ const fixture = (file: string) =>
 	readFileSync(new URL(`./fixtures/print-images/${file}`, import.meta.url))
 const destinationProfile = fixture("CGATS21_CRPC6.icc")
 
-it.each(["rgba.png", "palette.png"])(
+it.each(["rgba.png", "rgba-interlaced.png", "palette.png"])(
 	"preserves straight alpha when preparing %s for print",
 	async (file) => {
 		const prepared = await prepareCmykImage(fixture(file), {

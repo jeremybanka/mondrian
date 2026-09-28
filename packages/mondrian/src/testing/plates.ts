@@ -11,6 +11,7 @@ import type {
 } from "../objects.ts"
 import {
 	dictionary,
+	name,
 	indirectObject,
 	nameBytes,
 	objectNumber,
@@ -28,6 +29,8 @@ import {
 import type { ProjectedPaint } from "./plate-paint.ts"
 import { planPdfPlates, replaceEntries } from "./plate-plan.ts"
 import type { PlateColorSpace, PlateForm, PlateScope } from "./plate-plan.ts"
+import type { PlateImage, PlateRaster } from "./plate-image.ts"
+import { zlibSync } from "fflate"
 
 export interface PdfPlateOptions {
 	/** Allowed source paint spaces. Defaults to ["cmyk", "spot"]. No color conversion is performed. */
@@ -45,8 +48,9 @@ export interface PdfPlatePreview {
 /**
  * Discover print plates, then produce one colored preview document per plate.
  * CMYK plates are included whenever permitted; spots follow first discovery order.
- * Supports vector paths, live text, Forms, knockout, overprint, and constant
- * opacity with Normal blending. Unsupported painting fails during discovery.
+ * Supports vector paths, live text, Forms, prepared CMYK images with alpha,
+ * knockout, overprint, and constant opacity with Normal blending.
+ * Unsupported painting fails during discovery; images are never color-converted here.
  */
 export function previewPdfPlates(
 	document: PdfDocument,
@@ -78,12 +82,61 @@ export function previewPdfPlates(
 		// A scope identifies the Form, page resource context, and inherited paint.
 		// The cache is local to this plate; other plates need their own projection.
 		const projectedForms = new Map<PlateForm, PdfReference>()
+		const projectedImages = new Map<PlateImage, PdfReference>()
+		const projectedMasks = new Map<PlateRaster, PdfReference>()
+		const rasterEntries = (
+			raster: PlateRaster,
+			colorSpace: "DeviceGray" | "DeviceCMYK",
+		) => ({
+			Type: name("XObject"),
+			Subtype: name("Image"),
+			Width: raster.width,
+			Height: raster.height,
+			ColorSpace: name(colorSpace),
+			BitsPerComponent: 8,
+			Filter: name("FlateDecode"),
+			Interpolate: raster.interpolate,
+		})
+		const projectImage = (source: PlateImage): PdfReference => {
+			const cached = projectedImages.get(source)
+			if (cached !== undefined) return cached
+			let mask: PdfReference | undefined
+			if (source.alpha !== undefined) {
+				mask = projectedMasks.get(source.alpha)
+				if (mask === undefined) {
+					mask = add(
+						stream(
+							rasterEntries(source.alpha, "DeviceGray"),
+							zlibSync(source.alpha.data),
+						),
+					)
+					projectedMasks.set(source.alpha, mask)
+				}
+			}
+			// Image OPM never skips zero-valued process components. Preserve the
+			// alpha separately so even zero ink can occlude the existing plate.
+			const data = new Uint8Array(source.data.length)
+			if (plate.colorSpace === "cmyk")
+				for (let offset = plate.component; offset < data.length; offset += 4)
+					data[offset] = source.data[offset]!
+			const result = add(
+				stream(
+					{
+						...rasterEntries(source, "DeviceCMYK"),
+						...(mask === undefined ? {} : { SMask: mask }),
+					},
+					zlibSync(data),
+				),
+			)
+			projectedImages.set(source, result)
+			return result
+		}
 		const emit = (
 			scope: PlateScope,
 		): { data: Uint8Array; resources: PdfDictionary } => {
 			const commands: string[] = []
-			const forms = new Map<string, PdfValue>()
-			const formNames = new Map<PdfReference, string>()
+			const xObjects = new Map<string, PdfValue>()
+			const xObjectNames = new Map<PdfReference, string>()
 			let spotDefinition: PdfValue | undefined
 			const color = (paint: ProjectedPaint, stroke: boolean): void => {
 				if (paint.kind === "skip") return
@@ -101,6 +154,18 @@ export function previewPdfPlates(
 				}
 			}
 			for (const instruction of scope.instructions) {
+				if (instruction.kind === "image") {
+					if (plate.colorSpace === "spot" && instruction.overprint) continue
+					const projected = projectImage(instruction.image)
+					let key = xObjectNames.get(projected)
+					if (key === undefined) {
+						key = `/PlateImage${xObjects.size}`
+						xObjectNames.set(projected, key)
+						xObjects.set(key, projected)
+					}
+					commands.push(`${key} Do`)
+					continue
+				}
 				if (instruction.kind === "form") {
 					let projected = projectedForms.get(instruction.form)
 					if (projected === undefined) {
@@ -120,11 +185,11 @@ export function previewPdfPlates(
 						)
 						projectedForms.set(instruction.form, projected)
 					}
-					let key = formNames.get(projected)
+					let key = xObjectNames.get(projected)
 					if (key === undefined) {
-						key = `/PlateForm${forms.size}`
-						formNames.set(projected, key)
-						forms.set(key, projected)
+						key = `/PlateForm${xObjects.size}`
+						xObjectNames.set(projected, key)
+						xObjects.set(key, projected)
 					}
 					commands.push(`${key} Do`)
 					continue
@@ -162,7 +227,7 @@ export function previewPdfPlates(
 					scope.states.size === 0
 						? undefined
 						: resourceDictionary(scope.states),
-				XObject: forms.size === 0 ? undefined : resourceDictionary(forms),
+				XObject: xObjects.size === 0 ? undefined : resourceDictionary(xObjects),
 				Pattern: undefined,
 				Shading: undefined,
 			})

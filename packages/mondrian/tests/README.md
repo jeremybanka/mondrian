@@ -61,7 +61,7 @@ Private plate tests are split into `plate-colors`, `plate-content`, `plate-forms
 
 ## Running compatibility checks
 
-Run `pnpm --filter mondrian.pdf test:once:public` for the public suite. Normal
+Run `pnpm --filter mondrian.pdf test:public` for the public suite. Normal
 test and coverage commands run both directories. Run `pnpm test:semver` from a
 clean checkout for current public tests followed by release compatibility.
 

@@ -10,11 +10,11 @@ repository and consumes the published `mondrian.pdf` package.
 
 ## Coverage
 
-Run `MONDRIAN_PDF_ARTIFACT_MODE=verify pnpm coverage` to run the test suite with
+Run `MONDRIAN_PDF_ARTIFACT_MODE=verify pnpm cov` to run the test suite with
 coverage. Reports are written to `packages/mondrian/coverage` in text, HTML,
 and Istanbul JSON formats.
 
-Run `pnpm coverage:track` after generating coverage to capture and compare it
+Run `pnpm cov:check` after generating coverage to capture and compare it
 with the main-branch baseline using [Recoverage](https://recoverage.cloud).
 Bun is installed through `mise.toml`. The local `coverage.sqlite` database is
 ignored by Git.
@@ -41,7 +41,7 @@ task caching because remote release tags can change independently of the
 checkout.
 
 The compatibility contract lives in `packages/mondrian/tests/public/`; run it
-directly with `pnpm --filter mondrian.pdf test:once:public`. Break Check restores
+directly with `pnpm --filter mondrian.pdf test:public`. Break Check restores
 released tests and helpers, type-checks and runs them, then restores the checkout.
 Implementation and visual regression tests live in `tests/private/`. See the
 [test guide](packages/mondrian/tests/README.md) for the boundary and the release
@@ -61,3 +61,7 @@ If you distribute modifications to Mondrian's MPL-covered files, you must make
 the source for those files available under MPL 2.0. Private and internal
 modifications do not need to be published. This is file-level sharing, not
 whole-program copyleft. See [Mozilla's official MPL 2.0 FAQ](https://www.mozilla.org/MPL/2.0/FAQ/) for details.
+
+## Repository commands
+
+See [the command guide](docs/commands.md) for formatting, static checks, tests, coverage where available, and release commands.

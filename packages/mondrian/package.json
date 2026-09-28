@@ -49,7 +49,7 @@
 		"pdf-lib": "1.17.1"
 	},
 	"devDependencies": {
-		"break-check": "0.7.3",
+		"break-check": "0.8.0",
 		"recoverage": "0.1.17",
 		"vitest": "catalog:"
 	},

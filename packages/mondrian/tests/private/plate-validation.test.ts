@@ -34,7 +34,7 @@ describe("discovery failures", () => {
 		["0 0 20 20 re S", /Implicit DeviceGray stroke/u],
 		["/Shade sh", /operator sh/u],
 		["BI", /operator BI/u],
-		["/OC /Layer BDC", /operator BDC/u],
+		["/OC /Layer BDC", /Optional-content painting/u],
 		["Q", /Unbalanced Q/u],
 		["q", /Unbalanced q/u],
 		["1 0 0 k", /Invalid plate color components/u],

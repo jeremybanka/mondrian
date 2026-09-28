@@ -32,6 +32,8 @@ const imageKeys = new Set(
 export function readPlateImage(
 	source: PdfStream,
 	resolve: Resolve,
+	// Share masks across parent images only within this document's plan.
+	masks = new WeakMap<PdfStream, PlateRaster>(),
 ): PlateImage {
 	const read = (source: PdfStream, mask: boolean): PlateImage => {
 		const field = (key: string) =>
@@ -147,7 +149,11 @@ export function readPlateImage(
 				alpha.kind !== "stream"
 			)
 				throw new TypeError("Expected an image soft-mask stream")
-			decodedAlpha = read(alpha, true)
+			decodedAlpha = masks.get(alpha)
+			if (decodedAlpha === undefined) {
+				decodedAlpha = read(alpha, true)
+				masks.set(alpha, decodedAlpha)
+			}
 			if (decodedAlpha.width !== width || decodedAlpha.height !== height)
 				throw new TypeError(
 					"Plate image and soft mask must have matching dimensions",

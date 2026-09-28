@@ -19,7 +19,7 @@ import { pathPainting, textPainting } from "./plate-paint.ts"
 import type { PathShape, TextMode } from "./plate-paint.ts"
 import { decodePlateGraphicsState } from "./plate-graphics-state.ts"
 import { assertPlatePageGroup, readPlateImage } from "./plate-image.ts"
-import type { PlateImage } from "./plate-image.ts"
+import type { PlateImage, PlateRaster } from "./plate-image.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
@@ -223,6 +223,7 @@ export function planPdfPlates(
 		: []
 	const spots = new Map<string, number>()
 	const images = new WeakMap<PdfStream, PlateImage>()
+	const masks = new WeakMap<PdfStream, PlateRaster>()
 	// Intern shallow node descriptions containing child IDs, not expanded child
 	// values. Equivalent graphs share IDs regardless of reference/layout choices,
 	// and both traversal and key storage stay proportional to unique graph nodes.
@@ -580,7 +581,7 @@ export function planPdfPlates(
 							throw new TypeError("Plate images require DeviceCMYK samples")
 						let image = images.get(value)
 						if (image === undefined) {
-							image = readPlateImage(value, resolve)
+							image = readPlateImage(value, resolve, masks)
 							images.set(value, image)
 						}
 						instructions.push({

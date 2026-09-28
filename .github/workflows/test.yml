@@ -30,10 +30,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
-      - name: Run tests with coverage
-        run: pnpm run coverage
       - name: Track coverage with Recoverage
-        run: pnpm run coverage:track
+        run: pnpm run cov:check
         env:
           RECOVERAGE_CLOUD_TOKEN: ${{ secrets.RECOVERAGE_CLOUD_TOKEN }}
       - name: Upload coverage and PDF diagnostics

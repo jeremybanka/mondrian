@@ -19,6 +19,7 @@ const pdfiumPackage = JSON.parse(
 const pdfiumBitmapBgra = 4
 const pdfiumRenderAnnotations = 0x01
 const pdfiumRenderLcdText = 0x02
+const pdfiumRenderGrayscale = 0x08
 const pdfiumRenderReverseByteOrder = 0x10
 
 export const pdfArtifactRenderer = Object.freeze({
@@ -55,6 +56,26 @@ export interface RenderedPdf {
 export async function renderPdf(
 	bytes: Uint8Array,
 	options: PdfRenderOptions = {},
+): Promise<RenderedPdf> {
+	return render(bytes, options, false)
+}
+
+/** Internal scalar-coverage rendering: fixed white paper, grayscale antialiasing, no annotations. */
+export async function renderCoveragePdf(
+	bytes: Uint8Array,
+	resolution: number,
+): Promise<RenderedPdf> {
+	return render(
+		bytes,
+		{ resolution, background: "#ffffff", renderAnnotations: false },
+		true,
+	)
+}
+
+async function render(
+	bytes: Uint8Array,
+	options: PdfRenderOptions,
+	grayscale: boolean,
 ): Promise<RenderedPdf> {
 	if (!(bytes instanceof Uint8Array)) {
 		throw new TypeError("PDF rendering requires a Uint8Array")
@@ -105,6 +126,7 @@ export async function renderPdf(
 					height,
 					backgroundColor,
 					renderAnnotations,
+					grayscale,
 				)
 				pages.push(
 					Object.freeze({
@@ -141,6 +163,7 @@ function renderPage(
 	height: number,
 	background: number,
 	renderAnnotations: boolean,
+	grayscale: boolean,
 ): Uint8ClampedArray {
 	const byteLength = width * height * 4
 	const pixelsPointer = pdfium.pdfium.wasmExports.malloc(byteLength)
@@ -165,7 +188,7 @@ function renderPage(
 			throw new Error("PDFium could not initialize a page bitmap")
 		}
 		const flags =
-			pdfiumRenderLcdText |
+			(grayscale ? pdfiumRenderGrayscale : pdfiumRenderLcdText) |
 			pdfiumRenderReverseByteOrder |
 			(renderAnnotations ? pdfiumRenderAnnotations : 0)
 		pdfium.FPDF_RenderPageBitmap(bitmap, page, 0, 0, width, height, 0, flags)

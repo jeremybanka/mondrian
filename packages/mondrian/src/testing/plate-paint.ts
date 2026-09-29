@@ -60,7 +60,12 @@ export function textPaintMode(
 
 export type ProjectedPaint =
 	| { readonly kind: "skip" }
-	| { readonly kind: "knockout" | "ink"; readonly color: PlatePaint["color"] }
+	| {
+			readonly kind: "knockout" | "ink"
+			readonly color: PlatePaint["color"]
+			/** Selected ink fraction, independent of its preview color. */
+			readonly coverage: number
+	  }
 
 /** Skipping leaves earlier ink untouched; a zero-valued paint still occludes it. */
 export function projectPaint(
@@ -77,6 +82,7 @@ export function projectPaint(
 		return {
 			kind: value === 0 ? "knockout" : "ink",
 			color: { space: "cmyk", components },
+			coverage: value,
 		}
 	}
 	if (
@@ -85,8 +91,16 @@ export function projectPaint(
 		plate.ink === color.ink
 	)
 		// Even zero tint must retain the source ink's alternate-space transform.
-		return { kind: color.components[0] === 0 ? "knockout" : "ink", color }
+		return {
+			kind: color.components[0] === 0 ? "knockout" : "ink",
+			color,
+			coverage: color.components[0],
+		}
 	return overprint
 		? { kind: "skip" }
-		: { kind: "knockout", color: { space: "cmyk", components: [0, 0, 0, 0] } }
+		: {
+				kind: "knockout",
+				color: { space: "cmyk", components: [0, 0, 0, 0] },
+				coverage: 0,
+			}
 }

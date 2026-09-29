@@ -20,6 +20,7 @@ import type { PathShape, TextMode } from "./plate-paint.ts"
 import { decodePlateGraphicsState } from "./plate-graphics-state.ts"
 import { assertPlatePageGroup, readPlateImage } from "./plate-image.ts"
 import type { PlateImage, PlateRaster } from "./plate-image.ts"
+import { PlateMarkedContent } from "./plate-marked-content.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
@@ -105,7 +106,7 @@ export interface PlatePage {
 
 const processNames = ["Cyan", "Magenta", "Yellow", "Black"] as const
 const passthrough = new Set(
-	"cm w J j M d ri i m l c v y h re n W W* BT ET Tc Tw Tz TL Td TD Tm T* Ts BMC EMC MP".split(
+	"cm w J j M d ri i m l c v y h re n W W* BT ET Tc Tw Tz TL Td TD Tm T* Ts".split(
 		" ",
 	),
 )
@@ -380,6 +381,9 @@ export function planPdfPlates(
 			const stack: State[] = []
 			const states = new Map<string, PdfDictionary>()
 			const instructions: PlateInstruction[] = []
+			const marked = new PlateMarkedContent((key) =>
+				resolve(resource(resources, "Properties", key)),
+			)
 			let textObject: { transparent: boolean; overprint: boolean } | undefined
 			const paint = (channel: "fill" | "stroke"): PlatePaint => {
 				const color = state[channel]
@@ -396,6 +400,10 @@ export function planPdfPlates(
 			}
 			for (const instruction of parsePlateContent(source)) {
 				const { op, operands } = instruction
+				if (marked.accept(instruction)) {
+					instructions.push({ ...instruction, kind: "raw" })
+					continue
+				}
 				if (op === "BT") {
 					textObject = { transparent: false, overprint: false }
 				} else if (op === "ET") {
@@ -641,6 +649,7 @@ export function planPdfPlates(
 			}
 			if (stack.length !== 0)
 				throw new TypeError("Unbalanced q in plate content")
+			marked.finish()
 			return {
 				resources,
 				states,

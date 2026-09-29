@@ -91,7 +91,11 @@ export type { PdfValidationOptions } from "./validate.ts"
 
 export type {
 	PdfColor,
+	PdfGrayColor,
+	PdfRgbColor,
+	PdfCmykColor,
 	PdfProcessColor,
+	PdfSeparationColor,
 	PdfSpotColor,
 	PdfTintTransform,
 	PdfPaintState,

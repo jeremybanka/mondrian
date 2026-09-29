@@ -5,16 +5,22 @@ import type { PdfDictionary, PdfReference, PdfValue } from "./objects.ts"
 import { array, dictionary, name } from "./objects.ts"
 import { encodePdfName, formatPdfNumber } from "./syntax.ts"
 
-export type PdfProcessColor =
-	| Readonly<{ space: "DeviceGray"; components: readonly [number] }>
-	| Readonly<{
-			space: "DeviceRGB"
-			components: readonly [number, number, number]
-	  }>
-	| Readonly<{
-			space: "DeviceCMYK"
-			components: readonly [number, number, number, number]
-	  }>
+export type PdfGrayColor = Readonly<{
+	space: "DeviceGray"
+	components: readonly [number]
+}>
+
+export type PdfRgbColor = Readonly<{
+	space: "DeviceRGB"
+	components: readonly [number, number, number]
+}>
+
+export type PdfCmykColor = Readonly<{
+	space: "DeviceCMYK"
+	components: readonly [number, number, number, number]
+}>
+
+export type PdfProcessColor = PdfGrayColor | PdfRgbColor | PdfCmykColor
 
 /** One input (tint), with output components in the alternate space. */
 export interface PdfTintTransform {
@@ -31,13 +37,14 @@ export interface PdfSpotColor {
 	readonly tintTransform: PdfTintTransform
 }
 
-export type PdfColor =
-	| PdfProcessColor
-	| Readonly<{
-			space: "Separation"
-			ink: PdfSpotColor
-			tint: number
-	  }>
+/** A tint of a reusable named spot ink. */
+export type PdfSeparationColor = Readonly<{
+	space: "Separation"
+	ink: PdfSpotColor
+	tint: number
+}>
+
+export type PdfColor = PdfProcessColor | PdfSeparationColor
 
 /** Complete opaque overlap state. false explicitly requests knockout. */
 export interface PdfPaintState {
@@ -68,11 +75,11 @@ export interface PdfColorBuilder<T> {
 	paintState(state: PdfPaintState): T
 }
 
-export function rgb(red: number, green: number, blue: number): PdfProcessColor {
+export function rgb(red: number, green: number, blue: number): PdfRgbColor {
 	return copyProcess({ space: "DeviceRGB", components: [red, green, blue] })
 }
 
-export function gray(value: number): PdfProcessColor {
+export function gray(value: number): PdfGrayColor {
 	return copyProcess({ space: "DeviceGray", components: [value] })
 }
 
@@ -81,7 +88,7 @@ export function cmyk(
 	magenta: number,
 	yellow: number,
 	black: number,
-): PdfProcessColor {
+): PdfCmykColor {
 	return copyProcess({
 		space: "DeviceCMYK",
 		components: [cyan, magenta, yellow, black],
@@ -135,7 +142,7 @@ export function separation(
 	})
 }
 
-export function spot(ink: PdfSpotColor, tint: number): PdfColor {
+export function spot(ink: PdfSpotColor, tint: number): PdfSeparationColor {
 	if (ink?.space !== "Separation")
 		throw new TypeError("Expected a Separation ink definition")
 	assertKeys(ink, ["space", "name", "tintTransform"], "spot ink")
@@ -212,7 +219,7 @@ function component(value: number, label: string): void {
 		throw new RangeError(`PDF ${label} must be from 0 through 1`)
 }
 
-function copyProcess(color: PdfProcessColor): PdfProcessColor {
+function copyProcess<T extends PdfProcessColor>(color: T): T {
 	assertKeys(color, ["space", "components"], "process color")
 	const count = { DeviceGray: 1, DeviceRGB: 3, DeviceCMYK: 4 }[color?.space]
 	if (
@@ -229,7 +236,7 @@ function copyProcess(color: PdfProcessColor): PdfProcessColor {
 	return Object.freeze({
 		space: color.space,
 		components: Object.freeze([...color.components]),
-	}) as PdfProcessColor
+	}) as T
 }
 
 function copyColor(color: PdfColor): PdfColor {

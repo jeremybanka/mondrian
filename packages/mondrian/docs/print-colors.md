@@ -20,6 +20,8 @@ combining old and changed definitions of the same named ink fails.
 
 ## Color descriptions and units
 
+Import `PdfGrayColor`, `PdfRgbColor`, `PdfCmykColor`, and `PdfSeparationColor` from `mondrian.pdf` to describe individual color values. `PdfProcessColor` is the union of the gray, RGB, and CMYK types; `PdfColor` adds `PdfSeparationColor`. The `gray()`, `rgb()`, `cmyk()`, and `spot()` helpers return their respective individual types. `PdfSpotColor` describes the reusable ink definition returned by `separation()`; `PdfSeparationColor` combines that ink with a tint.
+
 `rgb(r, g, b)`, `gray(g)`, and `cmyk(c, m, y, k)` return immutable typed
 process colors. All components are finite numbers from 0 through 1. Convert
 percentages or 8-bit application channels at the application boundary.

@@ -93,11 +93,6 @@
 			"enabled": false
 		},
 		{
-			"matchPackageNames": ["vite-plus"],
-			"ignoreUnstable": false,
-			"respectLatest": false
-		},
-		{
 			"matchManagers": ["github-actions"],
 			"dependencyDashboardApproval": true
 		},

@@ -95,6 +95,8 @@ annotation rendering, and artifact roots explicitly.
 
 For individual ink proofs, `previewPdfPlates(pdf.compile())` returns a colored `PdfDocument` for each CMYK and named spot plate, preserving knockout and overprint. See [print plate previews](docs/print-plates.md) for options, supported painting, and examples.
 
+For PNG cut-outs and JPEG photographs, `prepareCmykImage()` from `mondrian.pdf/print` converts source pixels using the chosen ICC printing profile while preserving alpha. Embed the prepared data with `pdf.image()`; plate previews then use the same CMYK samples as the delivered PDF. See [images for print](docs/print-images.md) for the complete workflow and rendered proofs.
+
 The runner-neutral `mondrian.pdf/testing` submodule exports `renderPdf()`,
 `checkPdfArtifact()`, and their associated types for other test runners and
 custom workflows:
@@ -153,7 +155,7 @@ pdf.setPages(pdf.pages(cover, pdf.pages(chapterOne, chapterTwo)))
 `createPdfDocument()` is the recommended API. It provides:
 
 - An owned page tree through `page()`, `pages()`, and `setPages()`
-- Document-local handles for fonts and JPEG images
+- Document-local handles for fonts, JPEGs, and prepared CMYK images
 - Typed, automatically scoped text and graphics operations
 - Automatic page resource discovery and naming
 - Derived page parents and descendant counts

@@ -18,6 +18,8 @@ import type { ContentInstruction } from "./plate-content.ts"
 import { pathPainting, textPainting } from "./plate-paint.ts"
 import type { PathShape, TextMode } from "./plate-paint.ts"
 import { decodePlateGraphicsState } from "./plate-graphics-state.ts"
+import { assertPlatePageGroup, readPlateImage } from "./plate-image.ts"
+import type { PlateImage, PlateRaster } from "./plate-image.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
@@ -70,6 +72,11 @@ type PathPaint =
 	| { readonly fill: undefined; readonly stroke: PlatePaint }
 
 export type PlateInstruction =
+	| {
+			readonly kind: "image"
+			readonly image: PlateImage
+			readonly overprint: boolean
+	  }
 	| (ContentInstruction & { readonly kind: "raw" })
 	| ({ readonly kind: "path" } & PathShape & PathPaint)
 	| (ContentInstruction & {
@@ -215,6 +222,8 @@ export function planPdfPlates(
 			}))
 		: []
 	const spots = new Map<string, number>()
+	const images = new WeakMap<PdfStream, PlateImage>()
+	const masks = new WeakMap<PdfStream, PlateRaster>()
 	// Intern shallow node descriptions containing child IDs, not expanded child
 	// values. Equivalent graphs share IDs regardless of reference/layout choices,
 	// and both traversal and key storage stay proportional to unique graph nodes.
@@ -559,11 +568,31 @@ export function planPdfPlates(
 						value.kind !== "stream"
 					)
 						throw new TypeError("Expected an XObject stream")
-					if (pdfName(resolve(entry(value, "Subtype"))) !== "/Form") {
-						const imageSpace = entry(value, "ColorSpace")
-						if (imageSpace !== undefined) colorSpace(imageSpace)
-						throw new TypeError("Images are unsupported in plate previews")
+					const subtype = pdfName(resolve(entry(value, "Subtype")))
+					if (subtype === "/Image") {
+						let space = entry(value, "ColorSpace")
+						const named = pdfName(resolve(space))
+						if (
+							named !== undefined &&
+							!["/DeviceCMYK", "/DeviceRGB", "/DeviceGray"].includes(named)
+						)
+							space = resource(resources, "ColorSpace", named)
+						if (space === undefined || colorSpace(space).space !== "cmyk")
+							throw new TypeError("Plate images require DeviceCMYK samples")
+						let image = images.get(value)
+						if (image === undefined) {
+							image = readPlateImage(value, resolve, masks)
+							images.set(value, image)
+						}
+						instructions.push({
+							kind: "image",
+							image,
+							overprint: state.fillOverprint,
+						})
+						continue
 					}
+					if (subtype !== "/Form")
+						throw new TypeError("Unsupported XObject subtype")
 					if (
 						entry(value, "Group") !== undefined ||
 						entry(value, "OC") !== undefined ||
@@ -650,10 +679,16 @@ export function planPdfPlates(
 			}
 		} else {
 			const location = `Page ${pages.length + 1}`
-			if (entry(node, "Group") !== undefined)
-				throw new TypeError(
-					`${location}: transparency groups are unsupported in plate previews`,
-				)
+			if (entry(node, "Group") !== undefined) {
+				try {
+					assertPlatePageGroup(dict(entry(node, "Group")), resolve)
+				} catch (error) {
+					throw new TypeError(
+						`${location}: ${error instanceof Error ? error.message : String(error)}`,
+						{ cause: error },
+					)
+				}
+			}
 			const annotations = resolve(entry(node, "Annots"))
 			if (
 				annotations !== undefined &&

@@ -9,6 +9,7 @@ import type {
 	StandardFontName,
 } from "./content.ts"
 import {
+	createCmykImageHandle,
 	createFontHandle,
 	createGraphicsContent,
 	createImageHandle,
@@ -17,6 +18,9 @@ import {
 	getFontRecord,
 	getImageRecord,
 } from "./content.ts"
+import { zlibSync } from "fflate"
+import { assertCmykProfile, sameBytes } from "./icc.ts"
+import type { PdfCmykImageData, PdfOutputIntent } from "./print-image.ts"
 import { encodePageContent } from "./content-encode.ts"
 import type { PdfDiagnostic } from "./diagnostics.ts"
 import { throwForPdfErrors } from "./diagnostics.ts"
@@ -93,6 +97,7 @@ export interface PdfMetadata {
 }
 
 export interface PdfDocumentBuilderOptions {
+	readonly outputIntent?: PdfOutputIntent
 	readonly version?: PdfVersion
 	readonly metadata?: PdfMetadata
 	readonly id?: readonly [Uint8Array, Uint8Array]
@@ -101,6 +106,7 @@ export interface PdfDocumentBuilderOptions {
 export interface PdfDocumentBuilder {
 	standardFont(baseFont: StandardFontName): PdfFont
 	jpeg(bytes: Uint8Array): PdfImage
+	image(data: PdfCmykImageData): PdfImage
 	text(callback: (text: PdfTextBuilder) => void): PdfContent
 	graphics(callback: (graphics: PdfGraphicsBuilder) => void): PdfContent
 	page(options: PdfPageOptions): PdfPage
@@ -164,10 +170,25 @@ class DocumentBuilder implements PdfDocumentBuilder {
 	readonly #version: PdfVersion
 	readonly #metadata: PdfMetadata | undefined
 	readonly #id: readonly [Uint8Array, Uint8Array] | undefined
+	readonly #outputIntent: PdfOutputIntent | undefined
 	#rootChildren: readonly PdfPageTreeNode[] | undefined
 
 	constructor(options: PdfDocumentBuilderOptions) {
 		this.#version = options.version ?? "1.7"
+		if (options.outputIntent !== undefined) {
+			if (["1.0", "1.1", "1.2", "1.3"].includes(this.#version))
+				throw new TypeError("Print output intents require PDF 1.4 or later")
+			assertCmykProfile(options.outputIntent.profile)
+			if (
+				typeof options.outputIntent.identifier !== "string" ||
+				options.outputIntent.identifier.trim() === ""
+			)
+				throw new TypeError("An output condition identifier is required")
+			this.#outputIntent = Object.freeze({
+				profile: Uint8Array.from(options.outputIntent.profile),
+				identifier: options.outputIntent.identifier,
+			})
+		}
 		this.#metadata = copyMetadata(options.metadata)
 		this.#id =
 			options.id === undefined
@@ -181,6 +202,18 @@ class DocumentBuilder implements PdfDocumentBuilder {
 
 	jpeg(bytes: Uint8Array): PdfImage {
 		return createImageHandle(this.#owner, bytes)
+	}
+
+	image(data: PdfCmykImageData): PdfImage {
+		if (
+			this.#outputIntent === undefined ||
+			!(data.destinationProfile instanceof Uint8Array) ||
+			!sameBytes(data.destinationProfile, this.#outputIntent.profile)
+		)
+			throw new TypeError(
+				"The image destination profile must match the document output intent",
+			)
+		return createCmykImageHandle(this.#owner, data)
 	}
 
 	text(callback: (text: PdfTextBuilder) => void): PdfContent {
@@ -288,6 +321,23 @@ class DocumentBuilder implements PdfDocumentBuilder {
 				throw new TypeError("PDF image belongs to another document builder")
 			}
 
+			const mask =
+				record.alpha === undefined
+					? undefined
+					: objects.add(
+							stream(
+								{
+									Type: name("XObject"),
+									Subtype: name("Image"),
+									Width: record.width,
+									Height: record.height,
+									ColorSpace: name("DeviceGray"),
+									BitsPerComponent: 8,
+									Filter: name("FlateDecode"),
+								},
+								zlibSync(record.alpha),
+							),
+						)
 			const result = objects.add(
 				stream(
 					{
@@ -297,9 +347,12 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						Height: record.height,
 						ColorSpace: name(record.colorSpace),
 						BitsPerComponent: record.bitsPerComponent,
-						Filter: name("DCTDecode"),
+						Filter: name(
+							record.encoding === "raw" ? "FlateDecode" : "DCTDecode",
+						),
+						...(mask === undefined ? {} : { SMask: mask }),
 					},
-					record.bytes,
+					record.encoding === "raw" ? zlibSync(record.bytes) : record.bytes,
 				),
 			)
 			imageReferences.set(image, result)
@@ -364,6 +417,16 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						record.mediaBox[3],
 					),
 					Resources: dictionary(resourceEntries),
+					...(this.#outputIntent === undefined
+						? {}
+						: {
+								Group: dictionary({
+									S: name("Transparency"),
+									CS: name("DeviceCMYK"),
+									I: true,
+									K: false,
+								}),
+							}),
 					Contents: contents,
 					...(record.rotation === 0 ? {} : { Rotate: record.rotation }),
 				}) satisfies PdfPageDictionary,
@@ -408,10 +471,32 @@ class DocumentBuilder implements PdfDocumentBuilder {
 		}
 
 		const pages = lowerPages(rootChildren)
+		const output = this.#outputIntent
+		const outputIntents =
+			output === undefined
+				? undefined
+				: array(
+						objects.add(
+							dictionary({
+								Type: name("OutputIntent"),
+								S: name("GTS_PDFX"),
+								OutputConditionIdentifier: textString(output.identifier),
+								DestOutputProfile: objects.add(
+									stream(
+										{ N: 4, Filter: name("FlateDecode") },
+										zlibSync(output.profile),
+									),
+								),
+							}),
+						),
+					)
 		catalog.set(
 			dictionary({
 				Type: name("Catalog"),
 				Pages: pages.ref,
+				...(outputIntents === undefined
+					? {}
+					: { OutputIntents: outputIntents }),
 			}) satisfies PdfCatalogDictionary,
 		)
 

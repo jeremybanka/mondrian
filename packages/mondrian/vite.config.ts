@@ -16,11 +16,17 @@ export default defineConfig({
 				onlyBundle: [],
 			},
 			dts: {
-				entry: ["src/index.ts", "src/testing.ts", "src/vitest.ts"],
+				entry: [
+					"src/index.ts",
+					"src/testing.ts",
+					"src/vitest.ts",
+					"src/print.ts",
+				],
 				sourcemap: true,
 			},
 			entry: {
 				index: "src/index.ts",
+				print: "src/print.ts",
 				testing: "src/testing.ts",
 				vitest: "src/vitest.ts",
 			},

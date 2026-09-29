@@ -5,6 +5,8 @@ import { colorBuilder } from "./color.ts"
 
 import type { PdfLiteralString } from "./objects.ts"
 import { literalString } from "./objects.ts"
+import type { PdfCmykImageData } from "./print-image.ts"
+import { imagePixelCount } from "./print-image.ts"
 
 declare const pdfFontBrand: unique symbol
 declare const pdfImageBrand: unique symbol
@@ -42,8 +44,6 @@ export type StandardFontName =
 	| "ZapfDingbats"
 
 export type PdfImageBitsPerComponent = 8
-
-export type PdfImageColorSpace = "DeviceGray" | "DeviceRGB"
 
 export interface PdfTextBuilder extends PdfColorBuilder<PdfTextBuilder> {
 	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both, 3 invisible. Clipping is unsupported. */
@@ -206,14 +206,33 @@ export interface PdfFontRecord {
 	readonly baseFont: StandardFontName
 }
 
-export interface PdfImageRecord {
+interface PdfImageRecordBase {
 	readonly owner: symbol
 	readonly bytes: Uint8Array
 	readonly width: number
 	readonly height: number
 	readonly bitsPerComponent: PdfImageBitsPerComponent
-	readonly colorSpace: PdfImageColorSpace
 }
+
+/** Byte encoding determines compression; color space describes the samples. */
+export type PdfImageRecord = PdfImageRecordBase &
+	(
+		| {
+				readonly encoding: "jpeg"
+				readonly colorSpace: "DeviceGray" | "DeviceRGB"
+				readonly alpha?: never
+		  }
+		| {
+				readonly encoding: "raw"
+				readonly colorSpace: "DeviceCMYK"
+				readonly alpha?: Uint8Array
+		  }
+	)
+
+type JpegMetadata = Pick<
+	Extract<PdfImageRecord, { encoding: "jpeg" }>,
+	"width" | "height" | "bitsPerComponent" | "colorSpace"
+>
 
 export interface PdfTextContentRecord {
 	readonly owner: symbol
@@ -311,6 +330,7 @@ export function createImageHandle(owner: symbol, bytes: Uint8Array): PdfImage {
 		image,
 		Object.freeze({
 			owner,
+			encoding: "jpeg",
 			bytes: bytes.slice(),
 			...metadata,
 		}),
@@ -318,7 +338,39 @@ export function createImageHandle(owner: symbol, bytes: Uint8Array): PdfImage {
 	return image
 }
 
-function parseJpeg(bytes: Uint8Array): Omit<PdfImageRecord, "owner" | "bytes"> {
+export function createCmykImageHandle(
+	owner: symbol,
+	input: PdfCmykImageData,
+): PdfImage {
+	assertOwner(owner)
+	const pixels = imagePixelCount(input.width, input.height)
+	if (!(input.data instanceof Uint8Array) || input.data.length !== pixels * 4)
+		throw new TypeError("CMYK data must contain four bytes per pixel")
+	if (
+		input.alpha !== undefined &&
+		(!(input.alpha instanceof Uint8Array) || input.alpha.length !== pixels)
+	)
+		throw new TypeError("Image alpha must contain one byte per pixel")
+	const image = Object.freeze({}) as PdfImage
+	imageRecords.set(
+		image,
+		Object.freeze({
+			owner,
+			encoding: "raw",
+			width: input.width,
+			height: input.height,
+			bitsPerComponent: 8,
+			colorSpace: "DeviceCMYK",
+			bytes: Uint8Array.from(input.data),
+			...(input.alpha === undefined
+				? {}
+				: { alpha: Uint8Array.from(input.alpha) }),
+		}),
+	)
+	return image
+}
+
+function parseJpeg(bytes: Uint8Array): JpegMetadata {
 	if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) {
 		throw new TypeError("JPEG data must start with an SOI marker")
 	}
@@ -334,7 +386,7 @@ function parseJpeg(bytes: Uint8Array): Omit<PdfImageRecord, "owner" | "bytes"> {
 	const dcHuffmanTables = new Set<number>()
 	const acHuffmanTables = new Set<number>()
 	let frameComponents: ReadonlyMap<number, number> | undefined
-	let metadata: Omit<PdfImageRecord, "owner" | "bytes"> | undefined
+	let metadata: JpegMetadata | undefined
 
 	while (offset < bytes.length) {
 		if (bytes[offset] !== 0xff) {

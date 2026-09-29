@@ -59,6 +59,12 @@ The public color tests share a small independent PDF reader in `public/helpers/p
 
 Private plate tests are split into `plate-colors`, `plate-content`, `plate-forms`, `plate-graphics-state`, `plate-resources`, `plate-scalability`, `plate-text`, and `plate-validation` suites, alongside the internal `plate-types` contracts. Their reusable low-level setup lives in `private/fixtures/plates.ts`. Operator sequences, planner state, cache work counts, object retention, heap/size thresholds, diagnostic details, and current unsupported-feature boundaries stay private. A future implementation can change those details or support more PDF constructs without turning this test organization into a new compatibility promise. Each visual baseline lives beside the suite that owns it.
 
+## Print image contracts
+
+`public/print-preparation.test.ts` covers dimensions, straight alpha, source-profile interpretation, explicit assumptions for untagged input, and buffer independence. `public/image-plates.test.ts` previews a serialized delivery and checks image coverage against independently encoded transparent vector artwork, plus spot knockout/overprint behavior. These tests do not freeze ICC engine output values, PDF image compression, object layouts, or exact rendered pixels.
+
+`private/print-image-embedding.test.ts` verifies the current CMYK raster, soft-mask, and output-intent encoding through an independent reader. Private preparation and image-decoding tests cover metadata validation and decoder boundaries. Private plate-image tests cover channel projection, resource handling, Decode normalization, and bounded decompression. The photographic fixture and every exact visual baseline remain private proof obligations; the small public fixtures are retained for historical compatibility replay.
+
 ## Running compatibility checks
 
 Run `pnpm --filter mondrian.pdf test:public` for the public suite. Normal

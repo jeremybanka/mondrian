@@ -267,8 +267,8 @@ importers:
         specifier: 0.8.0
         version: 0.8.0(supports-color@7.2.0)
       recoverage:
-        specifier: 0.1.18
-        version: 0.1.18(supports-color@7.2.0)(typescript@7.0.2)
+        specifier: 0.1.19
+        version: 0.1.19(supports-color@7.2.0)(typescript@7.0.2)
       vitest:
         specifier: 'catalog:'
         version: 5.0.1(@types/node@26.6.3)(@vitest/browser-preview@5.0.1)(@vitest/coverage-v8@5.0.1)(@vitest/ui@5.0.1)(@voidzero-dev/vite-plus-core@1.0.0-rc.1(@types/node@26.6.3)(typescript@7.0.2)(yaml@2.9.0))
@@ -2088,8 +2088,8 @@ packages:
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
 
-  recoverage@0.1.18:
-    resolution: {integrity: sha512-xyNQk4T7IEyEuQva5g3dmIba3xUgAbFYdO5F7eKtxPj8UWE3fvCH074QYiA2nm3xM5bUgX5Eq8VKRGkbOoiQ0w==}
+  recoverage@0.1.19:
+    resolution: {integrity: sha512-HGNdxZKrCFt9cfT2kFDgSVNtR2kRn5lZ1JvgWwf6vfUAZusncn2oice0dBvWDesxgQglL2nYa09DS0evKrZsTA==}
     hasBin: true
 
   reflect.getprototypeof@1.0.10:
@@ -3991,7 +3991,7 @@ snapshots:
 
   react-is@17.0.2: {}
 
-  recoverage@0.1.18(supports-color@7.2.0)(typescript@7.0.2):
+  recoverage@0.1.19(supports-color@7.2.0)(typescript@7.0.2):
     dependencies:
       '@t3-oss/env-core': 0.13.11(arktype@2.2.5)(typescript@7.0.2)
       arktype: 2.2.5

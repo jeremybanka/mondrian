@@ -1,5 +1,15 @@
 # mondrian.pdf
 
+## 0.1.8
+
+### Patch Changes
+
+- 11e0844: Preserve ordinary marked content in plate previews, including `ActualText`, nested tags, marked points, and inline or named property dictionaries on pages and Forms. Validate marked-content and text-object boundaries while continuing to reject unsupported optional-content painting.
+- a0b050f: Add `renderPdfPlateCoverage()` to `mondrian.pdf/testing` for numeric ink evidence from a `PdfDocument`, including parsed delivered PDFs. Return grayscale PNGs and one-byte inverse-coverage samples for each plate and page, with paper white, full ink black, resolution, and renderer provenance. Coverage comes from process samples and spot tints before display color conversion, retaining supported opacity, cut-out alpha, clipping, knockout, and overprint.
+- 84e150b: Add `prepareCmykImage()` in `mondrian.pdf/print` to convert PNG and JPEG images using explicit ICC printing profiles and bounded image decoding while preserving straight color samples and per-pixel transparency. Embed the prepared CMYK samples and alpha through `pdf.image()` with a matching document output intent.
+
+  Preview the delivered image samples on colored CMYK and spot plates, preserving transparent cut-out edges, knockout, and overprint while reusing shared image masks within each preview. Includes an example and rendered proofs for a transparent photographic PNG over process and spot inks.
+
 ## 0.1.7
 
 ### Patch Changes

@@ -35,5 +35,8 @@
 	"include": [
 		"**/*.ts",
 		"*.d.ts"
+	],
+	"exclude": [
+		"apps"
 	]
 }

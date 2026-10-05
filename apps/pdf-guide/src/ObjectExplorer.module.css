@@ -1,0 +1,123 @@
+object-explorer.class {
+	display: block;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	overflow: hidden;
+	background: #fcfbf8;
+	> header {
+		padding: 20px 22px;
+		border-bottom: 1px solid var(--line);
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		> span {
+			font-size: 9px;
+			letter-spacing: 1.2px;
+		}
+		> small {
+			font-size: 10px;
+			color: var(--muted);
+		}
+	}
+	> explorer-panels {
+		display: grid;
+		grid-template-columns: 1.05fr 1fr;
+		> graph-panel {
+			display: block;
+			padding: 24px 12px;
+			background-image: radial-gradient(#dedbd3 0.6px, transparent 0.6px);
+			background-size: 16px 16px;
+			> svg {
+				display: block;
+				width: 100%;
+			}
+			> nav {
+				display: flex;
+				flex-wrap: wrap;
+				justify-content: center;
+				gap: 5px;
+				padding: 10px 0;
+				> button {
+					padding: 8px;
+					font-size: 10px;
+					background: var(--paper);
+					border: 1px solid var(--line);
+					border-radius: 4px;
+					&[aria-pressed="true"] {
+						background: var(--purple);
+						border-color: #a695c2;
+					}
+					&:hover {
+						border-color: #a695c2;
+					}
+				}
+			}
+		}
+		> inspector-panel {
+			display: block;
+			min-width: 0;
+			border-left: 1px solid var(--line);
+			> nav {
+				display: flex;
+				gap: 7px;
+				padding: 13px;
+				background: #eeece6;
+				> button {
+					font-size: 10px;
+					padding: 8px 12px;
+					border: 0;
+					border-radius: 4px;
+					background: none;
+					&[aria-pressed="true"] {
+						background: #fcfbf8;
+						box-shadow: 0 1px 4px #292b3c10;
+					}
+				}
+			}
+			> pre {
+				margin: 0;
+				padding: 22px;
+				background: var(--ink);
+				color: #e0daf3;
+				min-height: 200px;
+				max-height: 330px;
+				overflow: auto;
+				font: 10px/1.9 var(--mono);
+				white-space: pre-wrap;
+				overflow-wrap: anywhere;
+			}
+			> object-caption {
+				display: block;
+				padding: 22px;
+				> span {
+					font: 9px var(--mono);
+					color: #8a7b9b;
+				}
+				> h3 {
+					font-size: 20px;
+					font-weight: 500;
+					margin: 10px 0;
+				}
+				> p {
+					font-size: 12px;
+					color: #686867;
+					line-height: 1.8;
+					margin-bottom: 0;
+				}
+			}
+		}
+	}
+	@media (max-width: 900px) {
+		> explorer-panels {
+			grid-template-columns: 1fr;
+			> graph-panel > svg {
+				max-height: 340px;
+			}
+			> inspector-panel {
+				border-left: 0;
+				border-top: 1px solid var(--line);
+			}
+		}
+	}
+}

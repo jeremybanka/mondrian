@@ -1,7 +1,9 @@
 packages:
+  - apps/*
   - packages/*
 
 allowBuilds:
+  "@vscode/vsce-sign": false
   dprint: true
   skia-canvas: true
 

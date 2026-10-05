@@ -4,6 +4,7 @@ Workspace for typed PDF compilation targets.
 
 - [`mondrian.pdf`](packages/mondrian) provides the low-level PDF object model,
   invariant-preserving builder, validator, and serializer.
+- [`The PDF field guide`](apps/pdf-guide) is an interactive lesson on the file format and its representation in Mondrian. Run `pnpm --filter @mondrian/pdf-guide dev` to explore it locally.
 
 The `fitter-happier` integration is maintained in the `fitter-happier`
 repository and consumes the published `mondrian.pdf` package.

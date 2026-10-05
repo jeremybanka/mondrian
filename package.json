@@ -8,7 +8,7 @@
 		"check": "pnpm run \"/^check:.*/\"",
 		"check:fmt": "dprint check",
 		"check:public-types": "vp run -r check:public-types",
-		"check:vp": "vp check --no-fmt",
+		"check:vp": "vp check --no-fmt && pnpm --filter @mondrian/pdf-guide check",
 		"cov": "vp run -r cov",
 		"cov:check": "vp run -r --no-cache cov:check",
 		"fmt": "dprint fmt",

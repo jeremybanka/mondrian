@@ -4,7 +4,7 @@ drawing-lab.class {
 	border-radius: 8px;
 	overflow: hidden;
 	background: #fcfbf8;
-	> header {
+	> lab-heading {
 		display: flex;
 		justify-content: space-between;
 		gap: 12px;
@@ -115,7 +115,7 @@ drawing-lab.class {
 			}
 		}
 	}
-	> footer {
+	> lab-explanation {
 		display: flex;
 		gap: 15px;
 		padding: 18px 22px;

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react"
 import { useO } from "atom.io/react"
-import { chapterHref, chapterSelector } from "./router.ts"
+import { useEffect, useState } from "react"
+
 import { chapters } from "./chapters.ts"
 import css from "./GuideContents.module.css"
+import { chapterHref, chapterSelector } from "./router.ts"
 
 export function GuideContents() {
 	const chapter = useO(chapterSelector)

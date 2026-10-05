@@ -1,8 +1,9 @@
-import { useO } from "atom.io/react"
-import { LinePath } from "@visx/shape"
 import { scaleLinear } from "@visx/scale"
-import { drawingXAtom } from "./state.ts"
+import { LinePath } from "@visx/shape"
+import { useO } from "atom.io/react"
+
 import css from "./PdfPortrait.module.css"
+import { drawingXAtom } from "./state.ts"
 
 export function PdfPortrait() {
 	const x = useO(drawingXAtom)

@@ -1,6 +1,6 @@
 guide-app.class {
 	display: block;
-	> [data-skip] {
+	> header > [data-skip] {
 		position: fixed;
 		top: 12px;
 		left: 20px;
@@ -82,7 +82,7 @@ guide-app.class {
 			font-size: 12px;
 		}
 	}
-	> guide-layout {
+	> main {
 		display: grid;
 		grid-template-columns: 258px minmax(0, 1fr);
 		max-width: 1600px;
@@ -95,7 +95,8 @@ guide-app.class {
 			height: calc(100svh - 10px);
 			overflow-y: auto;
 		}
-		> main {
+		> lesson-content {
+			display: block;
 			min-width: 0;
 			padding: 45px clamp(28px, 4vw, 70px) 28px;
 			outline: none;
@@ -126,12 +127,12 @@ guide-app.class {
 				display: none;
 			}
 		}
-		> guide-layout {
+		> main {
 			grid-template-columns: 218px minmax(0, 1fr);
 			> aside {
 				padding-inline: 14px;
 			}
-			> main {
+			> lesson-content {
 				padding: 35px 28px;
 			}
 		}
@@ -147,7 +148,7 @@ guide-app.class {
 				display: block;
 			}
 		}
-		> guide-layout {
+		> main {
 			display: block;
 			> aside {
 				display: none;
@@ -159,7 +160,7 @@ guide-app.class {
 					display: block;
 				}
 			}
-			> main {
+			> lesson-content {
 				padding: 28px 20px;
 			}
 		}

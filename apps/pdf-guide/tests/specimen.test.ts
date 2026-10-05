@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest"
 import { parsePdf, validatePdf } from "mondrian.pdf"
+import { describe, expect, it } from "vitest"
+
+import { chapters } from "../src/chapters.ts"
+import { chapterHref, resolveChapter } from "../src/router.ts"
 import {
 	byteText,
 	createSpecimen,
@@ -7,8 +10,6 @@ import {
 	fileSections,
 	specimenBytes,
 } from "../src/specimen.ts"
-import { chapterHref, resolveChapter } from "../src/router.ts"
-import { chapters } from "../src/chapters.ts"
 
 describe("the guide’s actual PDF specimen", () => {
 	it("round-trips through Mondrian with a valid page, content stream, and font", () => {

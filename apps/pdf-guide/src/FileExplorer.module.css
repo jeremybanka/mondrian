@@ -4,7 +4,7 @@ file-explorer.class {
 	border-radius: 8px;
 	background: #fcfbf8;
 	overflow: hidden;
-	> header {
+	> explorer-heading {
 		display: flex;
 		justify-content: space-between;
 		padding: 20px 22px;
@@ -52,7 +52,7 @@ file-explorer.class {
 		display: grid;
 		grid-template-columns: 1fr 1.25fr;
 		border-top: 1px solid var(--line);
-		> div {
+		> section-description {
 			padding: 25px;
 			> small {
 				font: 9px var(--mono);
@@ -83,7 +83,8 @@ file-explorer.class {
 			max-height: 360px;
 		}
 	}
-	> footer {
+	> explorer-note {
+		display: block;
 		font-size: 10px;
 		color: var(--muted);
 		padding: 14px 22px;
@@ -97,7 +98,7 @@ file-explorer.class {
 		> file-detail {
 			grid-template-columns: 1fr;
 		}
-		> header {
+		> explorer-heading {
 			flex-wrap: wrap;
 		}
 	}

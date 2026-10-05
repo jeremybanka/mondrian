@@ -1,11 +1,12 @@
-import { useEffect, useRef } from "react"
 import { useI, useO } from "atom.io/react"
-import { chapterSelector, connectRouter } from "./router.ts"
+import { useEffect, useRef } from "react"
+
 import { chapters } from "./chapters.ts"
-import { menuOpenAtom } from "./state.ts"
+import css from "./GuideApp.module.css"
 import { GuideContents } from "./GuideContents.tsx"
 import { LessonPage } from "./LessonPage.tsx"
-import css from "./GuideApp.module.css"
+import { chapterSelector, connectRouter } from "./router.ts"
+import { menuOpenAtom } from "./state.ts"
 
 export function GuideApp() {
 	const chapter = useO(chapterSelector)
@@ -26,10 +27,10 @@ export function GuideApp() {
 
 	return (
 		<guide-app className={css.class}>
-			<a href="#main" data-skip>
-				Skip to lesson
-			</a>
 			<header>
+				<a href="#main" data-skip>
+					Skip to lesson
+				</a>
 				<a href="/" aria-label="Mondrian guide home" data-brand>
 					<brand-mark aria-hidden="true">
 						<i />
@@ -59,11 +60,11 @@ export function GuideApp() {
 					{menuOpen ? "Close" : "Contents"} <span aria-hidden="true">☰</span>
 				</button>
 			</header>
-			<guide-layout>
+			<main>
 				<aside id="guide-contents" data-open={menuOpen}>
 					<GuideContents />
 				</aside>
-				<main id="main" ref={main} tabIndex={-1}>
+				<lesson-content id="main" ref={main} tabIndex={-1}>
 					{chapter ? (
 						<LessonPage key={chapter} chapter={chapter} />
 					) : (
@@ -77,8 +78,8 @@ export function GuideApp() {
 							<a href="/">Back to the guide →</a>
 						</section>
 					)}
-				</main>
-			</guide-layout>
+				</lesson-content>
+			</main>
 		</guide-app>
 	)
 }

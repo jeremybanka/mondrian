@@ -1,14 +1,15 @@
 import { useO } from "atom.io/react"
+
+import { chapters } from "./chapters.ts"
+import { DrawingLab } from "./DrawingLab.tsx"
+import { FileExplorer } from "./FileExplorer.tsx"
+import css from "./LessonPage.module.css"
+import { ObjectExplorer } from "./ObjectExplorer.tsx"
+import { PdfPortrait } from "./PdfPortrait.tsx"
 import type { ChapterId } from "./router.ts"
 import { chapterHref } from "./router.ts"
-import { chapters } from "./chapters.ts"
-import { drawingXAtom } from "./state.ts"
 import { downloadSpecimen, specimenBytes } from "./specimen.ts"
-import { PdfPortrait } from "./PdfPortrait.tsx"
-import { FileExplorer } from "./FileExplorer.tsx"
-import { ObjectExplorer } from "./ObjectExplorer.tsx"
-import { DrawingLab } from "./DrawingLab.tsx"
-import css from "./LessonPage.module.css"
+import { drawingXAtom } from "./state.ts"
 
 const builderCode = `import { createPdfDocument, parsePdf, validatePdf }
   from "mondrian.pdf"
@@ -88,29 +89,29 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 					</intro-layout>
 					{chapter === "overview" && (
 						<concept-strip>
-							<div>
+							<concept-note>
 								<span>01 / STRUCTURE</span>
 								<h3>A graph of objects.</h3>
 								<p>
 									The catalog, pages, fonts, and content connect through
 									references.
 								</p>
-							</div>
-							<div>
+							</concept-note>
+							<concept-note>
 								<span>02 / INSTRUCTIONS</span>
 								<h3>A program for a page.</h3>
 								<p>
 									Small drawing commands tell the reader what to paint and
 									where.
 								</p>
-							</div>
-							<div>
+							</concept-note>
+							<concept-note>
 								<span>03 / REPRESENTATION</span>
 								<h3>A typed model.</h3>
 								<p>
 									Mondrian turns PDF values and relationships into TypeScript.
 								</p>
-							</div>
+							</concept-note>
 						</concept-strip>
 					)}
 					{chapter === "anatomy" && (
@@ -261,7 +262,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 						<prose-block>
 							<h2>Choose your level of control.</h2>
 							<api-layers>
-								<div>
+								<api-layer>
 									<span>AUTHORING</span>
 									<h3>Semantic builder</h3>
 									<p>
@@ -269,8 +270,8 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 										resource handles. It derives parents, counts, and resource
 										names, and scopes text and graphics operations.
 									</p>
-								</div>
-								<div>
+								</api-layer>
+								<api-layer>
 									<span>STRUCTURE</span>
 									<h3>Object model & builder</h3>
 									<p>
@@ -279,7 +280,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 										objects when you need to author names, arrays, dictionaries,
 										and streams directly.
 									</p>
-								</div>
+								</api-layer>
 							</api-layers>
 							<p>
 								Both paths produce a <code>PdfDocument</code>: a version, a
@@ -292,7 +293,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 				</section>
 				<section id="explore" data-exploration>
 					<section-heading>
-						<div>
+						<heading-copy>
 							<small>
 								{chapter === "overview"
 									? "LET’S MAKE IT CONCRETE"
@@ -311,7 +312,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 													? "Give the reader instructions."
 													: "Author. Compile. Serialize. Parse."}
 							</h2>
-						</div>
+						</heading-copy>
 						<span aria-hidden="true">↘</span>
 					</section-heading>
 					{chapter === "overview" && (
@@ -338,29 +339,29 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 								<code>{builderCode}</code>
 							</pre>
 							<journey-strip>
-								<div>
+								<journey-stage>
 									<span>01</span>
 									<strong>Author</strong>
 									<code>builder</code>
-								</div>
+								</journey-stage>
 								<span>→</span>
-								<div>
+								<journey-stage>
 									<span>02</span>
 									<strong>Compile</strong>
 									<code>PdfDocument</code>
-								</div>
+								</journey-stage>
 								<span>→</span>
-								<div>
+								<journey-stage>
 									<span>03</span>
 									<strong>Serialize</strong>
 									<code>Uint8Array</code>
-								</div>
+								</journey-stage>
 								<span>→</span>
-								<div>
+								<journey-stage>
 									<span>04</span>
 									<strong>Parse</strong>
 									<code>PdfDocument</code>
-								</div>
+								</journey-stage>
 							</journey-strip>
 							<p>
 								<code>serializePdf()</code> validates the graph, sorts indirect
@@ -371,7 +372,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 						</>
 					)}
 					<specimen-download>
-						<div>
+						<download-copy>
 							<span aria-hidden="true">↓</span>
 							<p>
 								<strong>Take the specimen with you.</strong>
@@ -380,7 +381,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 									bytes
 								</small>
 							</p>
-						</div>
+						</download-copy>
 						<button type="button" onClick={() => downloadSpecimen(x)}>
 							Download PDF <span aria-hidden="true">↗</span>
 						</button>
@@ -490,10 +491,10 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 							<strong>{previous.title}</strong>
 						</a>
 					) : (
-						<div>
+						<nav-introduction>
 							<small>START WITH CURIOSITY.</small>
 							<strong>Leave with a mental model.</strong>
-						</div>
+						</nav-introduction>
 					)}
 					{next ? (
 						<a href={chapterHref(next.id)} data-next>
@@ -512,7 +513,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 					)}
 				</nav>
 			</article>
-			<footer>
+			<guide-footer>
 				<span>
 					mondrian <i /> A little clarity, one object at a time.
 				</span>
@@ -523,7 +524,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 				>
 					Open source. Open format. ↗
 				</a>
-			</footer>
+			</guide-footer>
 		</lesson-page>
 	)
 }

@@ -4,7 +4,7 @@ object-explorer.class {
 	border-radius: 8px;
 	overflow: hidden;
 	background: #fcfbf8;
-	> header {
+	> explorer-heading {
 		padding: 20px 22px;
 		border-bottom: 1px solid var(--line);
 		display: flex;

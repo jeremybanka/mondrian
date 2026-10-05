@@ -1,3 +1,10 @@
+import type {
+	PdfCatalogDictionary,
+	PdfDocument,
+	PdfPageDictionary,
+	PdfPagesDictionary,
+	PdfStream,
+} from "mondrian.pdf"
 import {
 	array,
 	ascii,
@@ -8,13 +15,6 @@ import {
 	serializePdf,
 	serializePdfObjectBody,
 	stream,
-} from "mondrian.pdf"
-import type {
-	PdfCatalogDictionary,
-	PdfDocument,
-	PdfPageDictionary,
-	PdfPagesDictionary,
-	PdfStream,
 } from "mondrian.pdf"
 
 // A deliberately uncompressed, one-page PDF: the lesson inspects these exact bytes.

@@ -22,10 +22,20 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 ## Static checks
 
 - `check:fmt`: `dprint check`.
+- `check:eslint`: `vp run -r check:eslint`; the guide uses the npm `atom.io/eslint-plugin` and `lasertag/eslint-plugin` with typed parsing and import checks.
 - `check:public-types`: `vp run -r check:public-types`.
-- `check:vp`: `vp check --no-fmt`.
+- `check:lasertag`: `vp run -r check:lasertag`; checks component-owned CSS Modules against their render structure.
+- `check:vp`: `vp check --no-fmt && vp run -r check:tsc`.
 
-`check:vp` invokes the configured Vite Plus validation pipeline; `check:fmt` handles formatting separately.
+`check:vp` invokes the configured Vite Plus validation pipeline and package TypeScript checks. Formatting, ESLint, and Lasertag each have a separate CI job and canonical command.
+
+## Command notes
+
+The private PDF field guide in `apps/pdf-guide` provides `dev` and `preview` for the Vite development server and built-site preview. Run `pnpm --filter @mondrian/pdf-guide dev` from the root; it builds the Mondrian dependency first. Its `check` command aggregates `check:eslint`, `check:tsc`, and `check:lasertag`. ESLint follows atom.io’s flat-config approach, including a compatibility bridge in `.pnpmfile.mjs` that gives TypeScript ESLint v8 the TypeScript 6 compiler API while the repository’s `tsc` remains on TypeScript 7.
+
+Release compatibility checks need access to the Git remote and release tags.
+
+Coverage comparison requires a captured default-branch baseline or access to the hosted baseline through `RECOVERAGE_CLOUD_TOKEN`. Coverage comparison retains the existing Recoverage capture-and-diff behavior; this repository does not expose a separate upload-only command.
 
 ## Migration
 

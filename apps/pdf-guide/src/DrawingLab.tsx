@@ -1,9 +1,10 @@
-import { useI, useO } from "atom.io/react"
-import { LinePath } from "@visx/shape"
 import { scaleLinear } from "@visx/scale"
-import { drawingStepAtom, drawingXAtom } from "./state.ts"
-import { drawingCommands } from "./specimen.ts"
+import { LinePath } from "@visx/shape"
+import { useI, useO } from "atom.io/react"
+
 import css from "./DrawingLab.module.css"
+import { drawingCommands } from "./specimen.ts"
+import { drawingStepAtom, drawingXAtom } from "./state.ts"
 
 const explanations = [
 	"q saves the current graphics state so our color choice stays local.",
@@ -27,10 +28,10 @@ export function DrawingLab() {
 	const sy = scaleLinear({ domain: [0, 360], range: [324, 24] })
 	return (
 		<drawing-lab className={css.class}>
-			<header>
+			<lab-heading>
 				<span>THE CONTENT STREAM, IN MOTION</span>
 				<small>300 × 360 pt · unrotated page</small>
-			</header>
+			</lab-heading>
 			<lab-panels>
 				<program-panel>
 					<ol aria-label="Drawing commands">
@@ -155,10 +156,10 @@ export function DrawingLab() {
 					/>
 				</canvas-panel>
 			</lab-panels>
-			<footer aria-live="polite">
+			<lab-explanation aria-live="polite">
 				<strong>{drawingCommands(x)[step]?.split(" ").at(-1)}</strong>
 				<p>{explanations[step]}</p>
-			</footer>
+			</lab-explanation>
 		</drawing-lab>
 	)
 }

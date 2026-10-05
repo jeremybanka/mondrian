@@ -1,9 +1,10 @@
-import { useI, useO } from "atom.io/react"
 import { scaleLinear } from "@visx/scale"
 import { Bar } from "@visx/shape"
-import { drawingXAtom, fileSectionAtom } from "./state.ts"
-import { fileSections } from "./specimen.ts"
+import { useI, useO } from "atom.io/react"
+
 import css from "./FileExplorer.module.css"
+import { fileSections } from "./specimen.ts"
+import { drawingXAtom, fileSectionAtom } from "./state.ts"
 
 export function FileExplorer() {
 	const x = useO(drawingXAtom)
@@ -16,10 +17,10 @@ export function FileExplorer() {
 	const scale = scaleLinear({ domain: [0, length], range: [0, 700] })
 	return (
 		<file-explorer className={css.class}>
-			<header>
+			<explorer-heading>
 				<span>THE FILE, BYTE BY BYTE</span>
 				<small>{length} bytes · PDF 1.7</small>
-			</header>
+			</explorer-heading>
 			<svg
 				viewBox="0 0 700 45"
 				role="img"
@@ -53,22 +54,22 @@ export function FileExplorer() {
 				))}
 			</nav>
 			<file-detail>
-				<div>
+				<section-description>
 					<small>
 						OFFSET {section.start} → {section.end - 1}
 					</small>
 					<h3>{section.label}</h3>
 					<p>{section.note}</p>
 					<span>{section.end - section.start} bytes in this section</span>
-				</div>
+				</section-description>
 				<pre aria-label={`${section.label} PDF syntax`}>
 					<code>{section.syntax}</code>
 				</pre>
 			</file-detail>
-			<footer>
+			<explorer-note>
 				<span aria-hidden="true">↳</span> Positions are zero-based byte offsets,
 				not Unicode character counts.
-			</footer>
+			</explorer-note>
 		</file-explorer>
 	)
 }

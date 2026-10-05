@@ -103,7 +103,7 @@ lesson-page.class {
 				border-block: 1px solid var(--line);
 				padding: 26px 0;
 				gap: 24px;
-				> div {
+				> concept-note {
 					padding-right: 20px;
 					border-right: 1px solid var(--line);
 					&:last-child {
@@ -184,7 +184,7 @@ lesson-page.class {
 					grid-template-columns: 1fr 1fr;
 					gap: 20px;
 					margin: 24px 0;
-					> div {
+					> api-layer {
 						border: 1px solid var(--line);
 						border-radius: 5px;
 						padding: 22px;
@@ -219,7 +219,7 @@ lesson-page.class {
 				align-items: center;
 				gap: 15px;
 				margin-bottom: 18px;
-				> div {
+				> heading-copy {
 					> small {
 						font-size: 8px;
 						color: #8f7ba2;
@@ -264,7 +264,7 @@ lesson-page.class {
 				border-radius: 5px;
 				gap: 8px;
 				margin: 22px 0;
-				> div {
+				> journey-stage {
 					display: flex;
 					flex-direction: column;
 					gap: 8px;
@@ -294,7 +294,7 @@ lesson-page.class {
 				margin-top: 18px;
 				border: 1px solid var(--line);
 				border-radius: 5px;
-				> div {
+				> download-copy {
 					display: flex;
 					gap: 15px;
 					align-items: center;
@@ -377,7 +377,7 @@ lesson-page.class {
 			gap: 20px;
 			padding: 27px 0;
 			border-block: 1px solid var(--line);
-			> a, > div {
+			> a, > nav-introduction {
 				text-decoration: none;
 				> small {
 					font-size: 8px;
@@ -403,7 +403,7 @@ lesson-page.class {
 			}
 		}
 	}
-	> footer {
+	> guide-footer {
 		display: flex;
 		justify-content: space-between;
 		gap: 12px;
@@ -467,7 +467,7 @@ lesson-page.class {
 			}
 			> concept-strip {
 				gap: 15px;
-				> div {
+				> concept-note {
 					padding-right: 12px;
 					> h3 {
 						font-size: 22px;
@@ -492,7 +492,7 @@ lesson-page.class {
 				> concept-strip {
 					grid-template-columns: 1fr;
 					gap: 20px;
-					> div {
+					> concept-note {
 						border-right: 0;
 						border-bottom: 1px solid var(--line);
 						padding-bottom: 18px;
@@ -524,7 +524,7 @@ lesson-page.class {
 				}
 			}
 			> [data-exploration] {
-				> section-heading > div > h2 {
+				> section-heading > heading-copy > h2 {
 					font-size: 30px;
 				}
 				> specimen-download {
@@ -537,7 +537,7 @@ lesson-page.class {
 				}
 				> journey-strip {
 					padding: 18px 12px;
-					> div > code {
+					> journey-stage > code {
 						font-size: 7px;
 					}
 				}
@@ -550,7 +550,7 @@ lesson-page.class {
 				padding: 22px;
 			}
 			> [data-pagination] {
-				> a, > div {
+				> a, > nav-introduction {
 					> strong {
 						font-size: 11px;
 						> span {
@@ -560,7 +560,7 @@ lesson-page.class {
 				}
 			}
 		}
-		> footer {
+		> guide-footer {
 			flex-direction: column;
 		}
 	}

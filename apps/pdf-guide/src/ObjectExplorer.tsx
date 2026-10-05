@@ -1,13 +1,14 @@
-import { useI, useO } from "atom.io/react"
 import { LinkVertical } from "@visx/shape"
+import { useI, useO } from "atom.io/react"
+
 import { objectDetails } from "./chapters.ts"
+import css from "./ObjectExplorer.module.css"
+import { objectModel, objectSyntax } from "./specimen.ts"
 import {
 	drawingXAtom,
 	representationAtom,
 	selectedObjectAtom,
 } from "./state.ts"
-import { objectModel, objectSyntax } from "./specimen.ts"
-import css from "./ObjectExplorer.module.css"
 
 const nodes = [
 	{ id: 1, x: 220, y: 20 },
@@ -33,10 +34,10 @@ export function ObjectExplorer() {
 		objectDetails.find((entry) => entry.id === selected) ?? objectDetails[2]
 	return (
 		<object-explorer className={css.class}>
-			<header>
+			<explorer-heading>
 				<span>ONE DOCUMENT. FIVE CONNECTED OBJECTS.</span>
 				<small>Select an object to inspect it</small>
-			</header>
+			</explorer-heading>
 			<explorer-panels>
 				<graph-panel>
 					<svg

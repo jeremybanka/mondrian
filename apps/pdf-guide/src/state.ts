@@ -1,14 +1,17 @@
 import { atom } from "atom.io"
 
-export const selectedObjectAtom = atom({ key: "guide/object", default: 3 })
+export const selectedObjectAtom = atom<number>({
+	key: "selectedObject",
+	default: 3,
+})
 export const representationAtom = atom<"syntax" | "model">({
-	key: "guide/representation",
+	key: "representation",
 	default: "syntax",
 })
-export const drawingXAtom = atom({ key: "guide/drawing-x", default: 48 })
-export const drawingStepAtom = atom({ key: "guide/drawing-step", default: 4 })
-export const fileSectionAtom = atom({
-	key: "guide/file-section",
+export const drawingXAtom = atom<number>({ key: "drawingX", default: 48 })
+export const drawingStepAtom = atom<number>({ key: "drawingStep", default: 4 })
+export const fileSectionAtom = atom<string>({
+	key: "fileSection",
 	default: "objects",
 })
-export const menuOpenAtom = atom({ key: "guide/menu", default: false })
+export const menuOpenAtom = atom<boolean>({ key: "menuOpen", default: false })

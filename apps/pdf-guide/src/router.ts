@@ -21,12 +21,12 @@ export function chapterHref(chapter: ChapterId): string {
 	return chapter === "overview" ? "/" : `/${chapter}`
 }
 
-export const pathnameAtom = atom({
-	key: "guide/pathname",
+export const pathnameAtom = atom<string>({
+	key: "pathname",
 	default: typeof window === "undefined" ? "/" : window.location.pathname,
 })
-export const chapterSelector = selector({
-	key: "guide/chapter",
+export const chapterSelector = selector<ChapterId | null>({
+	key: "chapter",
 	get: ({ get }) => resolveChapter(get(pathnameAtom)),
 })
 

@@ -7,6 +7,7 @@
 		"change": "changeset",
 		"check": "pnpm run \"/^check:.*/\"",
 		"check:fmt": "dprint check",
+		"check:public-types": "vp run -r check:public-types",
 		"check:vp": "vp check --no-fmt",
 		"cov": "vp run -r cov",
 		"cov:check": "vp run -r --no-cache cov:check",
@@ -17,8 +18,7 @@
 		"test": "vp run -r test",
 		"test:semver": "vp run -r --no-cache test:semver",
 		"test:watch": "vp run -r --parallel --no-cache test:watch",
-		"workflows:update": "node scripts/update-workflows.ts",
-		"check:public-types": "vp run -r check:public-types"
+		"workflows:update": "node scripts/update-workflows.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

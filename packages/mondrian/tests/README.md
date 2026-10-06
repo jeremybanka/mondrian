@@ -1,6 +1,8 @@
 # Test contracts
 
-`public/` defines behavior consumers can depend on across releases.
+`public/` defines behavior consumers can depend on across releases. Break Check restores both the released tests and the inspection source used to read their output. Its pattern is `{tests/public,src/testing/inspection}/**/*`. The compatibility command runs the public tests against source, then type-checks consumer imports. Add assertions here only when a failure means an existing consumer capability has broken.
+
+The independent readers ship through `mondrian.pdf/testing` and live in `src/testing/inspection/`. Break Check restores that source alongside historical assertions and executes it directly, so changing today's reader does not silently change yesterday's observations. Rendering and artifact comparison remain current implementations under test. All dependencies use the package's ordinary manifest and workspace lockfile; there is no separate harness installation. Dependency upgrades must keep the restored inspection source runnable.
 
 Keep document setup inline in each public test and limited to the behavior it
 asserts. If a test needs repeated construction, use a local helper named for that

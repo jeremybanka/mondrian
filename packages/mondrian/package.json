@@ -38,13 +38,13 @@
 	],
 	"scripts": {
 		"build": "vp pack",
+		"check:public-types": "tsc --noEmit -p tsconfig.public.json",
 		"cov": "vp test run --coverage",
 		"cov:check": "pnpm run cov && node scripts/check-source-coverage.ts",
 		"test": "vp test",
 		"test:public": "vp test run tests/public --passWithNoTests=false",
 		"test:semver": "break-check",
-		"test:watch": "vp test watch",
-		"check:public-types": "tsc --noEmit -p tsconfig.public.json"
+		"test:watch": "vp test watch"
 	},
 	"dependencies": {
 		"@embedpdf/pdfium": "2.15.1",

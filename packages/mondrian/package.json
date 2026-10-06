@@ -40,7 +40,7 @@
 		"build": "vp pack",
 		"check:public-types": "tsc --noEmit -p tsconfig.public.json",
 		"cov": "vp test run --coverage",
-		"cov:check": "pnpm run cov && node scripts/check-source-coverage.ts",
+		"cov:check": "pnpm run cov && recoverage",
 		"test": "vp test",
 		"test:public": "vp test run tests/public --passWithNoTests=false",
 		"test:semver": "break-check",

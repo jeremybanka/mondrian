@@ -60,6 +60,10 @@ export interface PreparePdfForPrintOptions {
 	readonly blending: "destination" | "preserve-source"
 	/** Aggregate decoded image/mask bytes per preparation; defaults to 512 MiB, at most 1 GiB. */
 	readonly maxDecodedImageBytes?: number
+	/** Unique Form/inherited-state/page-resource contexts; defaults to 4096, at most 65536. */
+	readonly maxFormContexts?: number
+	/** Aggregate decoded and generated Form program bytes; defaults to 64 MiB, at most 1 GiB. */
+	readonly maxFormBytes?: number
 }
 
 export interface PdfPrintConversion {
@@ -169,6 +173,26 @@ export async function preparePdfForPrint(
 			"maxDecodedImageBytes must be a positive integer of at most 1 GiB",
 		)
 	let decodedBytes = 0
+	const maxFormContexts = options.maxFormContexts ?? 4096
+	const maxFormBytes = options.maxFormBytes ?? 64 * 1024 * 1024
+	if (
+		!Number.isSafeInteger(maxFormContexts) ||
+		maxFormContexts < 1 ||
+		maxFormContexts > 65536
+	)
+		throw new RangeError(
+			"maxFormContexts must be a positive integer of at most 65536",
+		)
+	if (
+		!Number.isSafeInteger(maxFormBytes) ||
+		maxFormBytes < 1 ||
+		maxFormBytes > 1024 * 1024 * 1024
+	)
+		throw new RangeError(
+			"maxFormBytes must be a positive integer of at most 1 GiB",
+		)
+	let formContexts = 0,
+		formBytes = 0
 	const countedMasks = new WeakSet<object>()
 	const decodedMasks = new WeakMap<PdfStream, PlateRaster>()
 	const objects = [...document.objects],
@@ -395,6 +419,109 @@ export async function preparePdfForPrint(
 	const activeForms = new Set<PdfStream>(),
 		activePages = new Set<PdfDictionary>()
 	const imageCache = new WeakMap<PdfStream, Map<string, PdfReference>>()
+	const formCache = new WeakMap<
+		PdfStream,
+		WeakMap<PdfDictionary, Map<string, PdfReference>>
+	>()
+	const paintKeys = new WeakMap<SourcePaint, string>()
+	const paintKey = (paint: SourcePaint): string => {
+		let key = paintKeys.get(paint)
+		if (key === undefined) {
+			key = JSON.stringify([
+				paint.space.kind,
+				sourceKey(paint.space),
+				paint.components,
+				paint.implicit ?? false,
+			])
+			paintKeys.set(paint, key)
+		}
+		return key
+	}
+	const normalizeForm = async (
+		value: PdfStream,
+		state: State,
+		location: string,
+		pageResources: PdfDictionary,
+	): Promise<PdfReference> => {
+		if (activeForms.has(value) || activeForms.size > 50)
+			throw new TypeError("Cyclic or excessively nested Form")
+		if (
+			field(value, "Group") !== undefined ||
+			field(value, "OC") !== undefined ||
+			field(value, "Ref") !== undefined
+		)
+			throw new TypeError(
+				"Form transparency groups, optional content, and reference XObjects are unsupported",
+			)
+		const pages =
+			formCache.get(value) ??
+			new WeakMap<PdfDictionary, Map<string, PdfReference>>()
+		formCache.set(value, pages)
+		const cache = pages.get(pageResources) ?? new Map<string, PdfReference>()
+		pages.set(pageResources, cache)
+		// Geometry, clipping, opacity, fonts, and overprint remain inherited PDF
+		// state; only source paint, intent, and text mode influence normalization.
+		const key = JSON.stringify([
+			paintKey(state.fill),
+			paintKey(state.stroke),
+			state.intent,
+			state.textMode,
+		])
+		const cached = cache.get(key)
+		if (cached !== undefined) return cached
+		if (++formContexts > maxFormContexts)
+			throw new RangeError(
+				`${location}: unique Form contexts exceed maxFormContexts`,
+			)
+		const remaining = maxFormBytes - formBytes
+		if (remaining < 1)
+			throw new RangeError(`${location}: Form programs exceed maxFormBytes`)
+		let program: Uint8Array
+		try {
+			program = decodedPdfStream(
+				value,
+				resolve,
+				Math.min(16 * 1024 * 1024, remaining),
+			)
+		} catch (error) {
+			throw new TypeError(
+				`${location}: cannot decode Form within maxFormBytes and the 16 MiB stream limit`,
+				{ cause: error },
+			)
+		}
+		formBytes += program.length
+		activeForms.add(value)
+		try {
+			const nested = await normalizeScope(
+				Buffer.from(program).toString("latin1"),
+				field(value, "Resources") === undefined
+					? pageResources
+					: dict(dictionaryValue(value, "Resources")),
+				state,
+				location,
+				pageResources,
+			)
+			if (nested.data.length > maxFormBytes - formBytes)
+				throw new RangeError(`${location}: Form programs exceed maxFormBytes`)
+			formBytes += nested.data.length
+			const replacement = replaceEntries(value, {
+				Resources: nested.resources,
+				Filter: undefined,
+				DecodeParms: undefined,
+			})
+			const result = add(
+				stream(
+					replacement.entries,
+					nested.data,
+					...(replacement.byteEntries ?? []),
+				),
+			)
+			cache.set(key, result)
+			return result
+		} finally {
+			activeForms.delete(value)
+		}
+	}
 	const normalizeImage = async (
 		image: PdfStream,
 		resources: PdfDictionary,
@@ -669,24 +796,8 @@ export async function preparePdfForPrint(
 						)
 					}
 				} else if (subtype === "/Form") {
-					if (activeForms.has(value) || activeForms.size > 50)
-						throw new TypeError("Cyclic or excessively nested Form")
-					if (
-						field(value, "Group") !== undefined ||
-						field(value, "OC") !== undefined ||
-						field(value, "Ref") !== undefined
-					)
-						throw new TypeError(
-							"Form transparency groups, optional content, and reference XObjects are unsupported",
-						)
-					activeForms.add(value)
-					const nested = await normalizeScope(
-						Buffer.from(
-							decodedPdfStream(value, resolve, 16 * 1024 * 1024),
-						).toString("latin1"),
-						field(value, "Resources") === undefined
-							? pageResources
-							: dict(dictionaryValue(value, "Resources")),
+					result = await normalizeForm(
+						value,
 						state,
 						`${location}, Form ${alias}`,
 						pageResources,
@@ -696,19 +807,6 @@ export async function preparePdfForPrint(
 							{ cause: error },
 						)
 					})
-					activeForms.delete(value)
-					const replacement = replaceEntries(value, {
-						Resources: nested.resources,
-						Filter: undefined,
-						DecodeParms: undefined,
-					})
-					result = add(
-						stream(
-							replacement.entries,
-							nested.data,
-							...(replacement.byteEntries ?? []),
-						),
-					)
 				} else throw new TypeError(`Unsupported XObject ${alias} subtype`)
 				const newAlias = `/PrintX${retainedXObjects.size}`
 				retainedXObjects.set(newAlias, result)

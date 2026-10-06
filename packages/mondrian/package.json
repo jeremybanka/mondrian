@@ -44,7 +44,7 @@
 		"test:public": "vp test run tests/public --passWithNoTests=false",
 		"test:semver": "break-check",
 		"test:watch": "vp test watch",
-		"check:public-types": "tsc --noEmit -p tests/public/tsconfig.json"
+		"check:public-types": "tsc --noEmit -p tsconfig.public.json"
 	},
 	"dependencies": {
 		"@embedpdf/pdfium": "2.15.1",

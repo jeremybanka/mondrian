@@ -1,6 +1,6 @@
 {
 	"tagPattern": "refs/tags/mondrian.pdf@",
 	"testPattern": "{tests/public,src/testing/inspection}/**/*",
-	"testCommand": "pnpm test:public",
+	"testCommand": "pnpm test:public && pnpm check:public-types",
 	"certifyCommand": "grep -q -E '^\"mondrian\\.pdf\": (minor|major)$' ../../.changeset/*.md"
 }

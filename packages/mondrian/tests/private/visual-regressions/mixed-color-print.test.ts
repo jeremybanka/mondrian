@@ -11,6 +11,36 @@ import {
 } from "../../public/fixtures/mixed-color/document.ts"
 import { taggedRgbImageExample } from "../../../examples/mixed-color-images.ts"
 import { visualArtifactOptions } from "./setup.ts"
+import { previewPdfPlates } from "mondrian.pdf/testing"
+import { opacityGraphicsStateDocument } from "../../public/fixtures/mixed-color/opacity.ts"
+import { vectorIntentDocument } from "../../public/fixtures/mixed-color/vector-intent.ts"
+
+it("proofs ordinary opacity with AIS false on the composite and all six ink plates", async () => {
+	const prepared = await preparePdfForPrint(
+		parsePdf(serializePdf(opacityGraphicsStateDocument())),
+		printOptions,
+	)
+	await expect(serializePdf(prepared.document)).toMatchPdfArtifact(
+		"ordinary-opacity",
+		visualArtifactOptions,
+	)
+	for (const plate of previewPdfPlates(prepared.document))
+		await expect(serializePdf(plate.document)).toMatchPdfArtifact(
+			`opacity-${plate.name.toLowerCase().replaceAll(" ", "-")}`,
+			visualArtifactOptions,
+		)
+}, 30_000)
+
+it("proofs intent changes between successive paintings of a reused source color", async () => {
+	const source = vectorIntentDocument(
+		"0 0 0 1 k BT /F 7 Tf 5 70 Td (Relative) Tj ET BT /F 7 Tf 45 70 Td (Absolute) Tj ET /RGB cs 0.8 0.15 0.05 sc 5 15 30 50 re f /Absolute gs 45 15 30 50 re f",
+	)
+	const prepared = await preparePdfForPrint(source, printOptions)
+	await expect(serializePdf(prepared.document)).toMatchPdfArtifact(
+		"paint-time-intent",
+		visualArtifactOptions,
+	)
+})
 
 it("proofs RGB handoff, an embedded-font RGB label, destination CMYK, and six numeric ink plates", async () => {
 	const authored = taggedRgbImageExample(

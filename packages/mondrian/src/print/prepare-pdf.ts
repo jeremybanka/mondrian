@@ -92,12 +92,15 @@ type Space =
 			readonly profile?: Uint8Array | "srgb"
 	  }
 	| { readonly kind: "spot"; readonly alias: string }
+interface SourcePaint {
+	readonly space: Space
+	readonly components: readonly number[]
+	readonly implicit?: true
+}
 interface State {
-	fill: Space
-	stroke: Space
+	fill: SourcePaint
+	stroke: SourcePaint
 	intent: PdfRenderingIntent
-	implicitFill: boolean
-	implicitStroke: boolean
 	textMode: TextMode
 }
 const hash = (bytes: Uint8Array) =>
@@ -500,6 +503,82 @@ export async function preparePdfForPrint(
 				throw new TypeError(`Missing ${category} resource ${key}`)
 			return value
 		}
+		// Source paint is immutable graphics state. Cache conversion by paint and
+		// active intent, but emit its ink amounts immediately before each painting.
+		const convertedPaints = new WeakMap<
+			SourcePaint,
+			Map<PdfRenderingIntent, readonly string[]>
+		>()
+		const emitPaint = async (channel: "fill" | "stroke"): Promise<void> => {
+			const paint = state[channel],
+				{ space, components } = paint
+			if (space.kind === "spot") return
+			const cache =
+				convertedPaints.get(paint) ??
+				new Map<PdfRenderingIntent, readonly string[]>()
+			convertedPaints.set(paint, cache)
+			let operands = cache.get(state.intent)
+			if (operands === undefined) {
+				const paintLocation = paint.implicit
+					? `${location}, implicit ${channel}`
+					: location
+				if (
+					space.kind === "cmyk" &&
+					options.processNumbers === "preserve" &&
+					(space.profile === undefined ||
+						(space.profile instanceof Uint8Array &&
+							sameBytes(space.profile, options.destinationProfile)))
+				) {
+					if (
+						space.profile === undefined &&
+						declaredProcessProfile !== undefined &&
+						!sameBytes(declaredProcessProfile, options.destinationProfile)
+					)
+						throw new TypeError(
+							"Declared CMYK output profile differs from the destination; select explicit process retargeting",
+						)
+					operands = components.map(formatPdfNumber)
+					conversions.push({
+						location: paintLocation,
+						source: sourceKey({
+							...space,
+							...(space.profile === undefined &&
+							declaredProcessProfile !== undefined
+								? { profile: declaredProcessProfile }
+								: {}),
+						}),
+						action: "preserve-process",
+						renderingIntent: state.intent,
+					})
+				} else if (space.kind === "gray" && options.gray === "black-only") {
+					operands = ["0", "0", "0", formatPdfNumber(1 - components[0]!)]
+					conversions.push({
+						location: paintLocation,
+						source: sourceKey(space),
+						action: "gray-to-black",
+						renderingIntent: state.intent,
+					})
+				} else if (
+					space.kind === "cmyk" &&
+					components[0] === 0 &&
+					components[1] === 0 &&
+					components[2] === 0 &&
+					typeof options.processNumbers === "object"
+				) {
+					operands = components.map(formatPdfNumber)
+				} else {
+					const data = await convert(
+						Uint8Array.from(components, (v) => Math.round(v * 255)),
+						space,
+						state.intent,
+						paintLocation,
+					)
+					operands = [...data].map((v) => formatPdfNumber(v / 255))
+				}
+				cache.set(state.intent, operands)
+			}
+			commands.push(`${operands.join(" ")} ${channel === "fill" ? "k" : "K"}`)
+		}
 		for (const instruction of parsePlateContent(source)) {
 			let { op, operands } = instruction
 			if (
@@ -529,93 +608,41 @@ export async function preparePdfForPrint(
 				)
 					? name(alias.slice(1))
 					: resource("ColorSpace", alias)
-				const space = readSpace(color, resources)
-				state[channel] = space.kind === "spot" ? { kind: "spot", alias } : space
-				state[channel === "fill" ? "implicitFill" : "implicitStroke"] = false
-				if (space.kind !== "spot") {
-					const count = space.kind === "rgb" ? 3 : space.kind === "gray" ? 1 : 4
-					const defaults = new Uint8Array(count)
-					if (space.kind === "cmyk") defaults[3] = 255
-					const data = await convert(defaults, space, state.intent, location)
-					op = channel === "stroke" ? "K" : "k"
-					operands = [...data].map((v) => formatPdfNumber(v / 255))
-				}
+				const resolved = readSpace(color, resources)
+				const space: Space =
+					resolved.kind === "spot" ? { kind: "spot", alias } : resolved
+				const components =
+					space.kind === "spot"
+						? [1]
+						: space.kind === "cmyk"
+							? [0, 0, 0, 1]
+							: space.kind === "rgb"
+								? [0, 0, 0]
+								: [0]
+				state[channel] = { space, components }
+				if (space.kind !== "spot") continue
 			} else if (
 				["rg", "RG", "g", "G", "k", "K", "sc", "SC", "scn", "SCN"].includes(op)
 			) {
-				const stroke = op === op.toUpperCase(),
-					channel = stroke ? "stroke" : "fill",
+				const channel = op === op.toUpperCase() ? "stroke" : "fill",
 					lower = op.toLowerCase()
-				if (lower === "rg") state[channel] = { kind: "rgb" }
-				if (lower === "g") state[channel] = { kind: "gray" }
-				if (lower === "k") state[channel] = { kind: "cmyk" }
-				state[channel === "fill" ? "implicitFill" : "implicitStroke"] = false
-				const space = state[channel]
-				if (space.kind !== "spot") {
-					const count =
-							space.kind === "rgb" ? 3 : space.kind === "gray" ? 1 : 4,
-						values = operands.map(Number)
-					if (
-						values.length !== count ||
-						values.some((v) => !Number.isFinite(v) || v < 0 || v > 1)
-					)
-						throw new TypeError("Invalid normalized print color components")
-					if (
-						space.kind === "cmyk" &&
-						options.processNumbers === "preserve" &&
-						(space.profile === undefined ||
-							(space.profile instanceof Uint8Array &&
-								sameBytes(space.profile, options.destinationProfile)))
-					) {
-						if (
-							space.profile === undefined &&
-							declaredProcessProfile !== undefined &&
-							!sameBytes(declaredProcessProfile, options.destinationProfile)
-						)
-							throw new TypeError(
-								"Declared CMYK output profile differs from the destination; select explicit process retargeting",
-							)
-						conversions.push({
-							location,
-							source: sourceKey({
-								...space,
-								...(space.profile === undefined &&
-								declaredProcessProfile !== undefined
-									? { profile: declaredProcessProfile }
-									: {}),
-							}),
-							action: "preserve-process",
-							renderingIntent: state.intent,
-						})
-						op = stroke ? "K" : "k"
-					} else if (space.kind === "gray" && options.gray === "black-only") {
-						op = stroke ? "K" : "k"
-						operands = ["0", "0", "0", formatPdfNumber(1 - values[0]!)]
-						conversions.push({
-							location,
-							source: sourceKey(space),
-							action: "gray-to-black",
-							renderingIntent: state.intent,
-						})
-					} else if (
-						space.kind === "cmyk" &&
-						values[0] === 0 &&
-						values[1] === 0 &&
-						values[2] === 0 &&
-						typeof options.processNumbers === "object"
-					) {
-						op = stroke ? "K" : "k"
-					} else {
-						const data = await convert(
-							Uint8Array.from(values, (v) => Math.round(v * 255)),
-							space,
-							state.intent,
-							location,
-						)
-						op = stroke ? "K" : "k"
-						operands = [...data].map((v) => formatPdfNumber(v / 255))
-					}
-				}
+				const space: Space =
+					lower === "rg"
+						? { kind: "rgb" }
+						: lower === "g"
+							? { kind: "gray" }
+							: lower === "k"
+								? { kind: "cmyk" }
+								: state[channel].space
+				const components = operands.map(Number),
+					count = space.kind === "rgb" ? 3 : space.kind === "cmyk" ? 4 : 1
+				if (
+					components.length !== count ||
+					components.some((v) => !Number.isFinite(v) || v < 0 || v > 1)
+				)
+					throw new TypeError("Invalid normalized print color components")
+				state[channel] = { space, components }
+				if (space.kind !== "spot") continue
 			} else if (op === "Do") {
 				const alias = tokenName(operands[0]),
 					value = resolve(resource("XObject", alias))
@@ -700,22 +727,7 @@ export async function preparePdfForPrint(
 					: undefined)
 			if (painting)
 				for (const channel of ["fill", "stroke"] as const)
-					if (
-						painting[channel] &&
-						state[channel === "fill" ? "implicitFill" : "implicitStroke"]
-					) {
-						const data = await convert(
-							Uint8Array.of(0),
-							{ kind: "gray" },
-							state.intent,
-							`${location}, implicit ${channel}`,
-						)
-						commands.push(
-							`${[...data].map((v) => formatPdfNumber(v / 255)).join(" ")} ${channel === "fill" ? "k" : "K"}`,
-						)
-						state[channel === "fill" ? "implicitFill" : "implicitStroke"] =
-							false
-					}
+					if (painting[channel]) await emitPaint(channel)
 			commands.push(`${operands.join(" ")} ${op}`)
 		}
 		if (stack.length) throw new TypeError("Unbalanced q")
@@ -843,11 +855,13 @@ export async function preparePdfForPrint(
 					source,
 					resources,
 					{
-						fill: { kind: "gray" },
-						stroke: { kind: "gray" },
+						fill: { space: { kind: "gray" }, components: [0], implicit: true },
+						stroke: {
+							space: { kind: "gray" },
+							components: [0],
+							implicit: true,
+						},
 						intent: options.renderingIntent,
-						implicitFill: true,
-						implicitStroke: true,
 						textMode: 0,
 					},
 					location,

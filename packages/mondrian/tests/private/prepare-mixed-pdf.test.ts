@@ -7,6 +7,8 @@ import {
 	stream,
 	serializePdf,
 	parsePdf,
+	createPdfDocument,
+	rectangle,
 } from "../../src/index.ts"
 import { preparePdfForPrint } from "../../src/print.ts"
 import { rawDocument } from "./fixtures/plates.ts"
@@ -17,6 +19,130 @@ import {
 } from "../public/fixtures/mixed-color/document.ts"
 import type { PdfDocument } from "../../src/index.ts"
 import { renderPdfPlateCoverage } from "../../src/testing.ts"
+import { readPlateImage } from "../../src/testing/plate-image.ts"
+
+function preparedRaster(document: PdfDocument) {
+	const values = new Map(
+		document.objects.map((object) => [object.objectNumber, object.value]),
+	)
+	const image = document.objects
+		.map((object) => object.value)
+		.find(
+			(value) =>
+				value !== null &&
+				typeof value === "object" &&
+				value.kind === "stream" &&
+				value.entries.ColorSpace !== null &&
+				typeof value.entries.ColorSpace === "object" &&
+				value.entries.ColorSpace.kind === "name" &&
+				value.entries.ColorSpace.value === "DeviceCMYK",
+		)
+	if (image === null || typeof image !== "object" || image.kind !== "stream")
+		throw new Error("Expected prepared CMYK image")
+	return readPlateImage(image, (value) =>
+		value !== null && typeof value === "object" && value.kind === "reference"
+			? values.get(value.objectNumber)
+			: value,
+	)
+}
+
+it("keeps already prepared CMYK samples and source alpha while associating their declared destination", async () => {
+	const data = Uint8Array.of(0, 0, 0, 99, 32, 64, 128, 50),
+		alpha = Uint8Array.of(64, 255)
+	const pdf = createPdfDocument({
+		outputIntent: {
+			profile: destinationProfile,
+			identifier: "Test destination",
+		},
+	})
+	const image = pdf.image({
+		width: 2,
+		height: 1,
+		data,
+		alpha,
+		destinationProfile,
+	})
+	pdf.setPages(
+		pdf.page({
+			mediaBox: rectangle(0, 0, 80, 80),
+			content: [pdf.graphics((g) => g.drawImage(image, 0, 0, 80, 80))],
+		}),
+	)
+	const preserved = await preparePdfForPrint(pdf.compile(), printOptions)
+	expect(preparedRaster(preserved.document).data).toEqual(data)
+	expect(preparedRaster(preserved.document).alpha!.data).toEqual(alpha)
+	const tagged = rawDocument((objects) => ({
+		resources: dictionary({
+			XObject: dictionary({
+				Photo: objects.add(
+					stream(
+						{
+							Subtype: name("Image"),
+							Width: 2,
+							Height: 1,
+							BitsPerComponent: 8,
+							ColorSpace: array(
+								name("ICCBased"),
+								objects.add(stream({ N: 4 }, destinationProfile)),
+							),
+						},
+						data,
+					),
+				),
+			}),
+		}),
+		contents: [stream({}, ascii("q 80 0 0 80 0 0 cm /Photo Do Q"))],
+	}))
+	expect(
+		preparedRaster((await preparePdfForPrint(tagged, printOptions)).document)
+			.data,
+	).toEqual(data)
+})
+
+it("applies explicit gray-to-black image interpretation without changing its independent alpha", async () => {
+	const alpha = Uint8Array.of(0, 64, 128, 255)
+	const source = rawDocument((objects) => {
+		const mask = objects.add(
+			stream(
+				{
+					Subtype: name("Image"),
+					Width: 4,
+					Height: 1,
+					BitsPerComponent: 8,
+					ColorSpace: name("DeviceGray"),
+				},
+				alpha,
+			),
+		)
+		return {
+			resources: dictionary({
+				XObject: dictionary({
+					Gray: objects.add(
+						stream(
+							{
+								Subtype: name("Image"),
+								Width: 4,
+								Height: 1,
+								BitsPerComponent: 8,
+								ColorSpace: name("DeviceGray"),
+								SMask: mask,
+							},
+							Uint8Array.of(0, 64, 128, 255),
+						),
+					),
+				}),
+			}),
+			contents: [stream({}, ascii("q 80 0 0 80 0 0 cm /Gray Do Q"))],
+		}
+	})
+	const raster = preparedRaster(
+		(await preparePdfForPrint(source, printOptions)).document,
+	)
+	expect(raster.data).toEqual(
+		Uint8Array.of(0, 0, 0, 255, 0, 0, 0, 191, 0, 0, 0, 127, 0, 0, 0, 0),
+	)
+	expect(raster.alpha!.data).toEqual(alpha)
+})
 
 function pageProgram(document: PdfDocument): string {
 	return document.objects

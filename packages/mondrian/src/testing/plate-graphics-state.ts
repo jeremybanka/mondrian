@@ -18,7 +18,7 @@ interface DecodedPlateGraphicsState {
 }
 
 const allowedKeys = new Set(
-	"Type OP op OPM ca CA BM SMask LW LC LJ ML D RI FL SA TK"
+	"Type OP op OPM ca CA BM SMask AIS LW LC LJ ML D RI FL SA TK"
 		.split(" ")
 		.map((key) => `/${key}`),
 )
@@ -55,6 +55,13 @@ export function decodePlateGraphicsState(
 		),
 	)
 	const textKnockout = fields.get("/TK")
+	const alphaSource = fields.get("/AIS")
+	if (alphaSource !== undefined && typeof alphaSource !== "boolean")
+		throw new TypeError("Invalid AIS alpha source flag")
+	if (alphaSource === true)
+		throw new TypeError(
+			"Alpha-as-shape (AIS true) is unsupported in plate previews",
+		)
 	if (textKnockout !== undefined && typeof textKnockout !== "boolean")
 		throw new TypeError(
 			"Text knockout must be a boolean set outside a text object",

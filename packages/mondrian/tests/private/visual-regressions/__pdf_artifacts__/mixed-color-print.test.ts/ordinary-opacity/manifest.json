@@ -1,0 +1,18 @@
+{
+	"formatVersion": 1,
+	"renderer": {
+		"name": "pdfium",
+		"version": "2.15.1",
+		"wasmSha256": "5e4cd023c3dad4a895b3571ca573d3fc51bac6de48360d95283134385b954eaa"
+	},
+	"resolution": 96,
+	"background": "#ffffff",
+	"renderAnnotations": true,
+	"pages": [
+		{
+			"file": "page-001.png",
+			"width": 107,
+			"height": 107
+		}
+	]
+}

@@ -898,10 +898,22 @@ export async function preparePdfForPrint(
 					const space = readSpace(cs, resources)
 					if (space.kind !== "rgb" && space.kind !== "cmyk")
 						throw new TypeError("Unsupported page blending color space")
+					// Native CMYK uses the same caller interpretation as process paint.
+					// Under preservation, absent metadata establishes destination amounts.
+					const groupSpace =
+						space.kind === "cmyk" && space.profile === undefined
+							? {
+									...space,
+									profile:
+										options.processNumbers === "preserve"
+											? (declaredProcessProfile ?? options.destinationProfile)
+											: options.processNumbers.sourceProfile,
+								}
+							: space
 					if (
-						space.kind === "cmyk" &&
-						space.profile instanceof Uint8Array &&
-						!sameBytes(space.profile, options.destinationProfile) &&
+						groupSpace.kind === "cmyk" &&
+						groupSpace.profile instanceof Uint8Array &&
+						!sameBytes(groupSpace.profile, options.destinationProfile) &&
 						(options.blending === "preserve-source" ||
 							options.processNumbers === "preserve")
 					)
@@ -922,7 +934,7 @@ export async function preparePdfForPrint(
 						)
 					groups.push({
 						location,
-						source: sourceKey(space),
+						source: sourceKey(groupSpace),
 						destination: "DeviceCMYK",
 					})
 				}

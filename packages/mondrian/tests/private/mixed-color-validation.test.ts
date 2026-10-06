@@ -221,7 +221,7 @@ it("requires an explicit decision when native process paint's declared printing 
 		}),
 	)
 	await expect(preparePdfForPrint(pdf.compile(), printOptions)).rejects.toThrow(
-		/Declared CMYK output profile differs/,
+		/CMYK blending profile differs.*process retargeting and destination blending/,
 	)
 })
 

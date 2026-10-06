@@ -7,3 +7,5 @@ Support tagged RGB raster authoring with explicit source ICC profiles, straight 
 Extract established ICCBased CMYK channels and baseline CMYK JPEG samples without destination conversion. Support bounded image predictors/default DecodeParms, normalized Decode ranges, and opt-in gray-to-black plate interpretation.
 
 Reuse equivalent Form preparations while preserving inherited paint and page-resource context, with configurable aggregate Form context and program-byte limits.
+
+Validate effective CMYK page blending profile associations against the requested preparation policy, including DeviceCMYK groups interpreted by a declared OutputIntent or caller-supplied process source profile.

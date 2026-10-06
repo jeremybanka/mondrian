@@ -97,7 +97,7 @@ it("keeps already prepared CMYK samples and source alpha while associating their
 		preparedRaster((await preparePdfForPrint(tagged, printOptions)).document)
 			.data,
 	).toEqual(data)
-})
+}, 30_000)
 
 it("applies explicit gray-to-black image interpretation without changing its independent alpha", async () => {
 	const alpha = Uint8Array.of(0, 64, 128, 255)

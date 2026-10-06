@@ -75,13 +75,14 @@ export const chapters = [
 		id: "mondrian",
 		title: "Thinking in Mondrian",
 		short: "From TypeScript to bytes",
-		time: "3 min",
+		time: "4 min",
 		heading: "Give the format a type.",
 		intro:
 			"Mondrian keeps the PDF structure visible. Use its semantic builder to author documents, or its object model when you want direct control over the graph.",
 		sections: [
 			{ id: "idea", label: "Two ways to author" },
 			{ id: "explore", label: "The complete journey" },
+			{ id: "color", label: "Color & print" },
 			{ id: "takeaway", label: "Keep exploring" },
 		],
 	},

@@ -31,11 +31,13 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 
 ## Command notes
 
-The private PDF field guide in `apps/pdf-guide` provides `dev` and `preview` for the Vite development server and built-site preview. Run `pnpm --filter @mondrian/pdf-guide dev` from the root; it builds the Mondrian dependency first. Its `check` command aggregates `check:eslint`, `check:tsc`, and `check:lasertag`. ESLint follows atom.io’s flat-config approach, including a compatibility bridge in `.pnpmfile.mjs` that gives TypeScript ESLint v8 the TypeScript 6 compiler API while the repository’s `tsc` remains on TypeScript 7.
+The private PDF field guide in `apps/pdf-guide` provides `dev` and `preview` for the Vite development server and built-site preview. Run `pnpm --filter @mondrian/pdf-guide dev` from the root; Vite resolves the Mondrian dependency from source, with no prerequisite library build. Its `check` command aggregates `check:eslint`, `check:tsc`, and `check:lasertag`. ESLint follows atom.io’s flat-config approach, including a compatibility bridge in `.pnpmfile.mjs` that gives TypeScript ESLint v8 the TypeScript 6 compiler API while the repository’s `tsc` remains on TypeScript 7.
+
+Source tests and `check:vp` run independently of build artifacts. Run `pnpm build` before `check:public-types`, which verifies consumer types against the built package declarations.
 
 Release compatibility checks need access to the Git remote and release tags.
 
-Coverage comparison requires a captured default-branch baseline or access to the hosted baseline through `RECOVERAGE_CLOUD_TOKEN`. Coverage comparison retains the existing Recoverage capture-and-diff behavior; this repository does not expose a separate upload-only command.
+`cov:check` compares statement coverage with the base revision. `RECOVERAGE_CLOUD_TOKEN` enables the hosted coverage tracking described in the root README.
 
 ## Migration
 

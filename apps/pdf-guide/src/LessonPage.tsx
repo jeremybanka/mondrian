@@ -33,6 +33,40 @@ const bytes = pdf.serialize()      // Uint8Array
 const parsed = parsePdf(bytes)     // PdfDocument
 const diagnostics = validatePdf(parsed)`
 
+const colorCode = `// Caller-supplied image and ICC profile bytes:
+const pdf = createPdfDocument({
+  blendingSpace: { rgbProfile: sourceRgbProfile },
+  outputIntent: {
+    profile: pressCmykProfile,
+    identifier: "Chosen printing condition",
+  },
+})
+
+const photograph = pdf.rgbImage(prepareRgbImage(imageBytes, {
+  sourceProfile: sourceRgbProfile,
+}))
+
+pdf.setPages(pdf.page({
+  mediaBox: [0, 0, 300, 360],
+  content: [pdf.graphics(g =>
+    g.drawImage(photograph, 30, 30, 240, 300))],
+}))
+
+// Explicit conversion for that destination, rather than metadata alone:
+const prepared = await preparePdfForPrint(pdf.compile(), {
+  destinationProfile: pressCmykProfile,
+  outputCondition: "Chosen printing condition",
+  renderingIntent: "relative-colorimetric",
+  objectIntents: "honor",
+  blackPointCompensation: true,
+  untaggedRgb: "reject",
+  gray: "black-only",
+  spots: "preserve",
+  processNumbers: "preserve",
+  blending: "destination",
+})
+const bytes = serializePdf(prepared.document)`
+
 export function LessonPage({ chapter }: { chapter: ChapterId }) {
 	const index = chapters.findIndex((entry) => entry.id === chapter)
 	const lesson = chapters[index]!
@@ -79,7 +113,7 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 								<intro-meta>
 									<span>6 short chapters</span>
 									<i />
-									<span>About 16 minutes</span>
+									<span>About 17 minutes</span>
 									<i />
 									<span>Made with Mondrian</span>
 								</intro-meta>
@@ -387,6 +421,74 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 						</button>
 					</specimen-download>
 				</section>
+				{chapter === "mondrian" && (
+					<section id="color" data-exploration>
+						<section-heading>
+							<heading-copy>
+								<small>BEYOND THE LITTLE SQUARE</small>
+								<h2>Color has a source and a destination.</h2>
+							</heading-copy>
+							<span aria-hidden="true">↘</span>
+						</section-heading>
+						<p>
+							A PDF can combine RGB photographs, native CMYK paint, and named
+							spot inks. A tagged RGB image’s <code>/ColorSpace</code> contains
+							an <code>/ICCBased</code> array that references an ICC profile
+							stream with <code>/N 3</code>. Its pixels and profile are separate
+							objects; optional alpha becomes a grayscale image referenced by{" "}
+							<code>/SMask</code>. Mondrian’s <code>rgbImage()</code> builds
+							those connections from typed RGB data and source profile bytes.
+						</p>
+						<p>
+							The source profile describes the image’s color. The catalog’s{" "}
+							<code>/OutputIntents</code> describes a destination printing
+							condition. Attaching an OutputIntent does not convert RGB samples
+							to CMYK or establish PDF/X conformance. Transparency adds another
+							choice: the page’s <code>/Group /CS</code> determines its blending
+							space. For transparent RGB authoring, Mondrian requires an
+							explicit <code>blendingSpace</code>; a CMYK OutputIntent supplies
+							a default DeviceCMYK blending space when no override is given.
+						</p>
+						<p>
+							<code>prepareRgbImage()</code> and{" "}
+							<code>preparePdfForPrint()</code> come from{" "}
+							<code>mondrian.pdf/print</code>. The first decodes an image
+							without converting its color; the second prepares a supported
+							object graph for a caller-selected CMYK condition. This sketch
+							uses caller-supplied image bytes and verified ICC profiles, with{" "}
+							<code>createPdfDocument</code> and <code>serializePdf</code>{" "}
+							imported from <code>mondrian.pdf</code>.
+						</p>
+						<pre data-example>
+							<code>{colorCode}</code>
+						</pre>
+						<p>
+							Preparation can preserve live text, vectors, dimensions, alpha,
+							K-only process paint, and named <code>/Separation</code> inks, and
+							returns a conversion report. The policies are explicit: decide how
+							to interpret untagged RGB and gray, whether to preserve CMYK
+							numbers, and which rendering intents to honor. Conversion resolves
+							vector and text color at painting time, using the active intent
+							and scoped graphics state.
+						</p>
+						<p>
+							<code>blending: "destination"</code> converts each source color
+							before blending destination ink amounts. That can differ from
+							blending RGB first and converting the composite. With an RGB page
+							group, <code>blending: "preserve-source"</code> rejects
+							preparation explicitly: preserving that source blending order is
+							still unsupported. The{" "}
+							<a
+								href="https://github.com/jeremybanka/mondrian/blob/main/packages/mondrian/docs/mixed-color-print.md"
+								target="_blank"
+								rel="noreferrer"
+							>
+								mixed-color print guide ↗
+							</a>{" "}
+							covers the policies, plate extraction, and supported limits.
+						</p>
+					</section>
+				)}
 				<section id="takeaway" data-takeaway>
 					<small>THE THING TO REMEMBER</small>
 					{chapter === "overview" && (

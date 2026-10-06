@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "vp build",
-		"dev": "pnpm --filter mondrian.pdf build && vp dev --host 0.0.0.0",
+		"dev": "vp dev --host 0.0.0.0",
 		"preview": "vp preview --host 0.0.0.0",
 		"fmt": "dprint fmt .",
 		"check": "pnpm run \"/^check:.*/\"",

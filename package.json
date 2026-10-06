@@ -6,7 +6,9 @@
 		"build": "vp run -r build",
 		"change": "changeset",
 		"check": "pnpm run \"/^check:.*/\"",
+		"check:eslint": "vp run -r check:eslint",
 		"check:fmt": "dprint check",
+		"check:lasertag": "vp run -r check:lasertag",
 		"check:public-types": "vp run -r check:public-types",
 		"check:vp": "vp check --no-fmt && vp run -r check:tsc",
 		"cov": "vp run -r cov",
@@ -18,9 +20,7 @@
 		"test": "vp run -r test",
 		"test:semver": "vp run -r --no-cache test:semver",
 		"test:watch": "vp run -r --parallel --no-cache test:watch",
-		"workflows:update": "node scripts/update-workflows.ts",
-		"check:eslint": "vp run -r check:eslint",
-		"check:lasertag": "vp run -r check:lasertag"
+		"workflows:update": "node scripts/update-workflows.ts"
 	},
 	"devDependencies": {
 		"@changesets/cli": "3.0.3",

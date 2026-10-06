@@ -13,14 +13,21 @@ import {
 	createFontHandle,
 	createGraphicsContent,
 	createImageHandle,
+	createRgbImageHandle,
 	createTextContent,
 	getContentRecord,
 	getFontRecord,
 	getImageRecord,
 } from "./content.ts"
 import { zlibSync } from "fflate"
-import { assertCmykProfile, sameBytes } from "./icc.ts"
-import type { PdfCmykImageData, PdfOutputIntent } from "./print-image.ts"
+import { assertCmykProfile, iccColorSpace, sameBytes } from "./icc.ts"
+import type {
+	PdfBlendingSpace,
+	PdfCmykImageData,
+	PdfRgbImageData,
+	PdfOutputIntent,
+} from "./print-image.ts"
+import { pdfIntent } from "./rgb-image.ts"
 import { encodePageContent } from "./content-encode.ts"
 import type { PdfDiagnostic } from "./diagnostics.ts"
 import { throwForPdfErrors } from "./diagnostics.ts"
@@ -98,6 +105,8 @@ export interface PdfMetadata {
 
 export interface PdfDocumentBuilderOptions {
 	readonly outputIntent?: PdfOutputIntent
+	/** RGB handoff and destination CMYK blending are separate authoring choices. */
+	readonly blendingSpace?: PdfBlendingSpace
 	readonly version?: PdfVersion
 	readonly metadata?: PdfMetadata
 	readonly id?: readonly [Uint8Array, Uint8Array]
@@ -107,6 +116,7 @@ export interface PdfDocumentBuilder {
 	standardFont(baseFont: StandardFontName): PdfFont
 	jpeg(bytes: Uint8Array): PdfImage
 	image(data: PdfCmykImageData): PdfImage
+	rgbImage(data: PdfRgbImageData): PdfImage
 	text(callback: (text: PdfTextBuilder) => void): PdfContent
 	graphics(callback: (graphics: PdfGraphicsBuilder) => void): PdfContent
 	page(options: PdfPageOptions): PdfPage
@@ -171,10 +181,23 @@ class DocumentBuilder implements PdfDocumentBuilder {
 	readonly #metadata: PdfMetadata | undefined
 	readonly #id: readonly [Uint8Array, Uint8Array] | undefined
 	readonly #outputIntent: PdfOutputIntent | undefined
+	readonly #blendingSpace: PdfBlendingSpace | undefined
 	#rootChildren: readonly PdfPageTreeNode[] | undefined
 
 	constructor(options: PdfDocumentBuilderOptions) {
 		this.#version = options.version ?? "1.7"
+		const blend =
+			options.blendingSpace ??
+			(options.outputIntent === undefined ? undefined : "DeviceCMYK")
+		if (blend !== undefined) {
+			if (Number(this.#version) < 1.4)
+				throw new TypeError("Transparency blending requires PDF 1.4 or later")
+			if (blend !== "DeviceCMYK") {
+				if (iccColorSpace(blend.rgbProfile) !== "RGB ")
+					throw new TypeError("RGB blending requires an RGB ICC profile")
+				this.#blendingSpace = { rgbProfile: Uint8Array.from(blend.rgbProfile) }
+			} else this.#blendingSpace = blend
+		}
 		if (options.outputIntent !== undefined) {
 			if (["1.0", "1.1", "1.2", "1.3"].includes(this.#version))
 				throw new TypeError("Print output intents require PDF 1.4 or later")
@@ -202,6 +225,14 @@ class DocumentBuilder implements PdfDocumentBuilder {
 
 	jpeg(bytes: Uint8Array): PdfImage {
 		return createImageHandle(this.#owner, bytes)
+	}
+
+	rgbImage(data: PdfRgbImageData): PdfImage {
+		if (data.alpha !== undefined && this.#blendingSpace === undefined)
+			throw new TypeError(
+				"Transparent RGB images require an explicit document blendingSpace",
+			)
+		return createRgbImageHandle(this.#owner, data)
 	}
 
 	image(data: PdfCmykImageData): PdfImage {
@@ -345,12 +376,31 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						Subtype: name("Image"),
 						Width: record.width,
 						Height: record.height,
-						ColorSpace: name(record.colorSpace),
+						ColorSpace:
+							record.encoding === "raw" && record.sourceProfile !== undefined
+								? array(
+										name("ICCBased"),
+										objects.add(
+											stream(
+												{
+													N: 3,
+													Alternate: name("DeviceRGB"),
+													Filter: name("FlateDecode"),
+												},
+												zlibSync(record.sourceProfile),
+											),
+										),
+									)
+								: name(record.colorSpace),
 						BitsPerComponent: record.bitsPerComponent,
 						Filter: name(
 							record.encoding === "raw" ? "FlateDecode" : "DCTDecode",
 						),
 						...(mask === undefined ? {} : { SMask: mask }),
+						...(record.encoding === "raw" &&
+						record.renderingIntent !== undefined
+							? { Intent: name(pdfIntent(record.renderingIntent)) }
+							: {}),
 					},
 					record.encoding === "raw" ? zlibSync(record.bytes) : record.bytes,
 				),
@@ -417,12 +467,23 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						record.mediaBox[3],
 					),
 					Resources: dictionary(resourceEntries),
-					...(this.#outputIntent === undefined
+					...(this.#blendingSpace === undefined
 						? {}
 						: {
 								Group: dictionary({
 									S: name("Transparency"),
-									CS: name("DeviceCMYK"),
+									CS:
+										this.#blendingSpace === "DeviceCMYK"
+											? name("DeviceCMYK")
+											: array(
+													name("ICCBased"),
+													objects.add(
+														stream(
+															{ N: 3, Filter: name("FlateDecode") },
+															zlibSync(this.#blendingSpace.rgbProfile),
+														),
+													),
+												),
 									I: true,
 									K: false,
 								}),

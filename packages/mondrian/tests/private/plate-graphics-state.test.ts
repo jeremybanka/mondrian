@@ -8,14 +8,52 @@ import {
 	fillColor,
 	name,
 	nameBytes,
+	reference,
 	serializePdf,
 	spot,
 	stream,
 } from "../../src/index.ts"
 import { previewPdfPlates, renderPdf } from "../../src/testing.ts"
 import { planPdfPlates } from "../../src/testing/plate-plan.ts"
+import { decodePlateGraphicsState } from "../../src/testing/plate-graphics-state.ts"
 import { red, white, rawDocument, samples } from "./fixtures/plates.ts"
 import "../../src/vitest.ts"
+
+const resolveAlphaFlag = (
+	value: import("../../src/index.ts").PdfValue | undefined,
+): import("../../src/index.ts").PdfIndirectValue | undefined =>
+	value !== null && typeof value === "object" && value.kind === "reference"
+		? false
+		: value
+
+it("preserves direct and indirect byte-keyed AIS false without changing opacity", () => {
+	const ref = reference(1)
+	const source = dictionary({
+		AIS: false,
+		ca: 0.5,
+		CA: 0.25,
+		BM: name("Normal"),
+		SMask: name("None"),
+	})
+	const direct = decodePlateGraphicsState(source, resolveAlphaFlag)
+	expect(direct.source.entries.AIS).toBe(false)
+	expect([direct.fillOpacity, direct.strokeOpacity]).toEqual([0.5, 0.25])
+	const indirect = decodePlateGraphicsState(
+		dictionary({ ca: 0.5 }, [nameBytes(ascii("AIS")), ref]),
+		resolveAlphaFlag,
+	)
+	expect(indirect.source.byteEntries?.[0]?.[1]).toBe(ref)
+	expect(indirect.fillOpacity).toBe(0.5)
+})
+
+it.each([true, 0, 1, name("False")])(
+	"rejects shape-alpha and malformed AIS values: %j",
+	(AIS) => {
+		expect(() =>
+			decodePlateGraphicsState(dictionary({ AIS }), resolveAlphaFlag),
+		).toThrow(/AIS/)
+	},
+)
 
 it("leaves inherited opacity unchanged by null byte-name graphics state entries", async () => {
 	const source = rawDocument((objects) => ({

@@ -21,6 +21,7 @@ import { decodePlateGraphicsState } from "./plate-graphics-state.ts"
 import { assertPlatePageGroup, readPlateImage } from "./plate-image.ts"
 import type { PlateImage, PlateRaster } from "./plate-image.ts"
 import { PlateMarkedContent } from "./plate-marked-content.ts"
+import { readIccSpace } from "../print/pdf-color.ts"
 
 export type PlateColorSpace = "cmyk" | "spot"
 
@@ -42,7 +43,11 @@ export type PlateInk =
 	  }
 
 type Color =
-	| { readonly space: "cmyk"; readonly components: CmykComponents }
+	| {
+			readonly space: "cmyk"
+			readonly components: CmykComponents
+			readonly gray?: true
+	  }
 	| {
 			readonly space: "spot"
 			readonly components: SpotComponents
@@ -130,6 +135,7 @@ function dictionaryItems(
 export function planPdfPlates(
 	document: PdfDocument,
 	permitted: ReadonlySet<PlateColorSpace>,
+	gray?: "black-only",
 ): {
 	plates: PlateInk[]
 	pages: PlatePage[]
@@ -283,7 +289,13 @@ export function planPdfPlates(
 				? resolve(resolved.items[0])
 				: resolved,
 		)
-		if (named === "/DeviceCMYK") {
+		const icc = readIccSpace(value, resolve)
+		if (named === "/DeviceGray" && gray === "black-only") {
+			if (!permitted.has("cmyk"))
+				throw new TypeError("Gray-to-black requires CMYK plates")
+			return { space: "cmyk", components: [0, 0, 0, 1], gray: true }
+		}
+		if (named === "/DeviceCMYK" || icc?.channels === 4) {
 			if (!permitted.has("cmyk"))
 				throw new TypeError("Color space DeviceCMYK is not permitted")
 			return { space: "cmyk", components: [0, 0, 0, 1] }
@@ -347,8 +359,14 @@ export function planPdfPlates(
 		return Buffer.from(bytes).toString("latin1")
 	}
 	const initialState = (): State => ({
-		fill: undefined,
-		stroke: undefined,
+		fill:
+			gray === "black-only"
+				? { space: "cmyk", components: [0, 0, 0, 1], gray: true }
+				: undefined,
+		stroke:
+			gray === "black-only"
+				? { space: "cmyk", components: [0, 0, 0, 1], gray: true }
+				: undefined,
 		fillOverprint: false,
 		strokeOverprint: false,
 		fillOpacity: 1,
@@ -442,7 +460,10 @@ export function planPdfPlates(
 					].includes(op)
 				) {
 					const channel = op === op.toLowerCase() ? "fill" : "stroke"
-					if (["g", "G", "rg", "RG"].includes(op))
+					if (
+						["rg", "RG"].includes(op) ||
+						(["g", "G"].includes(op) && gray !== "black-only")
+					)
 						throw new TypeError(
 							`Color space ${op.toLowerCase() === "g" ? "DeviceGray" : "DeviceRGB"} is not permitted for plate previews`,
 						)
@@ -457,9 +478,11 @@ export function planPdfPlates(
 						)
 					} else {
 						const color =
-							op.toLowerCase() === "k"
-								? colorSpace({ kind: "name", value: "DeviceCMYK" })
-								: state[channel]
+							op.toLowerCase() === "g"
+								? colorSpace(name("DeviceGray"))
+								: op.toLowerCase() === "k"
+									? colorSpace({ kind: "name", value: "DeviceCMYK" })
+									: state[channel]
 						if (!color)
 							throw new TypeError("Implicit DeviceGray color is not permitted")
 						const components = operands.map(Number)
@@ -469,7 +492,16 @@ export function planPdfPlates(
 							)
 						)
 							throw new TypeError("Invalid plate color components")
-						if (color.space === "cmyk" && isCmykComponents(components))
+						if (color.space === "cmyk" && color.gray && components.length === 1)
+							state[channel] = {
+								...color,
+								components: [0, 0, 0, 1 - components[0]!],
+							}
+						else if (
+							color.space === "cmyk" &&
+							!color.gray &&
+							isCmykComponents(components)
+						)
 							state[channel] = { ...color, components }
 						else if (color.space === "spot" && isSpotComponents(components))
 							state[channel] = { ...color, components }
@@ -586,10 +618,19 @@ export function planPdfPlates(
 						)
 							space = resource(resources, "ColorSpace", named)
 						if (space === undefined || colorSpace(space).space !== "cmyk")
-							throw new TypeError("Plate images require DeviceCMYK samples")
+							throw new TypeError(
+								`Image ${key}: plate images require DeviceCMYK or ICCBased CMYK samples`,
+							)
 						let image = images.get(value)
 						if (image === undefined) {
-							image = readPlateImage(value, resolve, masks)
+							try {
+								image = readPlateImage(value, resolve, masks)
+							} catch (error) {
+								throw new TypeError(
+									`Image ${key}: ${error instanceof Error ? error.message : String(error)}`,
+									{ cause: error },
+								)
+							}
 							images.set(value, image)
 						}
 						instructions.push({

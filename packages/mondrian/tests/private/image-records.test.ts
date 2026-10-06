@@ -22,7 +22,7 @@ it("requires an encoding discriminator and narrows the supported image variants"
 	type Raw = Extract<PdfImageRecord, { encoding: "raw" }>
 	expectTypeOf<Jpeg["colorSpace"]>().toEqualTypeOf<"DeviceGray" | "DeviceRGB">()
 	expectTypeOf<Jpeg["alpha"]>().toEqualTypeOf<undefined>()
-	expectTypeOf<Raw["colorSpace"]>().toEqualTypeOf<"DeviceCMYK">()
+	expectTypeOf<Raw["colorSpace"]>().toEqualTypeOf<"DeviceCMYK" | "DeviceRGB">()
 	expectTypeOf<Raw["alpha"]>().toEqualTypeOf<Uint8Array | undefined>()
 })
 

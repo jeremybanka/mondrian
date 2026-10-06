@@ -56,6 +56,8 @@ it("measures delivered PNG samples with their independent alpha", async () => {
 	}
 })
 
+// Each case prepares two PDFs and rasterizes ten plates; instrumented CI
+// runs need the same budget as the other image/print proof contracts.
 it.each([0, 1] as const)(
 	"retains image process zeros and spot knockout/overprint in OPM %s",
 	async (mode) => {
@@ -118,6 +120,7 @@ it.each([0, 1] as const)(
 			expect(row(4)).toEqual(overprint ? [0, 0, 0, 0] : [0, 64, 128, 255])
 		}
 	},
+	30_000,
 )
 
 it("measures fill and stroke opacity and clipping within the source CMYK page group", async () => {

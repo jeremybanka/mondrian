@@ -70,6 +70,40 @@ export async function prepareCmykImage(
 		alpha[pixel] = decoded.rgba[pixel * 4 + 3]!
 		transparent ||= alpha[pixel] !== 255
 	}
+	const data = await convertSamples(
+		samples,
+		sourceProfile,
+		destinationProfile,
+		intent,
+		blackPointCompensation,
+	)
+	return Object.freeze({
+		width: decoded.width,
+		height: decoded.height,
+		data,
+		destinationProfile,
+		...(transparent ? { alpha } : {}),
+	})
+}
+
+/** Shared explicit sample conversion; callers keep geometry and alpha separate. */
+export async function convertSamples(
+	samples: Uint8Array,
+	sourceProfile: Uint8Array | "srgb",
+	destinationProfile: Uint8Array,
+	intent: NonNullable<PrepareCmykImageOptions["renderingIntent"]>,
+	blackPointCompensation: boolean,
+): Promise<Uint8Array> {
+	const space = sourceProfile === "srgb" ? "RGB " : iccColorSpace(sourceProfile)
+	const channels = space === "GRAY" ? 1 : space === "CMYK" ? 4 : 3
+	const pixels = samples.length / channels
+	if (!Number.isSafeInteger(pixels) || pixels > 32_000_000)
+		throw new TypeError("Invalid color sample count")
+	if (!Object.hasOwn(intents, intent))
+		throw new TypeError("Unsupported rendering intent")
+	if (typeof blackPointCompensation !== "boolean")
+		throw new TypeError("blackPointCompensation must be boolean")
+	assertCmykProfile(destinationProfile)
 	const lcms = await (engine ??= instantiate({ printErr: () => {} }))
 	const profiles: { handle: number; pointer: number }[] = []
 	const open = (bytes: Uint8Array | "srgb") => {
@@ -92,7 +126,7 @@ export async function prepareCmykImage(
 	try {
 		transform = lcms.cmsCreateTransform(
 			open(sourceProfile),
-			channels === 1 ? TYPE_GRAY_8 : TYPE_RGB_8,
+			channels === 1 ? TYPE_GRAY_8 : channels === 4 ? TYPE_CMYK_8 : TYPE_RGB_8,
 			open(destinationProfile),
 			TYPE_CMYK_8,
 			intents[intent],
@@ -114,13 +148,7 @@ export async function prepareCmykImage(
 				offset * 4,
 			)
 		}
-		return Object.freeze({
-			width: decoded.width,
-			height: decoded.height,
-			data,
-			destinationProfile,
-			...(transparent ? { alpha } : {}),
-		})
+		return data
 	} finally {
 		if (transform) lcms.cmsDeleteTransform(transform)
 		for (const { handle, pointer } of profiles) {

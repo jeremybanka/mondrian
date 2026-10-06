@@ -9,6 +9,8 @@ import type {
 	PdfValue,
 } from "../objects.ts"
 import { pdfName } from "./plate-names.ts"
+import { decodeJpegSamples } from "../print/jpeg-samples.ts"
+import { readIccSpace } from "../print/pdf-color.ts"
 
 export interface PlateRaster {
 	readonly width: number
@@ -34,6 +36,7 @@ export function readPlateImage(
 	resolve: Resolve,
 	// Share masks across parent images only within this document's plan.
 	masks = new WeakMap<PdfStream, PlateRaster>(),
+	components: 1 | 3 | 4 = 4,
 ): PlateImage {
 	const read = (source: PdfStream, mask: boolean): PlateImage => {
 		const field = (key: string) =>
@@ -92,7 +95,7 @@ export function readPlateImage(
 			].includes(pdfName(intent) ?? "")
 		)
 			throw new TypeError("Unsupported image rendering intent")
-		const channels = mask ? 1 : 4
+		const channels = mask ? 1 : components
 		const expected = pixels * channels
 		const filter = field("Filter")
 		const filters =
@@ -101,22 +104,99 @@ export function readPlateImage(
 				: filter === undefined
 					? []
 					: [filter]
+		const codec = filters.length === 0 ? undefined : pdfName(filters[0])
 		if (
 			filters.length > 1 ||
-			(filters.length === 1 && pdfName(filters[0]) !== "/FlateDecode") ||
-			field("DecodeParms") !== undefined
+			(filters.length === 1 &&
+				codec !== "/FlateDecode" &&
+				codec !== "/DCTDecode")
 		)
 			throw new TypeError(
-				"Plate images support only unfiltered or FlateDecode samples without DecodeParms",
+				"Plate images support only unfiltered, FlateDecode, or baseline DCTDecode samples",
+			)
+		let parameters = field("DecodeParms")
+		if (
+			parameters !== null &&
+			typeof parameters === "object" &&
+			parameters.kind === "array"
+		) {
+			if (parameters.items.length !== filters.length)
+				throw new TypeError("DecodeParms must match the filter array")
+			parameters = resolve(parameters.items[0]) ?? undefined
+		}
+		if (
+			parameters !== undefined &&
+			(parameters === null ||
+				typeof parameters !== "object" ||
+				parameters.kind !== "dictionary")
+		)
+			throw new TypeError("Expected image DecodeParms dictionary")
+		const setting = (key: string, fallback: number) => {
+			const value =
+				parameters === undefined
+					? fallback
+					: (resolve(dictionaryValue(parameters as PdfDictionary, key)) ??
+						fallback)
+			if (typeof value !== "number" || !Number.isSafeInteger(value))
+				throw new TypeError(`Invalid image DecodeParms ${key}`)
+			return value
+		}
+		const allowed =
+			codec === "/DCTDecode"
+				? ["ColorTransform"]
+				: ["Predictor", "Colors", "Columns", "BitsPerComponent"]
+		if (parameters !== undefined) {
+			for (const key of [
+				...Object.keys((parameters as PdfDictionary).entries).map(
+					(key) => `/${key}`,
+				),
+				...((parameters as PdfDictionary).byteEntries ?? []).map(([key]) =>
+					pdfName(key)!,
+				),
+			])
+				if (!allowed.includes(key.slice(1)))
+					throw new TypeError(`Unsupported image DecodeParms ${key}`)
+		}
+		const predictor = codec === "/DCTDecode" ? 1 : setting("Predictor", 1)
+		if (
+			predictor !== 1 &&
+			predictor !== 2 &&
+			(predictor < 10 || predictor > 15)
+		)
+			throw new TypeError(`Unsupported image predictor ${predictor}`)
+		if (
+			predictor !== 1 &&
+			(setting("Colors", 1) !== channels ||
+				setting("Columns", 1) !== width ||
+				setting("BitsPerComponent", 8) !== 8)
+		)
+			throw new TypeError(
+				"Image predictor geometry must match its 8-bit samples",
 			)
 		if (filters.length === 0 && source.data.length !== expected)
 			throw new TypeError("Image sample length does not match its dimensions")
-		const data =
+		const colorTransform =
+			codec === "/DCTDecode" ? setting("ColorTransform", -1) : -1
+		if (![-1, 0, 1].includes(colorTransform))
+			throw new TypeError("Unsupported DCT ColorTransform")
+		let data =
 			filters.length === 0
 				? Uint8Array.from(source.data)
-				: Uint8Array.from(
-						inflateSync(source.data, { maxOutputLength: expected }),
-					)
+				: codec === "/DCTDecode"
+					? decodeJpegSamples(
+							source.data,
+							width,
+							height,
+							channels,
+							colorTransform === -1 ? undefined : (colorTransform as 0 | 1),
+						)
+					: Uint8Array.from(
+							inflateSync(source.data, {
+								maxOutputLength: expected + (predictor >= 10 ? height : 0),
+							}),
+						)
+		if (predictor !== 1)
+			data = undoPredictor(data, width, height, channels, predictor)
 		if (data.length !== expected)
 			throw new TypeError("Image sample length does not match its dimensions")
 		const decode = field("Decode")
@@ -131,13 +211,21 @@ export function readPlateImage(
 			for (let channel = 0; channel < channels; channel++) {
 				const low = resolve(decode.items[channel * 2])
 				const high = resolve(decode.items[channel * 2 + 1])
-				if (!((low === 0 && high === 1) || (low === 1 && high === 0)))
+				if (
+					typeof low !== "number" ||
+					typeof high !== "number" ||
+					!Number.isFinite(low) ||
+					!Number.isFinite(high) ||
+					low < 0 ||
+					low > 1 ||
+					high < 0 ||
+					high > 1
+				)
 					throw new TypeError(
-						"Plate images support only default or inverted Decode ranges",
+						"Plate image Decode endpoints must be finite values from 0 through 1",
 					)
-				if (low === 1)
-					for (let index = channel; index < data.length; index += channels)
-						data[index] = 255 - data[index]!
+				for (let index = channel; index < data.length; index += channels)
+					data[index] = Math.round(low * 255 + data[index]! * (high - low))
 			}
 		}
 		const alpha = field("SMask")
@@ -170,6 +258,46 @@ export function readPlateImage(
 	return read(source, false)
 }
 
+function undoPredictor(
+	input: Uint8Array,
+	width: number,
+	height: number,
+	channels: number,
+	predictor: number,
+): Uint8Array {
+	const row = width * channels,
+		stride = row + (predictor >= 10 ? 1 : 0)
+	if (input.length !== stride * height)
+		throw new TypeError(
+			"Image predictor row length does not match its dimensions",
+		)
+	const output = new Uint8Array(row * height)
+	for (let y = 0; y < height; y++) {
+		const filter = predictor === 2 ? 1 : input[y * stride]!
+		if (filter > 4) throw new TypeError("Invalid image PNG predictor filter")
+		for (let x = 0; x < row; x++) {
+			const at = y * row + x,
+				left = x >= channels ? output[at - channels]! : 0,
+				above = y ? output[at - row]! : 0,
+				upperLeft = y && x >= channels ? output[at - row - channels]! : 0
+			let prediction = 0
+			if (filter === 1) prediction = left
+			else if (filter === 2) prediction = above
+			else if (filter === 3) prediction = Math.floor((left + above) / 2)
+			else if (filter === 4) {
+				const estimate = left + above - upperLeft,
+					a = Math.abs(estimate - left),
+					b = Math.abs(estimate - above),
+					c = Math.abs(estimate - upperLeft)
+				prediction = a <= b && a <= c ? left : b <= c ? above : upperLeft
+			}
+			output[at] =
+				input[y * stride + x + (predictor >= 10 ? 1 : 0)]! + prediction
+		}
+	}
+	return output
+}
+
 /** A page is the outer isolated group; only explicit CMYK, non-knockout blending is supported. */
 export function assertPlatePageGroup(
 	group: PdfDictionary,
@@ -179,7 +307,8 @@ export function assertPlatePageGroup(
 		resolve(dictionaryValue(group, key)) ?? undefined
 	if (
 		pdfName(field("S")) !== "/Transparency" ||
-		pdfName(field("CS")) !== "/DeviceCMYK" ||
+		(pdfName(field("CS")) !== "/DeviceCMYK" &&
+			readIccSpace(dictionaryValue(group, "CS")!, resolve)?.channels !== 4) ||
 		(field("K") !== undefined && field("K") !== false) ||
 		(field("I") !== undefined && typeof field("I") !== "boolean")
 	)

@@ -31,14 +31,7 @@ artifact, retained for seven days.
 
 ## Release compatibility
 
-Run `pnpm test:semver` from a clean checkout to run the current public tests and
-then the public tests from the latest `mondrian.pdf@` release tag against the
-current implementation.
-The Break Check CI job runs this command alongside Vitest and Coverage. The
-command discovers workspace packages with a `test:semver` script automatically.
-Checks need access to the Git remote named `origin` and explicitly disable
-task caching because remote release tags can change independently of the
-checkout.
+Run `pnpm test:semver` from a clean checkout to run the public tests from the latest `mondrian.pdf@` release tag against the current implementation. The Break Check CI job runs this command alongside Vitest and Coverage. The command discovers workspace packages with a `test:semver` script automatically. Checks need access to the Git remote named `origin` and explicitly disable task caching because remote release tags can change independently of the checkout.
 
 The compatibility contract lives in `packages/mondrian/tests/public/`; run it
 directly with `pnpm --filter mondrian.pdf test:public`. Break Check restores

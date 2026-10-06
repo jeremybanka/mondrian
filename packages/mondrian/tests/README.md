@@ -1,19 +1,8 @@
 # Test contracts
 
-`public/` defines behavior consumers can depend on across releases. Break Check
-restores both the released tests and the inspection source used to read their
-output. Its pattern is `{tests/public,src/testing/inspection}/**/*`. The public
-command builds the package, type-checks consumer imports, then runs the tests.
-Add assertions here only when a failure means an existing consumer capability
-has broken.
+`public/` defines behavior consumers can depend on across releases. Break Check restores both the released tests and the inspection source used to read their output. Its pattern is `{tests/public,src/testing/inspection}/**/*`. The public command runs public tests against source. Build and consumer type checks run separately. Add assertions here only when a failure means an existing consumer capability has broken.
 
-The independent readers ship through `mondrian.pdf/testing` and live in
-`src/testing/inspection/`. Break Check restores that source alongside historical
-assertions and rebuilds it, so changing today's reader does not silently change
-yesterday's observations. Rendering and artifact comparison remain current
-implementations under test. All dependencies use the package's ordinary manifest
-and workspace lockfile; there is no separate harness installation. Dependency
-upgrades must keep the restored inspection source runnable.
+The independent readers ship through `mondrian.pdf/testing` and live in `src/testing/inspection/`. Break Check restores that source alongside historical assertions and executes it directly, so changing today's reader does not silently change yesterday's observations. Rendering and artifact comparison remain current implementations under test. All dependencies use the package's ordinary manifest and workspace lockfile; there is no separate harness installation. Dependency upgrades must keep the restored inspection source runnable.
 
 Keep document setup inline in each public test and limited to the behavior it
 asserts. If a test needs repeated construction, use a local helper named for that
@@ -45,7 +34,7 @@ promises.
 
 ## Parser contracts
 
-`public/parse.test.ts` commits to usable `PdfDocument` values, existing object identities, decoded bytes, input-buffer independence, current revisions, metadata, identifiers, readable output, explicit recovery, and configurable decoding limits. It also protects the validation/serialization options needed to retain imported metadata. `public/parse-encryption.test.ts` protects supported AES-256 password handling and independently readable unencrypted output using self-contained original fixtures. These files import the built package and declarations and have no private-fixture dependencies.
+`public/parse.test.ts` commits to usable `PdfDocument` values, existing object identities, decoded bytes, input-buffer independence, current revisions, metadata, identifiers, readable output, explicit recovery, and configurable decoding limits. It also protects the validation/serialization options needed to retain imported metadata. `public/parse-encryption.test.ts` protects supported AES-256 password handling and independently readable unencrypted output using self-contained original fixtures. These files resolve public package imports to source and have no private-fixture dependencies.
 
 Public parser assertions follow references and compare PDF meaning. PDF array order is meaningful; `document.objects` order is not. The literal/hex spelling of a string is not a commitment where either public type is allowed; file identifiers still satisfy their declared `PdfHexString` type. Synthetic object allocation, container retention, dictionary prototypes, complete graph snapshots, diagnostic prose, exact detection positions, and unsupported-feature boundaries stay private. Error classes, original-input offset coordinates, and recovery warning codes remain public. Determinism means repeating serialization of the same model within an implementation, not freezing a byte layout across releases or guaranteeing byte-identical rewriting of arbitrary input.
 
@@ -67,12 +56,9 @@ Private plate tests are split into `plate-colors`, `plate-content`, `plate-forms
 
 ## Running compatibility checks
 
-Run `pnpm --filter mondrian.pdf test:public` for the public suite. Normal
-test and coverage commands run both directories. Run `pnpm test:semver` from a
-clean checkout for current public tests followed by release compatibility.
+Run `pnpm --filter mondrian.pdf test:public` for the public suite. Normal test and coverage commands run both directories. Run `pnpm test:semver` from a clean checkout for release compatibility.
 
 The command invokes the `break-check` CLI directly and preserves its failure
 behavior for missing tests and other inconclusive checks. Release
 `mondrian.pdf@0.1.0` predates this directory, so the release comparison fails
-until a release includes the public suite. The current public tests run before
-the release comparison.
+until a release includes the public suite. Current tests run in the parallel Vitest job.

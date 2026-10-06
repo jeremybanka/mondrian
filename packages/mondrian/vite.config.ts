@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url"
+
 import { defineConfig } from "vite-plus"
 
 export default defineConfig({
@@ -36,14 +38,25 @@ export default defineConfig({
 		},
 	],
 	test: {
+		alias: [
+			{
+				find: /^mondrian\.pdf$/,
+				replacement: fileURLToPath(new URL("./src/index.ts", import.meta.url)),
+			},
+			...["testing", "vitest", "print"].map((entry) => ({
+				find: `mondrian.pdf/${entry}`,
+				replacement: fileURLToPath(
+					new URL(`./src/${entry}.ts`, import.meta.url),
+				),
+			})),
+		],
 		// Vitest v4 compatibility: preserve mock call history.
 		// Remove after tests no longer rely on calls from setup or earlier tests.
 		// https://viteplus.dev/guide/vitest-v5#remove-unneeded-compatibility-settings
 		// https://vitest.dev/guide/migration/#clearmocks-is-enabled-by-default
 		clearMocks: false,
 		coverage: {
-			// Public contracts execute the built package; remap that coverage to source too.
-			include: ["src/**/*.ts", "dist/**/*.mjs"],
+			include: ["src/**/*.ts"],
 			provider: "v8",
 			reporter: ["text", "html", "json"],
 		},

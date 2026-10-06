@@ -38,12 +38,13 @@
 	],
 	"scripts": {
 		"build": "vp pack",
-		"cov": "pnpm build && vp test run --coverage",
+		"cov": "vp test run --coverage",
 		"cov:check": "pnpm run cov && recoverage",
-		"test": "pnpm build && vp test",
-		"test:public": "pnpm build && tsc --noEmit -p tests/public/tsconfig.json && vp test run tests/public --passWithNoTests=false",
-		"test:semver": "pnpm run test:public && break-check",
-		"test:watch": "pnpm build && vp test watch"
+		"test": "vp test",
+		"test:public": "vp test run tests/public --passWithNoTests=false",
+		"test:semver": "break-check",
+		"test:watch": "vp test watch",
+		"check:public-types": "tsc --noEmit -p tests/public/tsconfig.json"
 	},
 	"dependencies": {
 		"@embedpdf/pdfium": "2.15.1",

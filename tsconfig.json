@@ -5,7 +5,9 @@
 		"declaration": true,
 		"erasableSyntaxOnly": true,
 		"exactOptionalPropertyTypes": true,
-		"lib": ["ES2024"],
+		"lib": [
+			"ES2024"
+		],
 		"module": "NodeNext",
 		"moduleResolution": "NodeNext",
 		"noEmit": true,
@@ -14,7 +16,24 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"target": "ES2024",
-		"types": []
+		"types": [],
+		"paths": {
+			"mondrian.pdf": [
+				"./packages/mondrian/src/index.ts"
+			],
+			"mondrian.pdf/testing": [
+				"./packages/mondrian/src/testing.ts"
+			],
+			"mondrian.pdf/vitest": [
+				"./packages/mondrian/src/vitest.ts"
+			],
+			"mondrian.pdf/print": [
+				"./packages/mondrian/src/print.ts"
+			]
+		}
 	},
-	"include": ["**/*.ts", "*.d.ts"]
+	"include": [
+		"**/*.ts",
+		"*.d.ts"
+	]
 }

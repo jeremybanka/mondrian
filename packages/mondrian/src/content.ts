@@ -5,8 +5,10 @@ import { colorBuilder } from "./color.ts"
 
 import type { PdfLiteralString } from "./objects.ts"
 import { literalString } from "./objects.ts"
-import type { PdfCmykImageData } from "./print-image.ts"
+import type { PdfCmykImageData, PdfRgbImageData } from "./print-image.ts"
 import { imagePixelCount } from "./print-image.ts"
+import { iccColorSpace } from "./icc.ts"
+import { pdfIntent } from "./rgb-image.ts"
 
 declare const pdfFontBrand: unique symbol
 declare const pdfImageBrand: unique symbol
@@ -224,8 +226,10 @@ export type PdfImageRecord = PdfImageRecordBase &
 		  }
 		| {
 				readonly encoding: "raw"
-				readonly colorSpace: "DeviceCMYK"
+				readonly colorSpace: "DeviceCMYK" | "DeviceRGB"
 				readonly alpha?: Uint8Array
+				readonly sourceProfile?: Uint8Array
+				readonly renderingIntent?: import("./print-image.ts").PdfRenderingIntent
 		  }
 	)
 
@@ -365,6 +369,45 @@ export function createCmykImageHandle(
 			...(input.alpha === undefined
 				? {}
 				: { alpha: Uint8Array.from(input.alpha) }),
+		}),
+	)
+	return image
+}
+
+export function createRgbImageHandle(
+	owner: symbol,
+	input: PdfRgbImageData,
+): PdfImage {
+	assertOwner(owner)
+	const pixels = imagePixelCount(input.width, input.height)
+	if (!(input.data instanceof Uint8Array) || input.data.length !== pixels * 3)
+		throw new TypeError("RGB data must contain three bytes per pixel")
+	if (iccColorSpace(input.sourceProfile) !== "RGB ")
+		throw new TypeError("RGB images require an RGB source ICC profile")
+	if (
+		input.alpha !== undefined &&
+		(!(input.alpha instanceof Uint8Array) || input.alpha.length !== pixels)
+	)
+		throw new TypeError("Image alpha must contain one byte per pixel")
+	if (input.renderingIntent !== undefined) pdfIntent(input.renderingIntent)
+	const image = Object.freeze({}) as PdfImage
+	imageRecords.set(
+		image,
+		Object.freeze({
+			owner,
+			encoding: "raw",
+			colorSpace: "DeviceRGB",
+			bitsPerComponent: 8,
+			width: input.width,
+			height: input.height,
+			bytes: Uint8Array.from(input.data),
+			sourceProfile: Uint8Array.from(input.sourceProfile),
+			...(input.alpha === undefined
+				? {}
+				: { alpha: Uint8Array.from(input.alpha) }),
+			...(input.renderingIntent === undefined
+				? {}
+				: { renderingIntent: input.renderingIntent }),
 		}),
 	)
 	return image

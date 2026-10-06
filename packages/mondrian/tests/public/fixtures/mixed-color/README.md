@@ -1,0 +1,9 @@
+# Original mixed-color print fixtures
+
+`photo.jpg` and `alpha.bin` are an 809 × 884 resampling of the repository's fixed generated [squirrel cut-out](../../../private/fixtures/print-images/README.md). JPEG RGB encoding uses pinned `jpeg-js` at quality 90; alpha remains a separate eight-bit raster with partial opacity. The public test creates an original PDF 1.5 label with ICCBased RGB source and page blending, default mask DecodeParms, live embedded text, ordinary process/gray/RGB paint, two painted ICCBased RGB spot alternates, and no destination OutputIntent. No consumer-supplied artwork or identifying file metadata is included.
+
+`label.ttf` is produced by the repository's original geometric [font generator](../../../fixtures/original-corpus/font-programs.ts). `cmyk.jpg` is an original 8 × 8 baseline JPEG with four constant component planes `[24, 80, 136, 200]`, unit quantization, and independently specified DC coefficients. PDFium independently checks its displayed equivalence to uncompressed CMYK; plate extraction checks component amounts and Decode inversion before display conversion.
+
+`sRGB-v2-micro.icc` is the unmodified [Compact ICC Profiles sRGB profile](https://github.com/saucecontrol/Compact-ICC-Profiles/blob/master/profiles/sRGB-v2-micro.icc), under the [included CC0 license](../print-images/compact-profiles-license.txt). The CMYK test condition uses the existing [CGATS21 CRPC6 profile and license](../print-images/README.md); it is a fixture, not a production default.
+
+Run `node packages/mondrian/tests/fixtures/mixed-color/generate.ts` explicitly to regenerate photographic, alpha, JPEG, and font assets. Tests consume committed bytes and never regenerate them. Reviewed proof baselines live in `tests/private/visual-regressions/__pdf_artifacts__/mixed-color-print.test.ts`.

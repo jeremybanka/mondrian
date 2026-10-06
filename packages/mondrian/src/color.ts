@@ -4,6 +4,9 @@ import type { PdfObjectBuilder } from "./object-builder.ts"
 import type { PdfDictionary, PdfReference, PdfValue } from "./objects.ts"
 import { array, dictionary, name } from "./objects.ts"
 import { encodePdfName, formatPdfNumber } from "./syntax.ts"
+import { iccColorSpace } from "./icc.ts"
+import { stream } from "./objects.ts"
+import { zlibSync } from "fflate"
 
 export type PdfGrayColor = Readonly<{
 	space: "DeviceGray"
@@ -28,6 +31,8 @@ export interface PdfTintTransform {
 	readonly zero: PdfProcessColor
 	readonly full: PdfProcessColor
 	readonly exponent: number
+	/** Qualify DeviceRGB endpoints with their source ICC profile. */
+	readonly sourceProfile?: Uint8Array
 }
 
 export interface PdfSpotColor {
@@ -117,7 +122,7 @@ export function separation(
 	}
 	assertKeys(
 		tintTransform,
-		["type", "zero", "full", "exponent"],
+		["type", "zero", "full", "exponent", "sourceProfile"],
 		"tint transform",
 	)
 	const zero = copyProcess(tintTransform.zero)
@@ -127,6 +132,14 @@ export function separation(
 			"Tint transform endpoints must have the same alternate space and output arity",
 		)
 	}
+	if (
+		tintTransform.sourceProfile !== undefined &&
+		(zero.space !== "DeviceRGB" ||
+			iccColorSpace(tintTransform.sourceProfile) !== "RGB ")
+	)
+		throw new TypeError(
+			"A profile-qualified spot alternate requires RGB endpoints and an RGB ICC profile",
+		)
 	if (!Number.isFinite(tintTransform.exponent) || tintTransform.exponent <= 0) {
 		throw new RangeError("Tint transform exponent must be finite and positive")
 	}
@@ -138,6 +151,9 @@ export function separation(
 			zero,
 			full,
 			exponent: tintTransform.exponent,
+			...(tintTransform.sourceProfile === undefined
+				? {}
+				: { sourceProfile: Uint8Array.from(tintTransform.sourceProfile) }),
 		}),
 	})
 }
@@ -365,7 +381,7 @@ export class ColorScope {
 			throw new TypeError(`Conflicting definitions for separation ${ink.name}`)
 		let ref = existing?.ref
 		if (ref === undefined) {
-			const { zero, full, exponent } = ink.tintTransform
+			const { zero, full, exponent, sourceProfile } = ink.tintTransform
 			const fn = dictionary({
 				FunctionType: 2,
 				Domain: array(0, 1),
@@ -375,7 +391,22 @@ export class ColorScope {
 				N: exponent,
 			})
 			ref = this.#objects.add(
-				array(name("Separation"), name(ink.name), name(zero.space), fn),
+				array(
+					name("Separation"),
+					name(ink.name),
+					sourceProfile === undefined
+						? name(zero.space)
+						: array(
+								name("ICCBased"),
+								this.#objects.add(
+									stream(
+										{ N: 3, Filter: name("FlateDecode") },
+										zlibSync(sourceProfile),
+									),
+								),
+							),
+					fn,
+				),
 			)
 			resources.inks.set(ink.name, { key, ref })
 		}

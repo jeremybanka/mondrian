@@ -35,6 +35,8 @@ import { zlibSync } from "fflate"
 export interface PdfPlateOptions {
 	/** Allowed source paint spaces. Defaults to ["cmyk", "spot"]. No color conversion is performed. */
 	readonly permitColors?: readonly PlateColorSpace[]
+	/** Explicitly interpret DeviceGray paint, including implicit black, as K-only ink. */
+	readonly gray?: "black-only"
 }
 
 export interface PdfPlatePreview {
@@ -72,7 +74,9 @@ export function projectPdfPlates(
 	)
 		throw new TypeError('permitColors must contain only "cmyk" and "spot"')
 	throwForPdfErrors(validatePdf(document))
-	const plan = planPdfPlates(document, new Set(permitted))
+	if (options.gray !== undefined && options.gray !== "black-only")
+		throw new TypeError("Unsupported gray-to-black policy")
+	const plan = planPdfPlates(document, new Set(permitted), options.gray)
 	const objectIndices = new Map<number, number>()
 	let highestNumber = 0
 	for (const [index, object] of document.objects.entries()) {

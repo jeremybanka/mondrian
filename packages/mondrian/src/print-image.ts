@@ -12,6 +12,26 @@ export interface PdfCmykImageData {
 	readonly destinationProfile: Uint8Array
 }
 
+/** Eight-bit tagged RGB samples, independent of any destination printing condition. */
+export interface PdfRgbImageData {
+	readonly width: number
+	readonly height: number
+	readonly data: Uint8Array
+	readonly alpha?: Uint8Array
+	readonly sourceProfile: Uint8Array
+	readonly renderingIntent?: PdfRenderingIntent
+}
+
+export type PdfRenderingIntent =
+	| "perceptual"
+	| "relative-colorimetric"
+	| "saturation"
+	| "absolute-colorimetric"
+
+export type PdfBlendingSpace =
+	| "DeviceCMYK"
+	| { readonly rgbProfile: Uint8Array }
+
 export interface PdfOutputIntent {
 	readonly profile: Uint8Array
 	/** Human-readable identification of the intended printing condition. */

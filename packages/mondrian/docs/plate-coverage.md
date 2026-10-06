@@ -43,7 +43,7 @@ The result includes `renderer.name`, `renderer.version`, `renderer.wasmSha256`, 
 
 ## Supported painting
 
-Coverage and colored previews use the same discovery and painting rules. Both validate every page and invoked Form before producing output; both reject unsupported semantics. See the [plate-preview boundaries](print-plates.md), including the supported CMYK/spot spaces, marked content, images, transparency, and overprint rules. RGB process painting is rejected rather than implicitly separated.
+Coverage and colored previews use the same discovery and painting rules. Both validate every page and invoked Form before producing output; both reject unsupported semantics. See the [plate-preview boundaries](print-plates.md), including the supported CMYK/spot spaces, marked content, images, transparency, and overprint rules. RGB process painting is rejected rather than implicitly separated. Use [explicit mixed-color preparation](mixed-color-print.md) to establish destination ink amounts first; ICCBased CMYK and baseline CMYK JPEG already describe channel amounts and need no destination conversion. DeviceGray paint can be extracted with an explicit `gray: "black-only"` policy.
 
 These are continuous-tone measurements of the ink amounts described by the PDF. Printer color management, dot gain, trapping, halftone screening, and physical ink behavior are outside this contract. Coverage measurements are useful for validating a delivery, but do not certify PDF/X conformance or equivalence to a particular press RIP.
 

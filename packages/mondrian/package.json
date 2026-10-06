@@ -39,7 +39,7 @@
 	"scripts": {
 		"build": "vp pack",
 		"cov": "vp test run --coverage",
-		"cov:check": "pnpm run cov && recoverage",
+		"cov:check": "pnpm run cov && node scripts/check-source-coverage.ts",
 		"test": "vp test",
 		"test:public": "vp test run tests/public --passWithNoTests=false",
 		"test:semver": "break-check",

@@ -264,8 +264,8 @@ importers:
         specifier: 6.0.5
         version: 6.0.5
       break-check:
-        specifier: 0.8.1
-        version: 0.8.1(supports-color@7.2.0)
+        specifier: 0.8.2
+        version: 0.8.2(supports-color@7.2.0)
       recoverage:
         specifier: 0.1.19
         version: 0.1.19(supports-color@7.2.0)(typescript@7.0.2)
@@ -1479,8 +1479,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  break-check@0.8.1:
-    resolution: {integrity: sha512-YEHOJLMsyvoDp/AI2fLdmCoFBJOEx7ibCaXNOpD8QLXLUQ7az6C6rhP24LXcGOY/ywiwlBrEvpjI8FF4vcp2Sg==}
+  break-check@0.8.2:
+    resolution: {integrity: sha512-Ff4qfyry4IX4ZwRdk9M+IbF+ZFDbb5D3RCWHC5FlMM5fRiyZnLnzoGCAmHStLrsSKJGmHt9zu0MGdqzg0OFLPQ==}
     hasBin: true
 
   cac@7.0.0:
@@ -3281,7 +3281,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  break-check@0.8.1(supports-color@7.2.0):
+  break-check@0.8.2(supports-color@7.2.0):
     dependencies:
       arktype: 2.2.7
       comline: 0.9.0(arktype@2.2.7)

@@ -22,15 +22,10 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 ## Static checks
 
 - `check:fmt`: `dprint check`.
-- `check:vp`: `pnpm run build && vp check --no-fmt`.
+- `check:public-types`: `vp run -r check:public-types`.
+- `check:vp`: `vp check --no-fmt`.
 
 `check:vp` invokes the configured Vite Plus validation pipeline; `check:fmt` handles formatting separately.
-
-## Command notes
-
-Release compatibility checks need access to the Git remote and release tags.
-
-Coverage comparison requires a captured default-branch baseline or access to the hosted baseline through `RECOVERAGE_CLOUD_TOKEN`. Coverage comparison retains the existing Recoverage capture-and-diff behavior; this repository does not expose a separate upload-only command.
 
 ## Migration
 

@@ -22,16 +22,10 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 ## Static checks
 
 - `check:fmt`: `dprint check`.
-- `check:public-types`: `vp run -r check:public-types`; validates public consumer imports against source.
+- `check:public-types`: `vp run -r check:public-types`.
 - `check:vp`: `vp check --no-fmt`.
 
 `check:vp` invokes the configured Vite Plus validation pipeline; `check:fmt` handles formatting separately.
-
-## Command notes
-
-`test:semver` runs released public tests against source without a build or current-test preflight. `test:public` only runs public tests; `check:public-types` checks their consumer imports separately. Build, current tests, consumer type checks, and release compatibility run as separate CI jobs. Compatibility checks need access to the Git remote and release tags.
-
-`cov:check` compares source statement coverage with the PR target commit (or `origin/main`) measured using the same source harness and installed toolchain. It runs the baseline in a disposable directory and rejects missing reports or decreases. This avoids comparing source spans with older bundled-coverage spans. On the default branch, it retains Recoverage capture and hosted-baseline publication through `RECOVERAGE_CLOUD_TOKEN`.
 
 ## Migration
 

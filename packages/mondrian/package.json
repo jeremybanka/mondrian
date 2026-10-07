@@ -59,7 +59,7 @@
 	},
 	"devDependencies": {
 		"@types/pngjs": "6.0.5",
-		"break-check": "0.8.1",
+		"break-check": "0.8.2",
 		"recoverage": "0.1.19",
 		"vitest": "catalog:"
 	},

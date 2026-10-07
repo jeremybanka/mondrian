@@ -1,9 +1,12 @@
 packages:
+  - apps/*
   - packages/*
 
 allowBuilds:
+  "@vscode/vsce-sign": false
   dprint: true
   skia-canvas: true
+  unrs-resolver: false
 
 blockExoticSubdeps: true
 minimumReleaseAge: 1440

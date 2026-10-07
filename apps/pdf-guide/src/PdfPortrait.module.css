@@ -1,0 +1,20 @@
+pdf-portrait.class {
+	display: block;
+	> figure {
+		margin: 0;
+		> svg {
+			width: 100%;
+			display: block;
+		}
+		> figcaption {
+			text-align: center;
+			font-size: 10px;
+			color: var(--muted);
+			> span {
+				font: 9px var(--mono);
+				margin-right: 12px;
+				color: #9a8cad;
+			}
+		}
+	}
+}

@@ -1,0 +1,60 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap");
+
+:root {
+	font-family: "DM Sans", sans-serif;
+	color: #292b3c;
+	background: #f7f6f2;
+	font-synthesis: none;
+	/* Keep standard and contextual ligatures enabled throughout the guide. */
+	font-feature-settings: "liga" 1, "clig" 1;
+	--ink: #292b3c;
+	--muted: #71716f;
+	--paper: #f7f6f2;
+	--line: #deded7;
+	--purple: #e8e4f5;
+	--serif: "Instrument Serif", Georgia, serif;
+	--mono: "DM Mono", monospace;
+}
+* {
+	box-sizing: border-box;
+}
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: 100px;
+}
+body {
+	margin: 0;
+}
+button, input {
+	font: inherit;
+}
+button, a, input {
+	-webkit-tap-highlight-color: transparent;
+}
+button {
+	cursor: pointer;
+	color: inherit;
+}
+a {
+	color: inherit;
+	text-underline-offset: 4px;
+}
+button:focus-visible, a:focus-visible, input:focus-visible {
+	outline: 2px solid #69609b;
+	outline-offset: 5px;
+}
+button:disabled {
+	cursor: default;
+}
+::selection {
+	background: #dcd6f4;
+}
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+	*, *::before, *::after {
+		animation: none !important;
+		transition: none !important;
+	}
+}

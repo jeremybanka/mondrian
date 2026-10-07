@@ -1,0 +1,144 @@
+drawing-lab.class {
+	display: block;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	overflow: hidden;
+	background: #fcfbf8;
+	> lab-heading {
+		display: flex;
+		justify-content: space-between;
+		gap: 12px;
+		flex-wrap: wrap;
+		padding: 20px 22px;
+		border-bottom: 1px solid var(--line);
+		> span {
+			font-size: 10px;
+			letter-spacing: 1.1px;
+		}
+		> small {
+			font: 9px var(--mono);
+			color: var(--muted);
+		}
+	}
+	> lab-panels {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		> program-panel {
+			background: var(--ink);
+			display: flex;
+			flex-direction: column;
+			> ol {
+				list-style: none;
+				padding: 18px 0;
+				margin: 0;
+				flex: 1;
+				> li {
+					padding: 0 12px;
+					> button {
+						display: flex;
+						width: 100%;
+						gap: 18px;
+						background: none;
+						color: #908da0;
+						border: 0;
+						padding: 10px;
+						text-align: left;
+						border-radius: 4px;
+						> span:first-child {
+							font: 9px var(--mono);
+							opacity: 0.6;
+						}
+						> code {
+							font: 11px var(--mono);
+							flex: 1;
+						}
+						> span:last-child {
+							font-size: 13px;
+						}
+					}
+					&[data-done="true"] > button {
+						color: #dbd4ed;
+					}
+					&[data-active="true"] > button {
+						background: #454055;
+						color: #ece6ff;
+					}
+				}
+			}
+			> step-controls {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				padding: 14px;
+				border-top: 1px solid #494753;
+				> span {
+					font: 9px var(--mono);
+					color: #aaa2bc;
+				}
+				> button {
+					border: 1px solid #625b70;
+					border-radius: 4px;
+					background: none;
+					color: #e0daf0;
+					padding: 8px;
+					font-size: 10px;
+					&:disabled {
+						opacity: 0.3;
+					}
+				}
+			}
+		}
+		> canvas-panel {
+			display: block;
+			padding: 18px 30px 22px;
+			> svg {
+				width: 100%;
+				max-height: 360px;
+				display: block;
+			}
+			> label {
+				display: flex;
+				justify-content: space-between;
+				font-size: 11px;
+				margin-top: 15px;
+				> output {
+					font: 10px var(--mono);
+					color: #827095;
+				}
+			}
+			> input {
+				display: block;
+				width: 100%;
+				margin: 15px 0 0;
+				accent-color: #9e8ac0;
+				cursor: pointer;
+			}
+		}
+	}
+	> lab-explanation {
+		display: flex;
+		gap: 15px;
+		padding: 18px 22px;
+		border-top: 1px solid var(--line);
+		background: #eeebf4;
+		align-items: center;
+		> strong {
+			font: 18px var(--mono);
+			color: #827095;
+			min-width: 28px;
+		}
+		> p {
+			font-size: 12px;
+			line-height: 1.8;
+			margin: 0;
+		}
+	}
+	@media (max-width: 550px) {
+		> lab-panels {
+			grid-template-columns: 1fr;
+			> canvas-panel > svg {
+				max-height: 300px;
+			}
+		}
+	}
+}

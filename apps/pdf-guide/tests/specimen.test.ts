@@ -1,5 +1,5 @@
 import { parsePdf, validatePdf } from "mondrian.pdf"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it } from "vite-plus/test"
 
 import { chapters } from "../src/chapters.ts"
 import { chapterHref, resolveChapter } from "../src/router.ts"

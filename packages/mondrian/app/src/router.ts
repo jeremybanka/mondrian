@@ -8,13 +8,16 @@ export const routes = optional({
 	pages: null,
 	drawing: null,
 	mondrian: null,
+	inspect: null,
 }) satisfies Tree
 export type Route = TreePath<typeof routes>
-export type ChapterId = "overview" | Exclude<Route[0], undefined>
+export type ChapterId = "overview" | Exclude<Route[0], undefined | "inspect">
 
 export function resolveChapter(pathname: string): ChapterId | null {
-	const segments = pathname.split("/").filter(Boolean)
-	return isTreePath(routes, segments) ? (segments[0] ?? "overview") : null
+	const segments = pathname.split("?")[0]!.split("/").filter(Boolean)
+	return isTreePath(routes, segments) && segments[0] !== "inspect"
+		? (segments[0] ?? "overview")
+		: null
 }
 
 export function chapterHref(chapter: ChapterId): string {
@@ -23,7 +26,10 @@ export function chapterHref(chapter: ChapterId): string {
 
 export const pathnameAtom = atom<string>({
 	key: "pathname",
-	default: typeof window === "undefined" ? "/" : window.location.pathname,
+	default:
+		typeof window === "undefined"
+			? "/"
+			: window.location.pathname + window.location.search,
 })
 export const chapterSelector = selector<ChapterId | null>({
 	key: "chapter",
@@ -31,7 +37,8 @@ export const chapterSelector = selector<ChapterId | null>({
 })
 
 export function connectRouter(): () => void {
-	const update = () => setState(pathnameAtom, window.location.pathname)
+	const update = () =>
+		setState(pathnameAtom, window.location.pathname + window.location.search)
 	const onClick = (event: MouseEvent) => {
 		if (
 			event.defaultPrevented ||
@@ -53,13 +60,21 @@ export function connectRouter(): () => void {
 		const url = new URL(anchor.href)
 		if (
 			url.origin !== window.location.origin ||
-			url.hash ||
-			resolveChapter(url.pathname) === null
+			!isTreePath(routes, url.pathname.split("/").filter(Boolean))
+		)
+			return
+		if (
+			url.hash &&
+			url.pathname + url.search ===
+				window.location.pathname + window.location.search
 		)
 			return
 		event.preventDefault()
-		if (url.pathname !== window.location.pathname) {
-			history.pushState(null, "", url.pathname + url.search)
+		if (
+			url.pathname + url.search !==
+			window.location.pathname + window.location.search
+		) {
+			history.pushState(null, "", url.pathname + url.search + url.hash)
 			update()
 			window.scrollTo({ top: 0, behavior: "instant" })
 		}

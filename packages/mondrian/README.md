@@ -47,6 +47,8 @@ pnpm exec mondrian --port 4010 --host 127.0.0.1
 
 Open the URL printed in the terminal. The default is `http://127.0.0.1:3000/`. The Node server serves the browser assets bundled with the package, supports direct chapter URLs, and works from any working directory. No Vite installation or development server is required. Use `mondrian --help` for options and Ctrl+C to stop it.
 
+Choose **Inspect a PDF** or drop a file onto the application to explore its object graph, references, fields, streams, palette usage, embedded bitmaps, ICC profiles, original pages, and supported ink plates. The original file remains unchanged. See [PDF inspection](docs/inspection.md) for supported previews, limits, and the browser-safe `mondrian.pdf/inspect` API.
+
 ## Create a PDF
 
 ```ts

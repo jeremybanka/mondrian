@@ -34,7 +34,7 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 
 The PDF field guide lives in `packages/mondrian/app` and ships with `mondrian.pdf`. `pnpm --filter mondrian.pdf dev` runs Vite against the app’s source; `pnpm build` bundles the library, CLI, and browser assets. `pnpm mondrian` (or the installed `node_modules/.bin/mondrian`) serves the packaged application. `pnpm --filter mondrian.pdf preview` uses the same packaged server. The package provides `check:eslint`, `check:tsc`, and `check:lasertag` for app checks. ESLint follows atom.io’s flat-config approach, including a compatibility bridge in `.pnpmfile.mjs` that gives TypeScript ESLint v8 the TypeScript 6 compiler API while the repository’s `tsc` remains on TypeScript 7.
 
-After building, run `pnpm --filter mondrian.pdf test:package` to pack and install the package into an isolated consumer project, then check its binary, assets, and chapter routes. The CI Build job performs this verification. Normal `test` continues to run source tests without a prerequisite build.
+After building, run `pnpm --filter mondrian.pdf test:package` to pack and install the package into an isolated consumer project, then check its binary, assets, chapter/inspector routes, inspection API, and page rendering. The CI Build job performs this verification. Normal `test` continues to run source tests without a prerequisite build.
 
 Source tests and `check:vp` run independently of build artifacts. Run `pnpm build` before `check:public-types`, which verifies consumer types against the built package declarations.
 

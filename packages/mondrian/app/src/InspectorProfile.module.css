@@ -1,0 +1,32 @@
+inspector-profile.class {
+	display: block;
+	padding: 20px;
+	border-top: 1px solid var(--line);
+	background: #eeebf4;
+	> h3 {
+		font-size: 12px;
+		font-weight: 500;
+		margin-top: 0;
+	}
+	> dl {
+		> profile-field {
+			display: grid;
+			grid-template-columns: 105px minmax(0, 1fr);
+			gap: 12px;
+			padding: 8px 0;
+			font-size: 10px;
+			> dt {
+				color: #8c789f;
+			}
+			> dd {
+				margin: 0;
+				overflow-wrap: anywhere;
+			}
+		}
+	}
+	> p {
+		font-size: 10px;
+		line-height: 1.8;
+		color: var(--muted);
+	}
+}

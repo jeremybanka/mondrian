@@ -18,6 +18,7 @@
 		"target": "ES2024",
 		"types": [],
 		"paths": {
+			"mondrian.pdf/inspect": ["./packages/mondrian/src/inspect.ts"],
 			"mondrian.pdf": [
 				"./packages/mondrian/src/index.ts"
 			],

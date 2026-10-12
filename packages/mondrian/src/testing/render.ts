@@ -29,6 +29,12 @@ export const pdfArtifactRenderer = Object.freeze({
 })
 
 export interface PdfRenderOptions {
+	/** Render only these one-based pages; order is preserved. Defaults to all pages. */
+	readonly pageNumbers?: readonly number[]
+	/** Password for supported encrypted original files. */
+	readonly password?: string
+	/** Optional page bitmap cap, from 1 to 32 million pixels. */
+	readonly maxPagePixels?: number
 	/** The raster resolution in dots per inch. Defaults to 144. */
 	readonly resolution?: number
 	/** An opaque #RGB or #RRGGBB page background. Defaults to white. */
@@ -98,7 +104,11 @@ async function render(
 		throw new RangeError("PDFium could not allocate memory for the PDF")
 	}
 	pdfiumHeap(pdfium).set(bytes, filePointer)
-	const document = pdfium.FPDF_LoadMemDocument(filePointer, bytes.length, "")
+	const document = pdfium.FPDF_LoadMemDocument(
+		filePointer,
+		bytes.length,
+		options.password ?? "",
+	)
 	if (document === 0) {
 		const error = pdfium.FPDF_GetLastError()
 		pdfium.pdfium.wasmExports.free(filePointer)
@@ -110,8 +120,26 @@ async function render(
 		const pages: RenderedPdfPage[] = []
 		const scale = resolution / 72
 		const pageCount = pdfium.FPDF_GetPageCount(document)
+		const selected =
+			options.pageNumbers ??
+			Array.from({ length: pageCount }, (_, index) => index + 1)
+		if (
+			selected.some(
+				(number) =>
+					!Number.isSafeInteger(number) || number < 1 || number > pageCount,
+			)
+		)
+			throw new RangeError("Requested PDF page is out of range")
+		const maxPixels = options.maxPagePixels ?? Number.MAX_SAFE_INTEGER
+		if (
+			!Number.isSafeInteger(maxPixels) ||
+			maxPixels < 1 ||
+			(options.maxPagePixels !== undefined && maxPixels > 32000000)
+		)
+			throw new RangeError("maxPagePixels must be between 1 and 32000000")
 
-		for (let index = 0; index < pageCount; index += 1) {
+		for (const pageNumber of selected) {
+			const index = pageNumber - 1
 			const page = pdfium.FPDF_LoadPage(document, index)
 			if (page === 0) {
 				throw new Error(`PDFium could not load PDF page ${index + 1}`)
@@ -119,6 +147,13 @@ async function render(
 			try {
 				const width = Math.ceil(pdfium.FPDF_GetPageWidthF(page) * scale)
 				const height = Math.ceil(pdfium.FPDF_GetPageHeightF(page) * scale)
+				if (
+					width < 1 ||
+					height < 1 ||
+					!Number.isSafeInteger(width * height) ||
+					width * height > maxPixels
+				)
+					throw new RangeError("PDF page exceeds the rendering pixel limit")
 				const pixels = renderPage(
 					pdfium,
 					page,

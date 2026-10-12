@@ -1,0 +1,71 @@
+import { useEffect, useRef, useState } from "react"
+
+import type { InspectionSession } from "./inspector-state.ts"
+import { inspectorRequest } from "./inspector-state.ts"
+import css from "./InspectorPreview.module.css"
+
+export function InspectorPreview({
+	session,
+	path,
+	label,
+	lazy = false,
+}: {
+	session: InspectionSession
+	path: string
+	label: string
+	lazy?: boolean
+}) {
+	const root = useRef<HTMLElement>(null)
+	const [visible, setVisible] = useState(!lazy)
+	useEffect(() => {
+		if (!lazy || !root.current) return
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries.some((entry) => entry.isIntersecting)) {
+					setVisible(true)
+					observer.disconnect()
+				}
+			},
+			{ rootMargin: "120px" },
+		)
+		observer.observe(root.current)
+		return () => observer.disconnect()
+	}, [lazy])
+	const [url, setUrl] = useState<string | null>(null)
+	const [message, setMessage] = useState("Loading preview…")
+	useEffect(() => {
+		if (!visible) return
+		const controller = new AbortController()
+		let address: string | undefined
+		setUrl(null)
+		setMessage("Loading preview…")
+		void inspectorRequest(session, path, controller.signal)
+			.then(async (response) => {
+				const blob = await response.blob()
+				if (controller.signal.aborted) return
+				address = URL.createObjectURL(blob)
+				setUrl(address)
+				setMessage(
+					response.headers.get("x-preview-interpretation") ??
+						"Original file rendered by PDFium; structural validation is reported separately.",
+				)
+			})
+			.catch((error: unknown) => {
+				if (!controller.signal.aborted)
+					setMessage(
+						`Preview unavailable: ${error instanceof Error ? error.message : String(error)}`,
+					)
+			})
+		return () => {
+			controller.abort()
+			if (address) URL.revokeObjectURL(address)
+		}
+	}, [path, session, visible])
+	return (
+		<inspector-preview className={css.class} ref={root}>
+			<h3>{label}</h3>
+			{url && <img src={url} alt={label} />}
+			<p aria-live="polite">{message}</p>
+		</inspector-preview>
+	)
+}

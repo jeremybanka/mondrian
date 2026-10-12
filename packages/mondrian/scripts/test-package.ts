@@ -85,7 +85,13 @@ try {
 				}
 			})
 		})
-		for (const path of ["", "objects", "pages", "mondrian"]) {
+		for (const path of [
+			"",
+			"objects",
+			"pages",
+			"mondrian",
+			"inspect?object=1%3A0",
+		]) {
 			const response = await fetch(new URL(path, url), {
 				signal: AbortSignal.timeout(5000),
 			})
@@ -102,8 +108,32 @@ try {
 			assert.ok((await response.arrayBuffer()).byteLength > 0)
 		}
 		assert.equal((await fetch(new URL("assets/missing.js", url))).status, 404)
+		const proof = join(consumer, "verify-inspector.ts")
+		await writeFile(
+			proof,
+			`
+import assert from "node:assert/strict"
+import { createPdfDocument, parsePdf, rectangle } from "mondrian.pdf"
+import { inspectPdf } from "mondrian.pdf/inspect"
+const pdf = createPdfDocument()
+pdf.setPages(pdf.page({ mediaBox: rectangle(0, 0, 100, 100) }))
+const bytes = pdf.serialize()
+assert.equal(inspectPdf(parsePdf(bytes)).pages.length, 1)
+const response = await fetch(new URL("api/inspect", process.argv[2]), {
+  method: "POST", headers: { "Content-Type": "application/pdf" }, body: bytes,
+})
+assert.equal(response.status, 200)
+const { id } = await response.json()
+const page = await fetch(new URL("api/inspect/" + id + "/page/1", process.argv[2]))
+assert.equal(page.status, 200)
+assert.equal(page.headers.get("content-type"), "image/png")
+assert.ok((await page.arrayBuffer()).byteLength > 0)
+assert.equal((await fetch(new URL("api/inspect/" + id, process.argv[2]), { method: "DELETE" })).status, 200)
+`,
+		)
+		await execFileAsync(process.execPath, [proof, url], { cwd: consumer })
 		process.stdout.write(
-			"Installed-package check passed: mondrian bin, bundled assets, and direct chapter routes.\n",
+			"Installed-package check passed: mondrian bin, bundled assets, direct routes, inspector API, and page rendering.\n",
 		)
 	} finally {
 		child.kill("SIGTERM")

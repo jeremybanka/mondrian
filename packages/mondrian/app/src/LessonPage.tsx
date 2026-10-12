@@ -11,14 +11,14 @@ import { chapterHref } from "./router.ts"
 import { downloadSpecimen, specimenBytes } from "./specimen.ts"
 import { drawingXAtom } from "./state.ts"
 
-const builderCode = `import { createPdfDocument, parsePdf, validatePdf }
+const builderCode = `import { createPdfDocument, rectangle, parsePdf, validatePdf }
   from "mondrian.pdf"
 
 const pdf = createPdfDocument()
 const helvetica = pdf.standardFont("Helvetica")
 
 const page = pdf.page({
-  mediaBox: [0, 0, 300, 360],
+  mediaBox: rectangle(0, 0, 300, 360),
   content: [
     pdf.text(text => text
       .font(helvetica, 16)
@@ -47,7 +47,7 @@ const photograph = pdf.rgbImage(prepareRgbImage(imageBytes, {
 }))
 
 pdf.setPages(pdf.page({
-  mediaBox: [0, 0, 300, 360],
+  mediaBox: rectangle(0, 0, 300, 360),
   content: [pdf.graphics(g =>
     g.drawImage(photograph, 30, 30, 240, 300))],
 }))
@@ -456,8 +456,8 @@ export function LessonPage({ chapter }: { chapter: ChapterId }) {
 							without converting its color; the second prepares a supported
 							object graph for a caller-selected CMYK condition. This sketch
 							uses caller-supplied image bytes and verified ICC profiles, with{" "}
-							<code>createPdfDocument</code> and <code>serializePdf</code>{" "}
-							imported from <code>mondrian.pdf</code>.
+							<code>createPdfDocument</code>, <code>rectangle</code>, and{" "}
+							<code>serializePdf</code> imported from <code>mondrian.pdf</code>.
 						</p>
 						<pre data-example>
 							<code>{colorCode}</code>

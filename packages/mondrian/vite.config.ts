@@ -20,6 +20,7 @@ export default defineConfig({
 			dts: {
 				entry: [
 					"src/index.ts",
+					"src/inspect.ts",
 					"src/testing.ts",
 					"src/vitest.ts",
 					"src/print.ts",
@@ -29,6 +30,7 @@ export default defineConfig({
 			entry: {
 				mondrian: "bin/mondrian.ts",
 				index: "src/index.ts",
+				inspect: "src/inspect.ts",
 				print: "src/print.ts",
 				testing: "src/testing.ts",
 				vitest: "src/vitest.ts",
@@ -44,7 +46,7 @@ export default defineConfig({
 				find: /^mondrian\.pdf$/,
 				replacement: fileURLToPath(new URL("./src/index.ts", import.meta.url)),
 			},
-			...["testing", "vitest", "print"].map((entry) => ({
+			...["testing", "vitest", "print", "inspect"].map((entry) => ({
 				find: `mondrian.pdf/${entry}`,
 				replacement: fileURLToPath(
 					new URL(`./src/${entry}.ts`, import.meta.url),

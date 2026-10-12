@@ -73,6 +73,21 @@ guide-app.class {
 				font-size: 19px;
 			}
 		}
+		> [data-inspect] {
+			> [data-short] {
+				display: none;
+			}
+			font-size: 12px;
+			text-decoration: none;
+			padding: 9px 13px;
+			border: 1px solid #d1c7df;
+			background: var(--purple);
+			border-radius: 4px;
+			white-space: nowrap;
+			> span {
+				margin-left: 12px;
+			}
+		}
 		> [data-menu] {
 			display: none;
 			background: none;
@@ -83,6 +98,9 @@ guide-app.class {
 		}
 	}
 	> main {
+		&[data-inspecting="true"] {
+			display: block;
+		}
 		display: grid;
 		grid-template-columns: 258px minmax(0, 1fr);
 		max-width: 1600px;
@@ -139,8 +157,38 @@ guide-app.class {
 	}
 	@media (max-width: 760px) {
 		> header {
+			gap: 10px;
+			padding-inline: 15px;
+			> [data-inspect] {
+				padding: 9px;
+				> [data-full] {
+					display: none;
+				}
+				> [data-short] {
+					display: inline;
+				}
+				> span {
+					margin-left: 0;
+				}
+			}
+			> [data-brand] {
+				gap: 8px;
+				> brand-mark {
+					grid-template-columns: 12px 12px;
+					grid-template-rows: 12px 12px;
+					gap: 2px;
+					padding: 4px;
+				}
+				> strong {
+					font-size: 20px;
+					> span {
+						font-size: 6px;
+						letter-spacing: 1px;
+					}
+				}
+			}
 			height: 80px;
-			padding-inline: 20px;
+			padding-inline: 15px;
 			> [data-source] {
 				display: none;
 			}

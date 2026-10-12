@@ -1,0 +1,28 @@
+inspector-preview.class {
+	display: block;
+	padding: 20px;
+	border-top: 1px solid var(--line);
+	background: #f0ede7;
+	> h3 {
+		font-size: 11px;
+		font-weight: 500;
+		margin: 0 0 16px;
+	}
+	> img {
+		display: block;
+		width: 100%;
+		height: auto;
+		max-height: 470px;
+		object-fit: contain;
+		background: repeating-conic-gradient(#ddd9d0 0% 25%, #f8f6f1 0% 50%) 0 /
+			16px 16px;
+		border: 1px solid #d5d0c6;
+	}
+	> p {
+		font-size: 10px;
+		line-height: 1.8;
+		color: #857b6b;
+		margin: 12px 0 0;
+		overflow-wrap: anywhere;
+	}
+}

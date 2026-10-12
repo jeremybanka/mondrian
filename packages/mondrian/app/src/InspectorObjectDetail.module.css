@@ -1,0 +1,126 @@
+inspector-object-detail.class {
+	display: block;
+	> detail-heading {
+		display: block;
+		padding: 22px;
+		> code {
+			font: 10px var(--mono);
+			color: #8b75a0;
+		}
+		> h2 {
+			font: 32px var(--serif);
+			font-feature-settings: inherit;
+			margin: 10px 0;
+		}
+		> p {
+			font-size: 12px;
+			line-height: 1.8;
+			color: var(--muted);
+		}
+		> a {
+			font-size: 10px;
+			color: #857098;
+		}
+	}
+	> nav {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 5px;
+		padding: 12px 18px;
+		background: #eeece6;
+		> button {
+			padding: 7px 9px;
+			background: none;
+			border: 0;
+			border-radius: 4px;
+			font-size: 10px;
+			&[aria-pressed="true"] {
+				background: #fcfbf8;
+			}
+		}
+	}
+	> field-list {
+		display: block;
+		padding: 12px 18px;
+		> details {
+			border-bottom: 1px solid var(--line);
+			padding: 12px 0;
+			> summary {
+				cursor: pointer;
+				font-size: 11px;
+				> code {
+					color: #846997;
+					font: 11px var(--mono);
+				}
+				> span {
+					display: block;
+					font: 9px/1.7 var(--mono);
+					overflow-wrap: anywhere;
+					margin-top: 6px;
+					color: #797469;
+				}
+			}
+			> p {
+				font-size: 11px;
+				line-height: 1.8;
+				color: var(--muted);
+			}
+			> a {
+				display: inline-block;
+				font: 10px var(--mono);
+				margin: 0 12px 4px 0;
+			}
+		}
+		> pre {
+			overflow: auto;
+			font: 11px var(--mono);
+		}
+	}
+	> pre {
+		background: var(--ink);
+		color: #e5ddf3;
+		font: 10px/1.9 var(--mono);
+		padding: 20px;
+		margin: 0;
+		max-height: 360px;
+		overflow: auto;
+		white-space: pre-wrap;
+		overflow-wrap: anywhere;
+	}
+	> [data-note] {
+		font-size: 9px;
+		line-height: 1.8;
+		color: #948b7c;
+		margin: 12px 20px;
+	}
+	> reference-list {
+		display: block;
+		padding: 0 20px 20px;
+		> h3 {
+			font-size: 11px;
+			font-weight: 500;
+			margin-top: 22px;
+		}
+		> a {
+			display: flex;
+			gap: 12px;
+			align-items: baseline;
+			padding: 7px 0;
+			text-decoration: none;
+			> code {
+				font: 10px var(--mono);
+				color: #8c76a0;
+				white-space: nowrap;
+			}
+			> span {
+				font: 9px var(--mono);
+				color: var(--muted);
+				overflow-wrap: anywhere;
+			}
+		}
+		> p {
+			font-size: 10px;
+			color: var(--muted);
+		}
+	}
+}

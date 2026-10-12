@@ -3,6 +3,7 @@
 import { readFile, readdir } from "node:fs/promises"
 import { createServer, type Server } from "node:http"
 import { extname, join } from "node:path"
+import { createInspectorApi } from "./inspector-api.ts"
 
 const contentTypes: Readonly<Record<string, string>> = {
 	".html": "text/html; charset=utf-8",
@@ -65,7 +66,15 @@ export async function createGuideServer(directory: URL): Promise<Server> {
 		)
 	}
 
+	const inspect = createInspectorApi()
 	return createServer((request, response) => {
+		if ((request.url ?? "").startsWith("/api/inspect")) {
+			void inspect(request, response).catch(() => {
+				if (!response.headersSent) response.writeHead(500)
+				response.end()
+			})
+			return
+		}
 		response.setHeader("X-Content-Type-Options", "nosniff")
 		if (request.method !== "GET" && request.method !== "HEAD") {
 			response.writeHead(405, {

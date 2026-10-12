@@ -10,6 +10,10 @@
 	"license": "MPL-2.0",
 	"type": "module",
 	"exports": {
+		"./inspect": {
+			"import": "./dist/inspect.mjs",
+			"types": "./dist/inspect.d.mts"
+		},
 		"./print": {
 			"import": "./dist/print.mjs",
 			"types": "./dist/print.d.mts"

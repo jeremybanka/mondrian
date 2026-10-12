@@ -22,7 +22,7 @@ try {
 	)
 	await execFileAsync(
 		"pnpm",
-		["add", "--offline", "--ignore-scripts", archive],
+		["add", "--prefer-offline", "--ignore-scripts", archive],
 		{ cwd: consumer },
 	)
 	const installed = join(consumer, "node_modules", "mondrian.pdf")

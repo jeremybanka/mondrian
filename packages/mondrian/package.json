@@ -28,20 +28,26 @@
 		},
 		"./package.json": "./package.json"
 	},
+	"bin": {
+		"mondrian": "./dist/mondrian.mjs"
+	},
 	"files": [
 		"AGENTS.md",
-		"dist/*.d.mts",
-		"dist/*.d.mts.map",
-		"dist/*.mjs",
-		"dist/*.mjs.map",
+		"dist",
 		"src"
 	],
 	"scripts": {
-		"build": "vp pack",
+		"build": "vp pack && node scripts/build-guide.ts",
+		"check:eslint": "eslint --config app/eslint.config.ts app --max-warnings 0",
+		"check:lasertag": "lasertag check \"app/src/**/*.module.css\"",
 		"check:public-types": "tsc --noEmit -p tsconfig.public.json",
+		"check:tsc": "tsc --noEmit -p app/tsconfig.json",
 		"cov": "vp test run --coverage",
 		"cov:check": "pnpm run cov && recoverage",
+		"dev": "vp dev --config app/vite.config.ts --host 0.0.0.0",
+		"preview": "node dist/mondrian.mjs",
 		"test": "vp test",
+		"test:package": "node scripts/test-package.ts",
 		"test:public": "vp test run tests/public --passWithNoTests=false",
 		"test:semver": "break-check",
 		"test:watch": "vp test watch"
@@ -59,8 +65,26 @@
 	},
 	"devDependencies": {
 		"@types/pngjs": "6.0.5",
+		"@types/react": "19.3.0",
+		"@types/react-dom": "19.3.0",
+		"@typescript-eslint/parser": "8.71.1",
+		"@typescript-eslint/utils": "8.71.1",
+		"@visx/scale": "4.0.0",
+		"@visx/shape": "4.0.0",
+		"@vitejs/plugin-react": "6.1.2",
+		"atom.io": "0.53.3",
 		"break-check": "0.8.2",
+		"eslint": "10.12.0",
+		"eslint-plugin-import-x": "4.17.1",
+		"eslint-plugin-simple-import-sort": "14.0.0",
+		"jiti": "2.7.0",
+		"lasertag": "0.8.7",
+		"react": "19.3.0",
+		"react-dom": "19.3.0",
 		"recoverage": "0.1.19",
+		"treetrunks": "0.1.12",
+		"vite": "catalog:",
+		"vite-plus": "catalog:",
 		"vitest": "catalog:"
 	},
 	"peerDependencies": {

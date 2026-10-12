@@ -37,6 +37,6 @@
 		"*.d.ts"
 	],
 	"exclude": [
-		"apps"
+		"packages/mondrian/app"
 	]
 }

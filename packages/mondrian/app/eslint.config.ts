@@ -10,7 +10,7 @@ const configs: Linter.Config[] = [
 		ignores: ["**/dist/**", "**/coverage/**", "**/node_modules/**"],
 	},
 	{
-		files: ["**/*.{ts,tsx}"],
+		files: ["app/**/*.{ts,tsx}"],
 		languageOptions: {
 			parser: tsParser,
 			parserOptions: {
@@ -46,11 +46,11 @@ const configs: Linter.Config[] = [
 		},
 	},
 	{
-		files: ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+		files: ["app/src/**/*.{ts,tsx}", "app/tests/**/*.{ts,tsx}"],
 		rules: { "no-console": "error" },
 	},
 	{
-		files: ["src/**/*.tsx"],
+		files: ["app/src/**/*.tsx"],
 		plugins: { lasertag: LasertagPlugin },
 		rules: {
 			"lasertag/access-css-module-class-only": "error",

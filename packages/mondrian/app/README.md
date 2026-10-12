@@ -1,21 +1,24 @@
 # The PDF field guide
 
-A small interactive guide to how PDF bytes, objects, page trees, and content streams map to Mondrian’s TypeScript model. The app is private and does not change the published package.
+A small interactive guide to how PDF bytes, objects, page trees, and content streams map to Mondrian’s TypeScript model. Its source lives inside the `mondrian.pdf` package; production browser assets and the `mondrian` launcher ship with that package.
 
 From the repository root:
 
 ```sh
 pnpm install
-pnpm --filter @mondrian/pdf-guide dev
+pnpm --filter mondrian.pdf dev
 ```
 
 Vite resolves `mondrian.pdf` directly to the workspace source for development, app builds, and guide tests. Changes to the library update the guide without a separate library build. The guide’s six chapter URLs use treetrunks for route validation and the browser History API for SPA navigation. Static hosting must rewrite unknown paths to `index.html` so refreshing a chapter URL loads the app.
 
 ```sh
 pnpm build
-pnpm --filter @mondrian/pdf-guide preview
-pnpm --filter @mondrian/pdf-guide check
-pnpm --filter @mondrian/pdf-guide test
+pnpm mondrian
+pnpm --filter mondrian.pdf check:eslint
+pnpm --filter mondrian.pdf check:tsc
+pnpm --filter mondrian.pdf check:lasertag
+pnpm --filter mondrian.pdf test
+pnpm --filter mondrian.pdf test:package
 pnpm fmt
 pnpm check
 ```
@@ -28,4 +31,6 @@ The PDF download, byte offsets, displayed syntax, and object model come from a r
 
 The format explanations connect the PDF object, file, and graphics structure to the local Mondrian implementation. The final chapter links to the [PDF Association specification archive](https://pdfa.org/resource/pdf-specification-archive/), which indexes the PDF 1.7 reference and ISO standards, and Mondrian’s API guide.
 
-The final chapter’s color section connects tagged RGB images, ICC profile streams, soft masks, page blending spaces, and OutputIntents to Mondrian’s explicit print-preparation API. For its policies and supported limits, see the library’s [mixed-color print guide](../../packages/mondrian/docs/mixed-color-print.md).
+`pnpm build` emits the library and launcher into `packages/mondrian/dist`, then builds the browser application into `dist/app`. `mondrian` serves that packaged directory on `127.0.0.1:3000` by default, with `--host` and `--port` options. `test:package` installs a packed tarball into a temporary consumer project and checks its actual binary, static assets, and SPA chapter routes; it requires a preceding build. The CI Build job runs this check.
+
+The final chapter’s color section connects tagged RGB images, ICC profile streams, soft masks, page blending spaces, and OutputIntents to Mondrian’s explicit print-preparation API. For its policies and supported limits, see the library’s [mixed-color print guide](../docs/mixed-color-print.md).

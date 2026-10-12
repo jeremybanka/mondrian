@@ -27,6 +27,7 @@ export default defineConfig({
 				sourcemap: true,
 			},
 			entry: {
+				mondrian: "bin/mondrian.ts",
 				index: "src/index.ts",
 				print: "src/print.ts",
 				testing: "src/testing.ts",
@@ -60,7 +61,7 @@ export default defineConfig({
 			provider: "v8",
 			reporter: ["text", "html", "json"],
 		},
-		include: ["tests/**/*.test.ts"],
+		include: ["tests/**/*.test.ts", "app/tests/**/*.test.ts"],
 		passWithNoTests: true,
 	},
 })

@@ -4,7 +4,7 @@ Workspace for typed PDF compilation targets.
 
 - [`mondrian.pdf`](packages/mondrian) provides the low-level PDF object model,
   invariant-preserving builder, validator, and serializer.
-- [`The PDF field guide`](apps/pdf-guide) is an interactive lesson on the file format and its representation in Mondrian. Run `pnpm --filter @mondrian/pdf-guide dev` to explore it locally.
+- [`The PDF field guide`](packages/mondrian/app) ships with `mondrian.pdf`. Install the package and run `mondrian` to explore the file format and its representation in Mondrian. In this workspace, run `pnpm build` followed by `pnpm mondrian`, or use `pnpm --filter mondrian.pdf dev` during development.
 
 The `fitter-happier` integration is maintained in the `fitter-happier`
 repository and consumes the published `mondrian.pdf` package.

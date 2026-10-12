@@ -35,6 +35,18 @@ arrays, streams, and indirect references.
 pnpm add mondrian.pdf
 ```
 
+## Explore the PDF field guide
+
+The package includes an interactive browser application about PDF bytes, objects, references, page trees, drawing commands, and Mondrian’s model. Launch it using the installed `node_modules/.bin/mondrian` command:
+
+```sh
+pnpm exec mondrian
+# Choose a different port or listen address:
+pnpm exec mondrian --port 4010 --host 127.0.0.1
+```
+
+Open the URL printed in the terminal. The default is `http://127.0.0.1:3000/`. The Node server serves the browser assets bundled with the package, supports direct chapter URLs, and works from any working directory. No Vite installation or development server is required. Use `mondrian --help` for options and Ctrl+C to stop it.
+
 ## Create a PDF
 
 ```ts

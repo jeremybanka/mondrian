@@ -3,12 +3,18 @@ import { pdfObjectId } from "mondrian.pdf/inspect"
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 
 import {
+	inspectionPageProgram,
+	inspectionSearchText,
+} from "./inspection-learning.ts"
+import {
 	cancelInspection,
 	closeInspection,
 	inspectionErrorAtom,
 	inspectionSessionAtom,
 	inspectionStatusAtom,
+	inspectorCapabilitiesAtom,
 	inspectorColorAtom,
+	inspectorInstructionSelector,
 	inspectorObjectSelector,
 	inspectorPageAtom,
 	inspectorSearchAtom,
@@ -23,6 +29,7 @@ import css from "./InspectorPage.module.css"
 import { InspectorPreview } from "./InspectorPreview.tsx"
 import { InspectorProfile } from "./InspectorProfile.tsx"
 import { InspectorResources } from "./InspectorResources.tsx"
+import { pathnameAtom } from "./router.ts"
 
 export function InspectorPage() {
 	const session = useO(inspectionSessionAtom),
@@ -32,8 +39,14 @@ export function InspectorPage() {
 		setTab = useI(inspectorTabAtom)
 	const search = useO(inspectorSearchAtom),
 		setSearch = useI(inspectorSearchAtom)
-	const query = useDeferredValue(search).toLowerCase()
+	const query = useDeferredValue(search)
+		.trim()
+		.replace(/\s+/gu, " ")
+		.toLowerCase()
+	const route = useO(pathnameAtom)
 	const selected = useO(inspectorObjectSelector)
+	const instruction = useO(inspectorInstructionSelector)
+	const capabilities = useO(inspectorCapabilitiesAtom)
 	const focused = useO(inspectorColorAtom),
 		setFocused = useI(inspectorColorAtom)
 	const page = useO(inspectorPageAtom),
@@ -43,15 +56,6 @@ export function InspectorPage() {
 	const [top, setTop] = useState(0),
 		[height, setHeight] = useState(700)
 	const scroller = useRef<HTMLElement>(null)
-	const filtered = useMemo(
-		() =>
-			(session?.index.objects ?? []).filter((object) =>
-				`${object.id} ${object.role} ${object.keys.join(" ")}`
-					.toLowerCase()
-					.includes(query),
-			),
-		[query, session],
-	)
 	const byId = useMemo(
 		() =>
 			new Map(
@@ -62,6 +66,46 @@ export function InspectorPage() {
 			),
 		[session],
 	)
+	const searchIndex = useMemo(
+		() =>
+			new Map(
+				(session?.index.objects ?? []).map((entry) => [
+					entry.id,
+					inspectionSearchText(entry, byId.get(entry.id)?.value),
+				]),
+			),
+		[byId, session],
+	)
+	const filtered = useMemo(
+		() =>
+			(session?.index.objects ?? []).filter((object) =>
+				searchIndex.get(object.id)?.includes(query),
+			),
+		[searchIndex, query, session],
+	)
+	const pageProgram = useMemo(
+		() =>
+			session
+				? inspectionPageProgram(session.document, session.index, page)
+				: null,
+		[page, session],
+	)
+	const placements =
+		pageProgram?.placements.filter((placement) =>
+			instruction
+				? placement.object === selected &&
+					placement.offset === instruction.offset
+				: placement.resource === selected,
+		) ?? []
+	useEffect(() => {
+		const number = Number(new URLSearchParams(route.split("?")[1]).get("page"))
+		if (
+			Number.isInteger(number) &&
+			number >= 1 &&
+			number <= (session?.index.pages.length ?? 0)
+		)
+			setPage(number)
+	}, [route, session, setPage])
 	const summary = session?.index.objects.find(
 		(object) => object.id === selected,
 	)
@@ -73,7 +117,7 @@ export function InspectorPage() {
 	)
 	useEffect(() => {
 		if (selected) setTab("objects")
-	}, [selected, setTab])
+	}, [selected, instruction?.offset, setTab])
 	useEffect(() => {
 		if (tab !== "objects" || !scroller.current) return
 		const root = scroller.current
@@ -231,9 +275,7 @@ export function InspectorPage() {
 												: mode === "bitmaps"
 													? session.index.bitmaps.length
 													: mode === "diagnostics"
-														? session.diagnostics.length +
-															session.warnings.length +
-															session.index.notices.length
+														? `${session.diagnostics.length} structural · ${session.warnings.length} recovery · ${session.index.notices.length + capabilities.length} limits`
 														: "CMYK + spot"}
 									</small>
 								</button>
@@ -243,7 +285,7 @@ export function InspectorPage() {
 							Search
 							<input
 								type="search"
-								placeholder="Object, field, color space…"
+								placeholder="4 0 R, /Im0, field, color space…"
 								value={search}
 								onChange={(event) => {
 									setSearch(event.target.value)
@@ -253,8 +295,27 @@ export function InspectorPage() {
 							/>
 						</label>
 					</inspector-navigation>
-					<inspector-workspace>
+					<inspector-workspace data-panel={tab}>
 						<aside aria-label="Document navigation">
+							<details data-walkthrough>
+								<summary>Follow a page’s story</summary>
+								<p>Catalog → Pages → Page → Contents → resource</p>
+								<ol>
+									<li>
+										Open the Catalog’s /Pages reference to find the page-tree
+										root.
+									</li>
+									<li>
+										Follow /Kids to a Page, then /Contents to its drawing
+										program.
+									</li>
+									<li>
+										Open Operators. Select a Do instruction to outline a direct
+										image placement; follow its resource link to inspect the
+										bitmap.
+									</li>
+								</ol>
+							</details>
 							<small>PAGE TREE</small>
 							{session.index.pages.slice(0, 1000).map((entry) => (
 								<button
@@ -334,6 +395,8 @@ export function InspectorPage() {
 									session={session}
 									object={object}
 									summary={summary}
+									pageProgram={pageProgram}
+									page={page}
 								/>
 							) : (
 								<p>
@@ -360,6 +423,8 @@ export function InspectorPage() {
 										label={`Bitmap ${summary.id.replace(":", " ")}`}
 									/>
 								)}
+						</inspection-detail>
+						<section data-preview aria-label="Page preview">
 							{session.index.pages.length > 0 && (
 								<>
 									<label data-page>
@@ -376,8 +441,14 @@ export function InspectorPage() {
 													Number.isInteger(number) &&
 													number >= 1 &&
 													number <= session.index.pages.length
-												)
+												) {
+													navigateInspector(
+														selected ?? undefined,
+														instruction?.offset,
+														number,
+													)
 													setPage(number)
+												}
 											}}
 										/>
 									</label>
@@ -385,10 +456,16 @@ export function InspectorPage() {
 										session={session}
 										path={`page/${page}`}
 										label={`Original page ${page}`}
+										placements={placements}
+										placementNote={
+											instruction || placements.length
+												? pageProgram?.message
+												: undefined
+										}
 									/>
 								</>
 							)}
-						</inspection-detail>
+						</section>
 					</inspector-workspace>
 					<p data-footnote>
 						Read-only · original bytes retained · objects and references are

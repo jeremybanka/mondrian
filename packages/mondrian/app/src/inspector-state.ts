@@ -3,6 +3,7 @@ import type { PdfDiagnostic, PdfDocument } from "mondrian.pdf"
 import type { PdfInspection } from "mondrian.pdf/inspect"
 import { pdfObjectId } from "mondrian.pdf/inspect"
 
+import { inspectionHref } from "./inspection-learning.ts"
 import { pathnameAtom } from "./router.ts"
 
 export interface InspectionSession {
@@ -46,6 +47,34 @@ export const inspectorInkAtom = atom<string | null>({
 	key: "inspectorInk",
 	default: null,
 })
+export const inspectorDetailViewAtom = atom<string>({
+	key: "inspectorDetailView",
+	default: "fields",
+})
+export const inspectorCapabilitiesAtom = atom<
+	readonly { key: string; label: string; message: string }[]
+>({
+	key: "inspectorCapabilities",
+	default: [],
+})
+export const inspectorInstructionSelector = selector<{
+	offset: number
+	page: number
+} | null>({
+	key: "inspectorInstruction",
+	get: ({ get }) => {
+		const query = new URLSearchParams(get(pathnameAtom).split("?")[1])
+		const offset = Number(query.get("offset")),
+			page = Number(query.get("page"))
+		return query.has("offset") &&
+			Number.isSafeInteger(offset) &&
+			offset >= 0 &&
+			Number.isSafeInteger(page) &&
+			page >= 1
+			? { offset, page }
+			: null
+	},
+})
 export const inspectorObjectSelector = selector<string | null>({
 	key: "inspectorObject",
 	get: ({ get }) =>
@@ -58,8 +87,16 @@ let backend:
 	| { session: InspectionSession; promise: Promise<string> }
 	| undefined
 
-export function navigateInspector(id?: string): void {
-	const target = `/inspect${id ? `?object=${encodeURIComponent(id)}` : ""}`
+export function navigateInspector(
+	id?: string,
+	offset?: number,
+	page?: number,
+): void {
+	if (offset !== undefined) {
+		setState(inspectorDetailViewAtom, "operators")
+		setState(inspectorTabAtom, "objects")
+	}
+	const target = id ? inspectionHref(id, offset, page) : "/inspect"
 	if (location.pathname + location.search !== target)
 		history.pushState(null, "", target)
 	setState(pathnameAtom, target)
@@ -82,6 +119,8 @@ export function closeInspection(): void {
 	setState(inspectionErrorAtom, "")
 	setState(inspectorColorAtom, null)
 	setState(inspectorInkAtom, null)
+	setState(inspectorCapabilitiesAtom, [])
+	setState(inspectorDetailViewAtom, "fields")
 	navigateInspector()
 }
 export async function openPdfFile(
@@ -167,38 +206,67 @@ export async function inspectorRequest(
 	path: string,
 	signal?: AbortSignal,
 ): Promise<Response> {
-	if (!backend || backend.session !== session) {
-		const promise = fetch("/api/inspect", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/pdf",
-				"X-Pdf-Password": encodeURIComponent(session.password),
-				"X-Pdf-Recover": String(session.recover),
-			},
-			body: Uint8Array.from(session.bytes),
-		}).then(async (response) => {
-			const result = (await response.json()) as { id?: string; error?: string }
-			if (!response.ok || !result.id)
-				throw new Error(
-					result.error ?? "The local preview service is unavailable",
-				)
-			return result.id
-		})
-		backend = { session, promise }
-		void promise.catch(() => {
-			if (backend?.promise === promise) backend = undefined
-		})
+	const key = path.startsWith("plates") ? "plates" : path
+	const label =
+		key === "plates"
+			? "Ink plates"
+			: path.startsWith("image/")
+				? `Bitmap ${path.slice(6).replace(":", " ")}`
+				: path.startsWith("profile/")
+					? `ICC profile ${path.slice(8).replace(":", " ")}`
+					: `Page preview ${path.slice(5)}`
+	try {
+		if (!backend || backend.session !== session) {
+			const promise = fetch("/api/inspect", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/pdf",
+					"X-Pdf-Password": encodeURIComponent(session.password),
+					"X-Pdf-Recover": String(session.recover),
+				},
+				body: Uint8Array.from(session.bytes),
+			}).then(async (response) => {
+				const result = (await response.json()) as {
+					id?: string
+					error?: string
+				}
+				if (!response.ok || !result.id)
+					throw new Error(
+						result.error ?? "The local preview service is unavailable",
+					)
+				return result.id
+			})
+			backend = { session, promise }
+			void promise.catch(() => {
+				if (backend?.promise === promise) backend = undefined
+			})
+		}
+		const id = await backend.promise
+		if (getState(inspectionSessionAtom) !== session)
+			throw new Error("Document changed; preview cancelled")
+		const response = await fetch(
+			`/api/inspect/${id}/${path}`,
+			signal ? { signal } : {},
+		)
+		if (!response.ok) {
+			const result = (await response.json()) as { error?: string }
+			throw new Error(result.error ?? "Preview is unavailable")
+		}
+		if (!signal?.aborted && getState(inspectionSessionAtom) === session)
+			setState(inspectorCapabilitiesAtom, (findings) =>
+				findings.filter((finding) => finding.key !== key),
+			)
+		return response
+	} catch (error: unknown) {
+		if (!signal?.aborted && getState(inspectionSessionAtom) === session)
+			setState(inspectorCapabilitiesAtom, (findings) => [
+				...findings.filter((finding) => finding.key !== key),
+				{
+					key,
+					label,
+					message: error instanceof Error ? error.message : String(error),
+				},
+			])
+		throw error
 	}
-	const id = await backend.promise
-	if (getState(inspectionSessionAtom) !== session)
-		throw new Error("Document changed; preview cancelled")
-	const response = await fetch(
-		`/api/inspect/${id}/${path}`,
-		signal ? { signal } : {},
-	)
-	if (!response.ok) {
-		const result = (await response.json()) as { error?: string }
-		throw new Error(result.error ?? "Preview is unavailable")
-	}
-	return response
 }

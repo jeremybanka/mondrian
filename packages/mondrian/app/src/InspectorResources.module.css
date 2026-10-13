@@ -6,6 +6,10 @@ inspector-resources.class {
 		font-feature-settings: inherit;
 		margin: 0 0 14px;
 	}
+	> h3 {
+		font-size: 14px;
+		margin-top: 24px;
+	}
 	> p {
 		font-size: 12px;
 		line-height: 1.85;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 
+import type { InspectionPlacement } from "./inspection-learning.ts"
 import type { InspectionSession } from "./inspector-state.ts"
 import { inspectorRequest } from "./inspector-state.ts"
 import css from "./InspectorPreview.module.css"
@@ -9,11 +10,15 @@ export function InspectorPreview({
 	path,
 	label,
 	lazy = false,
+	placements = [],
+	placementNote,
 }: {
 	session: InspectionSession
 	path: string
 	label: string
 	lazy?: boolean
+	placements?: readonly InspectionPlacement[]
+	placementNote?: string | undefined
 }) {
 	const root = useRef<HTMLElement>(null)
 	const [visible, setVisible] = useState(!lazy)
@@ -64,8 +69,36 @@ export function InspectorPreview({
 	return (
 		<inspector-preview className={css.class} ref={root}>
 			<h3>{label}</h3>
-			{url && <img src={url} alt={label} />}
+			{url && (
+				<preview-image>
+					<img src={url} alt={label} />
+					{placements.length > 0 && (
+						<svg
+							viewBox="0 0 1 1"
+							preserveAspectRatio="none"
+							role="img"
+							aria-label={`${placements.length} image placement ${placements.length === 1 ? "outline" : "outlines"}`}
+						>
+							{placements.map((placement, index) => (
+								<polygon
+									key={`${placement.object}-${placement.offset}-${index}`}
+									points={placement.points
+										.map((point) => point.join(","))
+										.join(" ")}
+									vectorEffect="non-scaling-stroke"
+								>
+									<title>
+										Image {placement.resource.replace(":", " ")} R · decoded
+										byte {placement.offset}
+									</title>
+								</polygon>
+							))}
+						</svg>
+					)}
+				</preview-image>
+			)}
 			<p aria-live="polite">{message}</p>
+			{placementNote && <p>{placementNote}</p>}
 		</inspector-preview>
 	)
 }

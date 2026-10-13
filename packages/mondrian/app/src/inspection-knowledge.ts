@@ -61,10 +61,13 @@ export const objectExplanations: Readonly<
 export const fieldExplanations: Readonly<Record<string, string>> = {
 	Type: "Declares this dictionary’s type when the format requires it.",
 	Subtype: "Refines a resource type, such as Image or Form.",
+	Pages:
+		"In the Catalog, this reference identifies the page-tree root. Follow /Kids through its branches to the Page objects, whose /Contents streams draw the visible pages.",
 	Parent:
-		"References the parent node; this backward link can create a graph cycle.",
-	Kids: "Ordered references to child nodes.",
-	Count: "Descendant-page count, including nested branches.",
+		"On a Page or Pages node, this reference points upward to the parent Pages branch. Page geometry and resources may be inherited from its ancestors.",
+	Kids: "On a Pages branch, these ordered references identify immediate Page or Pages children. Their order determines the document’s page order.",
+	Count:
+		"On a Pages branch, this is the number of descendant Page objects, including pages inside nested branches; it is not simply the length of /Kids.",
 	MediaBox:
 		"Page bounds [left, bottom, right, top] in user-space units; may be inherited.",
 	CropBox: "Visible page bounds; defaults to the effective MediaBox.",
@@ -110,4 +113,23 @@ export const fieldExplanations: Readonly<Record<string, string>> = {
 	OP: "Stroking overprint.",
 	op: "Nonstroking overprint.",
 	OPM: "CMYK overprint mode.",
+}
+export const operationExplanations: Readonly<Record<string, string>> = {
+	q: "Save the graphics state, including the current transformation, colors, and clipping path. Q restores it.",
+	Q: "Restore the most recently saved graphics state. This prevents one placement’s transformations and colors from affecting later drawing.",
+	cm: "Concatenate a transformation matrix. The six operands scale, rotate, shear, or translate subsequent drawing in the current coordinate system.",
+	Do: "Paint the named image or Form XObject from /Resources/XObject. The same resource can be painted many times using different transformations. Direct page images are outlined in the preview before clipping.",
+	Tf: "Select a font from /Resources/Font and set its size. The resource name is local to this drawing context.",
+	BT: "Begin a text object. Text operators inside it position and paint glyphs.",
+	ET: "End the text object.",
+	Tm: "Set the text matrix, determining where text is placed and how it is transformed.",
+	Tj: "Show the string’s glyphs using the selected font, text matrix, and text rendering mode.",
+	TJ: "Show an array of strings and spacing adjustments using the current text state.",
+	rg: "Set the nonstroking DeviceRGB color. This affects later fills and text painting, rather than painting immediately.",
+	RG: "Set the stroking DeviceRGB color for later strokes.",
+	re: "Append a rectangle to the current path: x, y, width, and height. A later painting operator makes it visible.",
+	f: "Fill the current path with the current nonstroking color using the nonzero winding rule.",
+	S: "Stroke the current path using the current stroke color, line width, and other stroke settings.",
+	W: "Set the clipping path from the current path using the nonzero winding rule, after the path-ending operator. Image outlines may extend beyond this clip.",
+	n: "End the current path without painting it, applying any pending clipping operation.",
 }

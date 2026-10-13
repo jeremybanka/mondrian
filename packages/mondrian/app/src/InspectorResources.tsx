@@ -1,14 +1,17 @@
 import { useI, useO } from "atom.io/react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
+import { inspectionHref, inspectionSearchText } from "./inspection-learning.ts"
 import type { InspectionSession } from "./inspector-state.ts"
 import {
+	inspectorCapabilitiesAtom,
 	inspectorColorAtom,
 	inspectorInkAtom,
 	inspectorPageAtom,
 	inspectorRequest,
 	inspectorSearchAtom,
 	inspectorTabAtom,
+	navigateInspector,
 } from "./inspector-state.ts"
 import { InspectorPreview } from "./InspectorPreview.tsx"
 import css from "./InspectorResources.module.css"
@@ -20,6 +23,7 @@ export function InspectorResources({
 	session: InspectionSession
 	mode: "palette" | "bitmaps" | "inks" | "diagnostics"
 }) {
+	const capabilities = useO(inspectorCapabilitiesAtom)
 	const focused = useO(inspectorColorAtom),
 		setFocused = useI(inspectorColorAtom)
 	const page = useO(inspectorPageAtom)
@@ -70,8 +74,12 @@ export function InspectorResources({
 			})
 		return () => controller.abort()
 	}, [gray, mode, session, setPlate])
+	const summaries = useMemo(
+		() => new Map(session.index.objects.map((object) => [object.id, object])),
+		[session],
+	)
 	const bitmaps = session.index.bitmaps.filter((image) =>
-		`${image.id} ${image.colorSpace} ${image.filters}`
+		`${image.id} ${image.id.replace(":", " ")} ${image.colorSpace} ${image.filters} ${inspectionSearchText(summaries.get(image.id)!)}`
 			.toLowerCase()
 			.includes(search),
 	)
@@ -124,7 +132,19 @@ export function InspectorResources({
 								{color.uses.slice(0, 24).map((use, index) => (
 									<a
 										key={index}
-										href={`/inspect?object=${encodeURIComponent(use.object)}`}
+										href={inspectionHref(use.object, use.offset, use.page)}
+										onClick={(event) => {
+											if (
+												event.button !== 0 ||
+												event.metaKey ||
+												event.ctrlKey ||
+												event.shiftKey ||
+												event.altKey
+											)
+												return
+											event.preventDefault()
+											navigateInspector(use.object, use.offset, use.page)
+										}}
 									>
 										{use.object.replace(":", " ")} obj · decoded byte{" "}
 										{use.offset} →
@@ -256,7 +276,7 @@ export function InspectorResources({
 							</button>
 						))}
 					</ink-list>
-					{plate && (
+					{plate && plates.some((ink) => ink.name === plate) && (
 						<InspectorPreview
 							session={session}
 							path={`page/${page}?plate=${encodeURIComponent(plate)}${gray ? "&gray=black-only" : ""}`}
@@ -276,6 +296,7 @@ export function InspectorResources({
 						separate results. Rendering a page successfully does not certify PDF
 						conformance.
 					</p>
+					<h3>Structural findings · {session.diagnostics.length}</h3>
 					{session.diagnostics.length === 0 && (
 						<p data-success>No Mondrian structural diagnostics.</p>
 					)}
@@ -288,10 +309,29 @@ export function InspectorResources({
 							<p>{diagnostic.message}</p>
 						</diagnostic-module>
 					))}
+					<h3>Parser recovery · {session.warnings.length}</h3>
+					{session.warnings.length === 0 && <p>No parser recovery warnings.</p>}
 					{session.warnings.map((warning, index) => (
 						<diagnostic-module key={`warning-${index}`}>
 							<strong>RECOVERY · original byte {warning.offset}</strong>
 							<p>{warning.message}</p>
+						</diagnostic-module>
+					))}
+					<h3>
+						Capability limits ·{" "}
+						{session.index.notices.length + capabilities.length}
+					</h3>
+					<p>
+						Preview capabilities are checked when opened. A preview limitation
+						does not imply a structural defect.
+					</p>
+					{session.index.notices.length + capabilities.length === 0 && (
+						<p>No capability limits reported so far.</p>
+					)}
+					{capabilities.map((finding) => (
+						<diagnostic-module key={finding.key}>
+							<strong>{finding.label}</strong>
+							<p>{finding.message}</p>
 						</diagnostic-module>
 					))}
 					{session.index.notices.map((notice, index) => (

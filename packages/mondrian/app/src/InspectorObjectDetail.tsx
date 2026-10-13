@@ -1,19 +1,25 @@
+import { useI, useO } from "atom.io/react"
 import type { PdfIndirectObject } from "mondrian.pdf"
 import type { PdfInspectedObject } from "mondrian.pdf/inspect"
 import {
 	decodePdfInspectionStream,
-	inspectPdfContent,
 	pdfDictionaryEntries,
 	pdfInspectionSyntax,
 } from "mondrian.pdf/inspect"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo } from "react"
 
 import {
 	fieldExplanations,
 	objectExplanations,
 } from "./inspection-knowledge.ts"
+import type { InspectionPageProgram } from "./inspection-learning.ts"
 import type { InspectionSession } from "./inspector-state.ts"
+import {
+	inspectorDetailViewAtom,
+	inspectorInstructionSelector,
+} from "./inspector-state.ts"
 import css from "./InspectorObjectDetail.module.css"
+import { InspectorOperators } from "./InspectorOperators.tsx"
 
 function modelText(value: unknown): string {
 	let remaining = 1000
@@ -40,12 +46,21 @@ export function InspectorObjectDetail({
 	session,
 	object,
 	summary,
+	pageProgram,
+	page,
 }: {
 	session: InspectionSession
 	object: PdfIndirectObject
 	summary: PdfInspectedObject
+	pageProgram: InspectionPageProgram | null
+	page: number
 }) {
-	const [view, setView] = useState("fields")
+	const instruction = useO(inspectorInstructionSelector)
+	const view = useO(inspectorDetailViewAtom),
+		setView = useI(inspectorDetailViewAtom)
+	useEffect(() => {
+		setView(instruction ? "operators" : "fields")
+	}, [summary.id, instruction?.offset, instruction?.page, setView])
 	const value = object.value
 	const structured =
 		typeof value === "object" &&
@@ -62,7 +77,7 @@ export function InspectorObjectDetail({
 			if (view === "model") return modelText(object)
 			if (view === "syntax")
 				return `${summary.objectNumber} ${summary.generation} obj\n${pdfInspectionSyntax(value)}\nendobj`
-			if (!stream) return ""
+			if (!stream || (view !== "encoded" && view !== "decoded")) return ""
 			if (view === "encoded")
 				return Array.from(stream.data.subarray(0, 4096), (byte) =>
 					byte.toString(16).padStart(2, "0"),
@@ -70,14 +85,6 @@ export function InspectorObjectDetail({
 			const bytes = decodePdfInspectionStream(session.document, stream)
 			if (view === "decoded")
 				return `${bytes.length.toLocaleString()} decoded bytes\n\n${new TextDecoder().decode(bytes.subarray(0, 16384))}`
-			if (view === "operators")
-				return inspectPdfContent(bytes)
-					.slice(0, 200)
-					.map(
-						(op) =>
-							`${String(op.offset).padStart(6)}  ${op.operands.map((operand) => pdfInspectionSyntax(operand)).join(" ")} ${op.operator}`,
-					)
-					.join("\n")
 			return ""
 		} catch (error) {
 			return `This view is unavailable: ${error instanceof Error ? error.message : String(error)}\n\nThe encoded bytes and object fields remain available.`
@@ -154,6 +161,13 @@ export function InspectorObjectDetail({
 						</pre>
 					)}
 				</field-list>
+			) : view === "operators" ? (
+				<InspectorOperators
+					session={session}
+					object={object}
+					pageProgram={pageProgram}
+					page={page}
+				/>
 			) : (
 				<pre aria-label={`${view} view`}>
 					<code>{text}</code>

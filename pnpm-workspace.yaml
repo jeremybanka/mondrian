@@ -11,6 +11,7 @@ blockExoticSubdeps: true
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - break-check
+  - breakage
   - comline
   - recoverage
   - takua

@@ -38,6 +38,7 @@
 			"matchDatasources": ["npm"],
 			"matchPackageNames": [
 				"break-check",
+				"breakage",
 				"comline",
 				"recoverage",
 				"takua",

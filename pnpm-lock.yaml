@@ -293,9 +293,9 @@ importers:
       atom.io:
         specifier: 0.53.3
         version: 0.53.3(@types/react@19.3.0)(@typescript-eslint/parser@8.71.2(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(react@19.3.1)
-      break-check:
-        specifier: 0.8.2
-        version: 0.8.2(supports-color@7.2.0)(zod@4.6.5)
+      breakage:
+        specifier: 0.8.1
+        version: 0.8.1(supports-color@7.2.0)(zod@4.6.5)
       eslint:
         specifier: 10.12.0
         version: 10.12.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -2200,8 +2200,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  break-check@0.8.2:
-    resolution: {integrity: sha512-Ff4qfyry4IX4ZwRdk9M+IbF+ZFDbb5D3RCWHC5FlMM5fRiyZnLnzoGCAmHStLrsSKJGmHt9zu0MGdqzg0OFLPQ==}
+  breakage@0.8.1:
+    resolution: {integrity: sha512-+NNLOg547CbFzzz/id0owulW5Wde+CiH4AfeULAMr7FF4X2IWb0wsWv4KQH3Ok/UZxTKMk+WhNCuw7SpN6PUfQ==}
     hasBin: true
 
   buffer-crc32@0.2.13:
@@ -5402,7 +5402,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  break-check@0.8.2(supports-color@7.2.0)(zod@4.6.5):
+  breakage@0.8.1(supports-color@7.2.0)(zod@4.6.5):
     dependencies:
       arktype: 2.2.7
       comline: 0.9.0(arktype@2.2.7)(zod@4.6.5)

@@ -54,8 +54,8 @@ jobs:
             packages/mondrian/artifacts/pdf
           retention-days: 7
 
-  BreakCheck:
-    name: Break Check
+  Breakage:
+    name: Breakage
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

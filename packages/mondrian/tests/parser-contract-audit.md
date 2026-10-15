@@ -1,6 +1,6 @@
 # Parser semver contract audit
 
-The parser is an unshipped feature on this branch. Public tests are replayed by Break Check against future implementations, so an assertion belongs there only when its failure represents lost consumer behavior. This audit covers every assertion in the original public parser suite, the added parser option/encryption contracts, and the disposition of the private parser suites. Dictionary prototypes and object-array ordering remain private implementation choices; complete graph comparisons normalize only object-array ordering and retain every object identity, value, and byte.
+The parser is an unshipped feature on this branch. Public tests are replayed by Breakage against future implementations, so an assertion belongs there only when its failure represents lost consumer behavior. This audit covers every assertion in the original public parser suite, the added parser option/encryption contracts, and the disposition of the private parser suites. Dictionary prototypes and object-array ordering remain private implementation choices; complete graph comparisons normalize only object-array ordering and retain every object identity, value, and byte.
 
 ## Public assertions
 

@@ -53,7 +53,7 @@
 		"test": "vp test",
 		"test:package": "node scripts/test-package.ts",
 		"test:public": "vp test run tests/public --passWithNoTests=false",
-		"test:semver": "breakage",
+		"test:breakage": "breakage",
 		"test:watch": "vp test watch"
 	},
 	"dependencies": {

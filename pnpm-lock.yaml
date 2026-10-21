@@ -310,7 +310,7 @@ importers:
         version: 2.7.0
       lasertag:
         specifier: 0.8.7
-        version: 0.8.7(@types/react@19.3.0)(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(arktype@2.2.5)(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(react@19.3.1)(supports-color@7.2.0)
+        version: 0.8.7(@types/react@19.3.0)(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(arktype@2.2.8)(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(react@19.3.1)(supports-color@7.2.0)
       react:
         specifier: 19.3.1
         version: 19.3.1
@@ -318,8 +318,8 @@ importers:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
       recoverage:
-        specifier: 0.1.19
-        version: 0.1.19(supports-color@7.2.0)(typescript@6.0.3)(zod@4.6.5)
+        specifier: 0.1.20
+        version: 0.1.20(supports-color@7.2.0)(typescript@6.0.3)(zod@4.6.5)
       treetrunks:
         specifier: 0.1.12
         version: 0.1.12
@@ -335,14 +335,8 @@ importers:
 
 packages:
 
-  '@ark/schema@0.56.4':
-    resolution: {integrity: sha512-nd4OqaWdKZJeGF5zNmZysDQO7NyyJ1ycl4S7i16Hj1VxqL+x72Z66lOn7ErpsoMUZtCtslAMHMjqJhuQSxciyw==}
-
   '@ark/schema@0.56.7':
     resolution: {integrity: sha512-jmoOJlYIc4k1uv8oYBDNOFnAsKk2a2D9t/D6npF2JUfW4ecPB0v6ce6lruKg7lkBxIBA8Z7UtxfmvephYbhUGQ==}
-
-  '@ark/util@0.56.4':
-    resolution: {integrity: sha512-KKqwGSia44cvuuDY70jGfbiUdG2E8F2cM4npdqvJ22S5a0LknlwG6nIrfQG1nF8fzxpzP30098wp0a8ASs0prQ==}
 
   '@ark/util@0.56.7':
     resolution: {integrity: sha512-z8pVnrPk/x9GC18yOp5wCe8rR2+Z6us4CTSg7dvxdsDLuA2xXYq+QETD1fO6f3fMuXe+PCjpvtCnhTW9RHLgEw==}
@@ -2095,14 +2089,8 @@ packages:
   aria-query@5.3.0:
     resolution: {integrity: sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A==}
 
-  arkregex@0.0.10:
-    resolution: {integrity: sha512-+iDWBYBjH8w7wqEv8VY4loBwRldFxX84KNwKbobH3FJPay/18XI9sTesmXYpKyIrgbC5z/s16+vSJYHCC9FEvQ==}
-
   arkregex@0.0.13:
     resolution: {integrity: sha512-c17sqCqiiZauxyoU1KZ2zbzCgeghGmc8dR2CrdQnlEtpq3bLhRLoLrxTL52M/8yQD8e/i1/IBRpRCNAuqJa7xQ==}
-
-  arktype@2.2.5:
-    resolution: {integrity: sha512-c9oqY1eBab2LceqvpWX50xae2HB8P/nJPxRhuhPVf5lEDi3WQpf7WQflJFMsyCiA3NGh6zENOlse30gWBzlwDg==}
 
   arktype@2.2.8:
     resolution: {integrity: sha512-tZyLza7kO2vN8BXBKcj4t43IVMe8/ZyqlITH0chZv7FfEw+edLovpY922tqcK4mCjTpf4oNo2xV6np7tquP1ww==}
@@ -3288,8 +3276,8 @@ packages:
     resolution: {integrity: sha512-rSOKNYUmaxy0om1BNjMN4ezNT6VKK+2xF4GBhc81mkH7L60i6dp8qPYrkndNLT3QPphoII3maL9PVC9XmhHwVQ==}
     engines: {node: '>=0.8'}
 
-  recoverage@0.1.19:
-    resolution: {integrity: sha512-HGNdxZKrCFt9cfT2kFDgSVNtR2kRn5lZ1JvgWwf6vfUAZusncn2oice0dBvWDesxgQglL2nYa09DS0evKrZsTA==}
+  recoverage@0.1.20:
+    resolution: {integrity: sha512-uFrSnrvH2mU3DWRKkBxWhlDX3Mhn5vVxHmE4vyBmRYy2MPua16gBaNSXlD7bwDv75R9L294xdJksyaiM/cyj9w==}
     hasBin: true
 
   reflect.getprototypeof@1.0.10:
@@ -3727,15 +3715,9 @@ packages:
 
 snapshots:
 
-  '@ark/schema@0.56.4':
-    dependencies:
-      '@ark/util': 0.56.4
-
   '@ark/schema@0.56.7':
     dependencies:
       '@ark/util': 0.56.7
-
-  '@ark/util@0.56.4': {}
 
   '@ark/util@0.56.7': {}
 
@@ -4505,9 +4487,9 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@t3-oss/env-core@0.13.11(arktype@2.2.5)(typescript@6.0.3)(zod@4.6.5)':
+  '@t3-oss/env-core@0.13.11(arktype@2.2.8)(typescript@6.0.3)(zod@4.6.5)':
     optionalDependencies:
-      arktype: 2.2.5
+      arktype: 2.2.8
       typescript: 6.0.3
       zod: 4.6.5
 
@@ -5184,19 +5166,9 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  arkregex@0.0.10:
-    dependencies:
-      '@ark/util': 0.56.4
-
   arkregex@0.0.13:
     dependencies:
       '@ark/util': 0.56.7
-
-  arktype@2.2.5:
-    dependencies:
-      '@ark/schema': 0.56.4
-      '@ark/util': 0.56.4
-      arkregex: 0.0.10
 
   arktype@2.2.8:
     dependencies:
@@ -5331,14 +5303,6 @@ snapshots:
   classnames@2.5.1: {}
 
   cockatiel@3.2.1: {}
-
-  comline@0.9.0(arktype@2.2.5)(zod@4.6.5):
-    dependencies:
-      '@standard-schema/spec': 1.1.0
-      treetrunks: 0.1.12
-    optionalDependencies:
-      arktype: 2.2.5
-      zod: 4.6.5
 
   comline@0.9.0(arktype@2.2.8)(zod@4.6.5):
     dependencies:
@@ -6133,12 +6097,12 @@ snapshots:
     dependencies:
       '@keyv/serialize': 1.1.1
 
-  lasertag@0.8.7(@types/react@19.3.0)(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(arktype@2.2.5)(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(react@19.3.1)(supports-color@7.2.0):
+  lasertag@0.8.7(@types/react@19.3.0)(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(arktype@2.2.8)(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(react@19.3.1)(supports-color@7.2.0):
     dependencies:
       '@astrojs/compiler': 4.0.0
       '@vscode/vsce': 4.0.0(supports-color@7.2.0)
       atom.io: 0.53.3(@types/react@19.3.0)(@typescript-eslint/parser@8.72.0(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(react@19.3.1)
-      comline: 0.9.0(arktype@2.2.5)(zod@4.6.5)
+      comline: 0.9.0(arktype@2.2.8)(zod@4.6.5)
       rolldown: 1.2.11
       takua: 0.2.3
       tinyglobby: 0.2.17
@@ -6558,11 +6522,11 @@ snapshots:
     dependencies:
       mute-stream: 0.0.8
 
-  recoverage@0.1.19(supports-color@7.2.0)(typescript@6.0.3)(zod@4.6.5):
+  recoverage@0.1.20(supports-color@7.2.0)(typescript@6.0.3)(zod@4.6.5):
     dependencies:
-      '@t3-oss/env-core': 0.13.11(arktype@2.2.5)(typescript@6.0.3)(zod@4.6.5)
-      arktype: 2.2.5
-      comline: 0.9.0(arktype@2.2.5)(zod@4.6.5)
+      '@t3-oss/env-core': 0.13.11(arktype@2.2.8)(typescript@6.0.3)(zod@4.6.5)
+      arktype: 2.2.8
+      comline: 0.9.0(arktype@2.2.8)(zod@4.6.5)
       diff: 9.0.0
       istanbul-lib-coverage: 3.2.2
       istanbul-lib-report: 3.0.1

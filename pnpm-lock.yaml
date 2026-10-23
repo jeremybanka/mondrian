@@ -321,8 +321,8 @@ importers:
         specifier: 0.1.20
         version: 0.1.20(supports-color@7.2.0)(typescript@6.0.3)(zod@4.6.7)
       treetrunks:
-        specifier: 0.1.12
-        version: 0.1.12
+        specifier: 0.1.13
+        version: 0.1.13
       vite:
         specifier: 'catalog:'
         version: '@voidzero-dev/vite-plus-core@1.3.0(@types/node@26.6.5)(jiti@2.7.0)(typescript@6.0.3)(yaml@2.9.0)'
@@ -3514,6 +3514,9 @@ packages:
 
   treetrunks@0.1.12:
     resolution: {integrity: sha512-x9XbZAus9Y4y7WRke6DwOrxmAxrwXNVv/wSmO9aNEfO92gu4Jau/4lmfXE1untxNle1WygPX2wriCtf+oYKMmg==}
+
+  treetrunks@0.1.13:
+    resolution: {integrity: sha512-mnGpuYAWH+EMci3E+4B9nd9K57mR4zSNmTrkzyJwTEmnN75TllJGgVb632unrp2AOfZ/ksgvombhwGH1bERhzw==}
 
   ts-api-utils@2.5.0:
     resolution: {integrity: sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA==}
@@ -6864,6 +6867,8 @@ snapshots:
   totalist@3.0.1: {}
 
   treetrunks@0.1.12: {}
+
+  treetrunks@0.1.13: {}
 
   ts-api-utils@2.5.0(typescript@6.0.3):
     dependencies:

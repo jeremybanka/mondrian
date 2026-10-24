@@ -1,4 +1,4 @@
-import { useI, useO } from "atom.io/react"
+import { useI, useO } from "@atom.io/react"
 import { useEffect, useMemo, useState } from "react"
 
 import { inspectionHref, inspectionSearchText } from "./inspection-learning.ts"

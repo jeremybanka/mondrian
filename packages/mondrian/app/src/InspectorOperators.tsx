@@ -1,4 +1,4 @@
-import { useO } from "atom.io/react"
+import { useO } from "@atom.io/react"
 import type { PdfIndirectObject } from "mondrian.pdf"
 import type { PdfContentOperation } from "mondrian.pdf/inspect"
 import {

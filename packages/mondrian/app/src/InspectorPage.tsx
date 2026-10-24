@@ -1,4 +1,4 @@
-import { useI, useO } from "atom.io/react"
+import { useI, useO } from "@atom.io/react"
 import { pdfObjectId } from "mondrian.pdf/inspect"
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 

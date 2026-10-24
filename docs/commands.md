@@ -23,7 +23,7 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 ## Static checks
 
 - `check:fmt`: `dprint check`.
-- `check:eslint`: `vp run -r check:eslint`; the guide uses the npm `atom.io/eslint-plugin` and `lasertag/eslint-plugin` with typed parsing and import checks.
+- `check:eslint`: `vp run -r check:eslint`; the guide uses the npm `@atom.io/eslint-plugin` and `lasertag/eslint-plugin` with typed parsing and import checks.
 - `check:public-types`: `vp run -r check:public-types`.
 - `check:lasertag`: `vp run -r check:lasertag`; checks component-owned CSS Modules against their render structure.
 - `check:vp`: `vp check --no-fmt && vp run -r check:tsc`.

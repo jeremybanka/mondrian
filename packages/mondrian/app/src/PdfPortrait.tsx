@@ -1,6 +1,6 @@
+import { useO } from "@atom.io/react"
 import { scaleLinear } from "@visx/scale"
 import { LinePath } from "@visx/shape"
-import { useO } from "atom.io/react"
 
 import css from "./PdfPortrait.module.css"
 import { drawingXAtom } from "./state.ts"

@@ -1,6 +1,6 @@
+import { useI, useO } from "@atom.io/react"
 import { scaleLinear } from "@visx/scale"
 import { Bar } from "@visx/shape"
-import { useI, useO } from "atom.io/react"
 
 import css from "./FileExplorer.module.css"
 import { fileSections } from "./specimen.ts"

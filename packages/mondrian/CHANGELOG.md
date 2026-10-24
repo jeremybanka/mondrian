@@ -1,5 +1,11 @@
 # mondrian.pdf
 
+## 0.1.14
+
+### Patch Changes
+
+- 2627539: Upgrade the bundled PDF guide and inspector to atom.io 0.54.0 with the standalone React bindings.
+
 ## 0.1.13
 
 ### Patch Changes

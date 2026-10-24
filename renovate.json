@@ -39,6 +39,8 @@
 				"npm"
 			],
 			"matchPackageNames": [
+				"@atom.io/eslint-plugin",
+				"@atom.io/react",
 				"atom.io",
 				"breakage",
 				"comline",

@@ -1,4 +1,4 @@
-import { useO } from "atom.io/react"
+import { useO } from "@atom.io/react"
 import { useEffect, useState } from "react"
 
 import { chapters } from "./chapters.ts"

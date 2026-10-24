@@ -1,5 +1,5 @@
+import { useI, useO } from "@atom.io/react"
 import { LinkVertical } from "@visx/shape"
-import { useI, useO } from "atom.io/react"
 
 import { objectDetails } from "./chapters.ts"
 import css from "./ObjectExplorer.module.css"

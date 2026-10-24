@@ -1,6 +1,6 @@
+import { useI, useO } from "@atom.io/react"
 import { scaleLinear } from "@visx/scale"
 import { LinePath } from "@visx/shape"
-import { useI, useO } from "atom.io/react"
 
 import css from "./DrawingLab.module.css"
 import { drawingCommands } from "./specimen.ts"

@@ -272,6 +272,9 @@ importers:
       '@atom.io/react':
         specifier: 0.1.0
         version: 0.1.0(@types/react@19.3.0)(atom.io@0.54.0)(react@19.3.1)
+      '@breakage/changesets':
+        specifier: 0.1.0
+        version: 0.1.0(breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7))
       '@types/pngjs':
         specifier: 6.0.5
         version: 6.0.5
@@ -300,8 +303,8 @@ importers:
         specifier: 0.54.0
         version: 0.54.0
       breakage:
-        specifier: 0.9.1
-        version: 0.9.1(@changesets/assemble-release-plan@7.0.0)(@changesets/config@4.0.1)(@changesets/pre@3.0.0)(@changesets/read@1.0.1)(@manypkg/get-packages@3.1.0)(supports-color@7.2.0)(zod@4.6.7)
+        specifier: 0.10.0
+        version: 0.10.0(supports-color@7.2.0)(zod@4.6.7)
       eslint:
         specifier: 10.13.0
         version: 10.13.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -456,6 +459,11 @@ packages:
 
   '@blazediff/core@1.10.0':
     resolution: {integrity: sha512-AOQff0zgR7cGsZL+4E7hVkmujoPUpm0J9xzWGWZj5wCjd3gmxESXAPfKyuzs93VdpQNFhHlBhfOjrcZ+XTERtQ==}
+
+  '@breakage/changesets@0.1.0':
+    resolution: {integrity: sha512-6PS6IdZlP8l64Bor33G/xWkFshJdNDJu3AdjWVshwVPbLmIr1XsjuGmK6hEPxEjrnFxDH3E4XjWckjSOYKVR+g==}
+    peerDependencies:
+      breakage: ^0.10.0
 
   '@cacheable/memory@2.2.0':
     resolution: {integrity: sha512-CTLKqLItRCEixEAewD3/j9DB3/o96gpTPD4eJ1v+DGOlxZRZncRQkGYqqnAGCscYd6RNeXfGeiuCphsPtqyIfQ==}
@@ -2232,26 +2240,9 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  breakage@0.9.1:
-    resolution: {integrity: sha512-vACLtyImFKdh6EpcKhhcJ5oeHwnxM9L7Ro18hjzgdI0NOQ9PnNkm58VRAQdqCnPovhxSLaas8k6IzamjUov8Iw==}
+  breakage@0.10.0:
+    resolution: {integrity: sha512-NdrlShsiuiOadVTkD1EPscKxOgnX0/3vBMHww1Jm2YNATYXCpF+vySY/W3vZ/G020brOd3ZPbySt9tEcjJS9/A==}
     hasBin: true
-    peerDependencies:
-      '@changesets/assemble-release-plan': ^7.0.0
-      '@changesets/config': ^4.0.1
-      '@changesets/pre': ^3.0.0
-      '@changesets/read': ^1.0.1
-      '@manypkg/get-packages': ^3.1.0
-    peerDependenciesMeta:
-      '@changesets/assemble-release-plan':
-        optional: true
-      '@changesets/config':
-        optional: true
-      '@changesets/pre':
-        optional: true
-      '@changesets/read':
-        optional: true
-      '@manypkg/get-packages':
-        optional: true
 
   buffer-crc32@0.2.13:
     resolution: {integrity: sha512-VO9Ht/+p3SN7SKWqcrgEzjGbRSJYTx+Q1pTQC0wrWqHx0vpJraQ6GtHx8tvcg1rlK1byhU5gccxgOgj7B0TDkQ==}
@@ -3945,6 +3936,15 @@ snapshots:
 
   '@blazediff/core@1.10.0': {}
 
+  '@breakage/changesets@0.1.0(breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7))':
+    dependencies:
+      '@changesets/assemble-release-plan': 7.0.0
+      '@changesets/config': 4.0.1
+      '@changesets/pre': 3.0.0
+      '@changesets/read': 1.0.1
+      '@manypkg/get-packages': 3.1.0
+      breakage: 0.10.0(supports-color@7.2.0)(zod@4.6.7)
+
   '@cacheable/memory@2.2.0':
     dependencies:
       '@cacheable/utils': 2.5.0
@@ -5324,7 +5324,7 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  breakage@0.9.1(@changesets/assemble-release-plan@7.0.0)(@changesets/config@4.0.1)(@changesets/pre@3.0.0)(@changesets/read@1.0.1)(@manypkg/get-packages@3.1.0)(supports-color@7.2.0)(zod@4.6.7):
+  breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7):
     dependencies:
       arktype: 2.2.9
       comline: 0.9.3(arktype@2.2.9)(zod@4.6.7)
@@ -5332,12 +5332,6 @@ snapshots:
       semver: 7.8.5
       simple-git: 4.0.2(supports-color@7.2.0)
       takua: 0.2.3
-    optionalDependencies:
-      '@changesets/assemble-release-plan': 7.0.0
-      '@changesets/config': 4.0.1
-      '@changesets/pre': 3.0.0
-      '@changesets/read': 1.0.1
-      '@manypkg/get-packages': 3.1.0
     transitivePeerDependencies:
       - supports-color
       - zod

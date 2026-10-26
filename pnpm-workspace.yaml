@@ -15,6 +15,7 @@ minimumReleaseAgeExclude:
   - "@atom.io/eslint-plugin"
   - "@atom.io/react"
   - atom.io
+  - "@breakage/changesets"
   - breakage
   - comline
   - lasertag

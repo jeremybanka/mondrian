@@ -42,3 +42,5 @@ whole-program copyleft. See [Mozilla's official MPL 2.0 FAQ](https://www.mozilla
 ## Repository commands
 
 See [the command guide](docs/commands.md) for formatting, static checks, tests, coverage where available, and release commands.
+
+See [Dagger CI](docs/ci.md) to run containerized checks before pushing and reuse engine snapshots in GitHub Actions.

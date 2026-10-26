@@ -300,8 +300,8 @@ importers:
         specifier: 0.54.0
         version: 0.54.0
       breakage:
-        specifier: 0.8.5
-        version: 0.8.5(supports-color@7.2.0)(zod@4.6.7)
+        specifier: 0.9.1
+        version: 0.9.1(@changesets/assemble-release-plan@7.0.0)(@changesets/config@4.0.1)(@changesets/pre@3.0.0)(@changesets/read@1.0.1)(@manypkg/get-packages@3.1.0)(supports-color@7.2.0)(zod@4.6.7)
       eslint:
         specifier: 10.13.0
         version: 10.13.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -344,8 +344,14 @@ packages:
   '@ark/schema@0.56.7':
     resolution: {integrity: sha512-jmoOJlYIc4k1uv8oYBDNOFnAsKk2a2D9t/D6npF2JUfW4ecPB0v6ce6lruKg7lkBxIBA8Z7UtxfmvephYbhUGQ==}
 
+  '@ark/schema@0.56.8':
+    resolution: {integrity: sha512-R05TOe85oQBGFFw2zKMuZpqkXibLKuC/aJt6VwFn5Cjc4x3NkWfhvGRpRDycNkj3ddcHnOPtIsmjVowJO9Yxdw==}
+
   '@ark/util@0.56.7':
     resolution: {integrity: sha512-z8pVnrPk/x9GC18yOp5wCe8rR2+Z6us4CTSg7dvxdsDLuA2xXYq+QETD1fO6f3fMuXe+PCjpvtCnhTW9RHLgEw==}
+
+  '@ark/util@0.56.8':
+    resolution: {integrity: sha512-XLiQyGfpJcws1zCtp2Cva8s1oheCdFn1Rt6JSyC4NnkDrpwCJnlaiawuuOc1Z97vMH+jEzW5vyyf0xOju5wUQA==}
 
   '@astrojs/compiler@4.0.0':
     resolution: {integrity: sha512-eouss7G8ygdZqHuke033VMcVw5HTZUu+PXd/h06DGDUg/jt5btPYPqh66ENWw/mU78rBrf/oeC4oqoBwMtDMNA==}
@@ -2154,8 +2160,14 @@ packages:
   arkregex@0.0.13:
     resolution: {integrity: sha512-c17sqCqiiZauxyoU1KZ2zbzCgeghGmc8dR2CrdQnlEtpq3bLhRLoLrxTL52M/8yQD8e/i1/IBRpRCNAuqJa7xQ==}
 
+  arkregex@0.0.14:
+    resolution: {integrity: sha512-G3I/uCtWE0IKQiPh0qqmmAFDdtjZKZQ5mNPR6gJBeAMZ7VqYCpoaDeXnLju2Zo6ywExtmxZJELeVFb0MPDjPyA==}
+
   arktype@2.2.8:
     resolution: {integrity: sha512-tZyLza7kO2vN8BXBKcj4t43IVMe8/ZyqlITH0chZv7FfEw+edLovpY922tqcK4mCjTpf4oNo2xV6np7tquP1ww==}
+
+  arktype@2.2.9:
+    resolution: {integrity: sha512-Cja0IMEn19rB35on9da1i1z6QMasuS7ULffXbetCry09jvCGYT8Bi1KgYiqri5FymF4nQAXkM90yksYkgSK2EA==}
 
   array-buffer-byte-length@1.0.2:
     resolution: {integrity: sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw==}
@@ -2220,9 +2232,26 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  breakage@0.8.5:
-    resolution: {integrity: sha512-nW5vhnvZfz3E1sQJKHubXjg9rXL1E5CBiH1Y5IrU4CNPZr8VFzyUeAeKv1xRomX8Ea0l3F1F0Bq8dFvzq30jZA==}
+  breakage@0.9.1:
+    resolution: {integrity: sha512-vACLtyImFKdh6EpcKhhcJ5oeHwnxM9L7Ro18hjzgdI0NOQ9PnNkm58VRAQdqCnPovhxSLaas8k6IzamjUov8Iw==}
     hasBin: true
+    peerDependencies:
+      '@changesets/assemble-release-plan': ^7.0.0
+      '@changesets/config': ^4.0.1
+      '@changesets/pre': ^3.0.0
+      '@changesets/read': ^1.0.1
+      '@manypkg/get-packages': ^3.1.0
+    peerDependenciesMeta:
+      '@changesets/assemble-release-plan':
+        optional: true
+      '@changesets/config':
+        optional: true
+      '@changesets/pre':
+        optional: true
+      '@changesets/read':
+        optional: true
+      '@manypkg/get-packages':
+        optional: true
 
   buffer-crc32@0.2.13:
     resolution: {integrity: sha512-VO9Ht/+p3SN7SKWqcrgEzjGbRSJYTx+Q1pTQC0wrWqHx0vpJraQ6GtHx8tvcg1rlK1byhU5gccxgOgj7B0TDkQ==}
@@ -2277,6 +2306,17 @@ packages:
 
   comline@0.9.1:
     resolution: {integrity: sha512-RbB0sJLMiTHe02VpHLK3RmXUk9Y/Jw5H35yx9X8rVWM7SQKDaSJ6AgIY1TbjhbduXhPrJEeiBbInvuYep5I9jw==}
+    peerDependencies:
+      arktype: ^2.1.28
+      zod: ^4.2.0
+    peerDependenciesMeta:
+      arktype:
+        optional: true
+      zod:
+        optional: true
+
+  comline@0.9.3:
+    resolution: {integrity: sha512-xtcKmn8iWGrkbet9qamn+Se3p9Fef2GSuOFKAq0AAx5tPFtB0kWLW+X1WkIHHDuPSpu5goVoffc5+6YHMvx/kQ==}
     peerDependencies:
       arktype: ^2.1.28
       zod: ^4.2.0
@@ -3767,7 +3807,13 @@ snapshots:
     dependencies:
       '@ark/util': 0.56.7
 
+  '@ark/schema@0.56.8':
+    dependencies:
+      '@ark/util': 0.56.8
+
   '@ark/util@0.56.7': {}
+
+  '@ark/util@0.56.8': {}
 
   '@astrojs/compiler@4.0.0': {}
 
@@ -5192,11 +5238,21 @@ snapshots:
     dependencies:
       '@ark/util': 0.56.7
 
+  arkregex@0.0.14:
+    dependencies:
+      '@ark/util': 0.56.8
+
   arktype@2.2.8:
     dependencies:
       '@ark/schema': 0.56.7
       '@ark/util': 0.56.7
       arkregex: 0.0.13
+
+  arktype@2.2.9:
+    dependencies:
+      '@ark/schema': 0.56.8
+      '@ark/util': 0.56.8
+      arkregex: 0.0.14
 
   array-buffer-byte-length@1.0.2:
     dependencies:
@@ -5268,14 +5324,20 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  breakage@0.8.5(supports-color@7.2.0)(zod@4.6.7):
+  breakage@0.9.1(@changesets/assemble-release-plan@7.0.0)(@changesets/config@4.0.1)(@changesets/pre@3.0.0)(@changesets/read@1.0.1)(@manypkg/get-packages@3.1.0)(supports-color@7.2.0)(zod@4.6.7):
     dependencies:
-      arktype: 2.2.8
-      comline: 0.9.0(arktype@2.2.8)(zod@4.6.7)
+      arktype: 2.2.9
+      comline: 0.9.3(arktype@2.2.9)(zod@4.6.7)
       minimatch: 10.2.6
       semver: 7.8.5
       simple-git: 4.0.2(supports-color@7.2.0)
       takua: 0.2.3
+    optionalDependencies:
+      '@changesets/assemble-release-plan': 7.0.0
+      '@changesets/config': 4.0.1
+      '@changesets/pre': 3.0.0
+      '@changesets/read': 1.0.1
+      '@manypkg/get-packages': 3.1.0
     transitivePeerDependencies:
       - supports-color
       - zod
@@ -5335,6 +5397,14 @@ snapshots:
       treetrunks: 0.1.13
     optionalDependencies:
       arktype: 2.2.8
+      zod: 4.6.7
+
+  comline@0.9.3(arktype@2.2.9)(zod@4.6.7):
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      treetrunks: 0.1.13
+    optionalDependencies:
+      arktype: 2.2.9
       zod: 4.6.7
 
   commander@12.1.0: {}

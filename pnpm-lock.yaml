@@ -271,7 +271,7 @@ importers:
         version: 0.1.0(@typescript-eslint/parser@8.72.1(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0))(eslint@10.13.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)
       '@atom.io/react':
         specifier: 0.1.0
-        version: 0.1.0(@types/react@19.3.0)(atom.io@0.54.0)(react@19.3.1)
+        version: 0.1.0(@types/react@19.3.0)(atom.io@0.54.1)(react@19.3.1)
       '@breakage/changesets':
         specifier: 0.1.0
         version: 0.1.0(breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7))
@@ -300,8 +300,8 @@ importers:
         specifier: 6.1.2
         version: 6.1.2(@voidzero-dev/vite-plus-core@1.4.0(@types/node@26.6.5)(jiti@2.7.0)(typescript@7.0.2)(yaml@2.9.0))
       atom.io:
-        specifier: 0.54.0
-        version: 0.54.0
+        specifier: 0.54.1
+        version: 0.54.1
       breakage:
         specifier: 0.10.0
         version: 0.10.0(supports-color@7.2.0)(zod@4.6.7)
@@ -2242,6 +2242,14 @@ packages:
       happy-dom:
         optional: true
 
+  atom.io@0.54.1:
+    resolution: {integrity: sha512-8nc7y4zqOfPMt8NrVg1KejV9qHGok9xddrOXkeJFWBIH+vKCBQLwdmOpiwoDh6e9MNFQv5Ag49auaB/OjYHaNA==}
+    peerDependencies:
+      happy-dom: '>=17.4.4'
+    peerDependenciesMeta:
+      happy-dom:
+        optional: true
+
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
@@ -3847,9 +3855,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@atom.io/react@0.1.0(@types/react@19.3.0)(atom.io@0.54.0)(react@19.3.1)':
+  '@atom.io/react@0.1.0(@types/react@19.3.0)(atom.io@0.54.1)(react@19.3.1)':
     dependencies:
-      atom.io: 0.54.0
+      atom.io: 0.54.1
       react: 19.3.1
     optionalDependencies:
       '@types/react': 19.3.0
@@ -5376,6 +5384,8 @@ snapshots:
   async-function@1.0.0: {}
 
   atom.io@0.54.0: {}
+
+  atom.io@0.54.1: {}
 
   available-typed-arrays@1.0.7:
     dependencies:

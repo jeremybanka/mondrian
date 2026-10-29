@@ -274,7 +274,7 @@ importers:
         version: 0.1.0(@types/react@19.3.0)(atom.io@0.54.2)(react@19.3.1)
       '@breakage/changesets':
         specifier: 0.1.0
-        version: 0.1.0(breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7))
+        version: 0.1.0(breakage@0.10.1(supports-color@7.2.0)(zod@4.6.7))
       '@types/pngjs':
         specifier: 6.0.5
         version: 6.0.5
@@ -303,8 +303,8 @@ importers:
         specifier: 0.54.2
         version: 0.54.2
       breakage:
-        specifier: 0.10.0
-        version: 0.10.0(supports-color@7.2.0)(zod@4.6.7)
+        specifier: 0.10.1
+        version: 0.10.1(supports-color@7.2.0)(zod@4.6.7)
       eslint:
         specifier: 10.13.0
         version: 10.13.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -719,6 +719,9 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@isaacs/nonrecursive-glob-match@1.0.2':
+    resolution: {integrity: sha512-GJPHIgPPtFl+nLhFHyF0zZoFcOFLsZWbHFFzo+Zr+PWDXJbl9hHxb2w+9SiF2fHmLgKaXIpUzQo3SbBBZ9WObw==}
 
   '@jridgewell/resolve-uri@3.1.2':
     resolution: {integrity: sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw==}
@@ -2248,8 +2251,8 @@ packages:
     resolution: {integrity: sha512-YovQ3rzhaLMIrDjNDMkNS01tea93qhEhG5xy8f6+R0l+dw3Ki+5sCoIoI942iuLZTHWogWktgwVDhU09iNEimQ==}
     engines: {node: 20 || >=22}
 
-  breakage@0.10.0:
-    resolution: {integrity: sha512-NdrlShsiuiOadVTkD1EPscKxOgnX0/3vBMHww1Jm2YNATYXCpF+vySY/W3vZ/G020brOd3ZPbySt9tEcjJS9/A==}
+  breakage@0.10.1:
+    resolution: {integrity: sha512-cxs6/gBeMl0K/Tt5MVBKn27dajk79hKREGm7Kg4WsTn67phAZD+523n+qyVi5GfhFjLteil6GCGGpal/5Yo7GA==}
     hasBin: true
 
   buffer-crc32@0.2.13:
@@ -3147,6 +3150,10 @@ packages:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
 
+  minimatch@11.0.2:
+    resolution: {integrity: sha512-pWTgz5CN3tjqyZNSK2tePlSmu9IwM41q8yn8Usdqqwe9TIHh+9dEpLLjF4uApsfPEAZY71qtSiA2B2APEr+1Yw==}
+    engines: {node: 18 || 20 || >=22}
+
   minimatch@3.1.5:
     resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
 
@@ -3944,14 +3951,14 @@ snapshots:
 
   '@blazediff/core@1.10.0': {}
 
-  '@breakage/changesets@0.1.0(breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7))':
+  '@breakage/changesets@0.1.0(breakage@0.10.1(supports-color@7.2.0)(zod@4.6.7))':
     dependencies:
       '@changesets/assemble-release-plan': 7.0.0
       '@changesets/config': 4.0.1
       '@changesets/pre': 3.0.0
       '@changesets/read': 1.0.1
       '@manypkg/get-packages': 3.1.0
-      breakage: 0.10.0(supports-color@7.2.0)(zod@4.6.7)
+      breakage: 0.10.1(supports-color@7.2.0)(zod@4.6.7)
 
   '@cacheable/memory@2.2.0':
     dependencies:
@@ -4209,6 +4216,8 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@isaacs/nonrecursive-glob-match@1.0.2': {}
 
   '@jridgewell/resolve-uri@3.1.2': {}
 
@@ -5334,11 +5343,11 @@ snapshots:
     dependencies:
       balanced-match: 4.0.4
 
-  breakage@0.10.0(supports-color@7.2.0)(zod@4.6.7):
+  breakage@0.10.1(supports-color@7.2.0)(zod@4.6.7):
     dependencies:
       arktype: 2.2.9
       comline: 0.9.3(arktype@2.2.9)(zod@4.6.7)
-      minimatch: 10.2.6
+      minimatch: 11.0.2
       semver: 7.8.5
       simple-git: 4.0.2(supports-color@7.2.0)
       takua: 0.2.3
@@ -6327,6 +6336,11 @@ snapshots:
 
   minimatch@10.2.6:
     dependencies:
+      brace-expansion: 5.0.12
+
+  minimatch@11.0.2:
+    dependencies:
+      '@isaacs/nonrecursive-glob-match': 1.0.2
       brace-expansion: 5.0.12
 
   minimatch@3.1.5:

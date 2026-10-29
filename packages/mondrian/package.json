@@ -68,7 +68,7 @@
 		"pngjs": "7.0.0"
 	},
 	"devDependencies": {
-		"@atom.io/eslint-plugin": "0.1.0",
+		"@atom.io/eslint-plugin": "0.1.1",
 		"@atom.io/react": "0.1.0",
 		"@breakage/changesets": "0.1.0",
 		"@types/pngjs": "6.0.5",

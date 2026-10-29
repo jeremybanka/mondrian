@@ -2,6 +2,8 @@
 
 Run these commands from the repository root with `pnpm run <command>`. `mise.toml` selects the toolchain. Package-level commands keep the same meaning while narrowing their scope.
 
+Run `dagger check` for the containerized static checks, tests, build, and installed-package verification. See [Dagger CI](ci.md) for cache inspection, focused checks, and GitHub Actions setup.
+
 Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.html#add-node-modules-binaries-to-the-path), mise adds the repository root’s `node_modules/.bin` to `PATH`. With shell activation or `mise exec -- <tool>`, installed dependency CLIs are available from the root and package directories.
 
 | Command            | Contract                                                                                                                 |
@@ -34,9 +36,9 @@ Following the [mise Node.js cookbook](https://mise.jdx.dev/mise-cookbook/nodejs.
 
 The PDF field guide lives in `packages/mondrian/app` and ships with `mondrian.pdf`. `pnpm --filter mondrian.pdf dev` runs Vite against the app’s source; `pnpm build` bundles the library, CLI, and browser assets. `pnpm mondrian` (or the installed `node_modules/.bin/mondrian`) serves the packaged application. `pnpm --filter mondrian.pdf preview` uses the same packaged server. The package provides `check:eslint`, `check:tsc`, and `check:lasertag` for app checks. ESLint follows atom.io’s flat-config approach, including a compatibility bridge in `.pnpmfile.mjs` that gives TypeScript ESLint v8 the TypeScript 6 compiler API while the repository’s `tsc` remains on TypeScript 7.
 
-After building, run `pnpm --filter mondrian.pdf test:package` to pack and install the package into an isolated consumer project, then check its binary, assets, chapter/inspector routes, inspection API, and page rendering. The CI Build job performs this verification. Normal `test` continues to run source tests without a prerequisite build.
+After building, run `pnpm --filter mondrian.pdf test:package` to pack and install the package into an isolated consumer project, then check its binary, assets, chapter/inspector routes, inspection API, and page rendering. Dagger's `ci:build` check performs this verification in CI.
 
-Source tests and `check:vp` run independently of build artifacts. Run `pnpm build` before `check:public-types`, which verifies consumer types against the built package declarations.
+`check:vp` runs independently of build artifacts. Run `pnpm build` before `check:public-types`, which verifies consumer types against the built package declarations, and before `test` in a clean checkout, because the browser-bundling tests import the package's built exports. Dagger shares this build between tests, public types, and installed-package verification.
 
 Release compatibility checks need access to the Git remote and release tags.
 

@@ -4,7 +4,13 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      cache:
+        description: Restore and save a stopped Dagger engine snapshot
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -14,35 +20,138 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ESLint:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
+  Dagger:
+    name: Dagger checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DAGGER_ENGINE: container://dagger-ci
+      DAGGER_NO_NAG: "1"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:eslint
+        with:
+          persist-credentials: false
 
-  Lasertag:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:lasertag
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+        with:
+          version: 2026.10.17
+          install_args: http:dagger
 
-  VitePlus:
-    name: Vite Plus
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:vp
+      - name: Select the pinned engine and cache format
+        id: engine
+        run: |
+          version="$(mise current http:dagger)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "prefix=dagger-state-v1-${{ runner.os }}-${{ runner.arch }}-$version-" >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/dagger-cache" "$RUNNER_TEMP/dagger-state"
+          # Bound retained state without the default 20% free-disk target
+          # evicting everything on a nearly full hosted runner.
+          cat > "$RUNNER_TEMP/dagger-engine.json" <<'JSON'
+          {"gc":{"maxUsedSpace":"6GB","reservedSpace":"4GB","minFreeSpace":"2GB"}}
+          JSON
 
-  Dprint:
+      - name: Download engine snapshot
+        if: github.event_name != 'workflow_dispatch' || inputs.cache
+        id: cache
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/dagger-cache/engine.tar.zst
+          key: ${{ steps.engine.outputs.prefix }}${{ github.sha }}
+          restore-keys: ${{ steps.engine.outputs.prefix }}
+
+      - name: Restore filesystem metadata before starting the engine
+        run: |
+          if [ -f "$RUNNER_TEMP/dagger-cache/engine.tar.zst" ]; then
+            started=$SECONDS
+            if sudo tar --xattrs --xattrs-include='*' --acls --numeric-owner --same-owner --sparse \
+              -I zstd -xf "$RUNNER_TEMP/dagger-cache/engine.tar.zst" -C "$RUNNER_TEMP/dagger-state"; then
+              echo "Snapshot extraction: $((SECONDS - started)) seconds" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo '::warning::Snapshot extraction failed; starting with an empty cache.'
+              sudo rm -rf "$RUNNER_TEMP/dagger-state"
+              mkdir -p "$RUNNER_TEMP/dagger-state"
+            fi
+          else
+            echo "Fresh engine: no snapshot restored." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Start engine
+        env:
+          ENGINE_VERSION: ${{ steps.engine.outputs.version }}
+        run: |
+          docker run -d --name dagger-ci --privileged \
+            --volume "$RUNNER_TEMP/dagger-state:/var/lib/dagger" \
+            --volume "$RUNNER_TEMP/dagger-engine.json:/etc/dagger/engine.json:ro" \
+            "registry.dagger.io/engine:v$ENGINE_VERSION"
+
+      - name: Run repository and generated-binding checks
+        id: checks
+        run: |
+          set -o pipefail
+          started=$SECONDS
+          dagger check --progress=plain 2>&1 | tee "$RUNNER_TEMP/dagger-check.log"
+          echo "Dagger checks: $((SECONDS - started)) seconds" >> "$GITHUB_STEP_SUMMARY"
+          echo 'Inspect the check log for Container.withExec CACHED entries; an Actions cache hit alone does not prove Dagger reused work.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop engine cleanly before archiving
+        if: always()
+        id: stop
+        continue-on-error: true
+        run: |
+          if docker inspect dagger-ci > /dev/null 2>&1; then
+            docker stop -t 120 dagger-ci
+            docker logs dagger-ci > "$RUNNER_TEMP/dagger-engine.log" 2>&1
+            test "$(docker inspect --format '{{.State.ExitCode}}' dagger-ci)" = 0
+          fi
+
+      - name: Archive stopped engine state
+        id: archive
+        if: >-
+          success() && steps.checks.outcome == 'success' && steps.stop.outcome == 'success' &&
+          (github.event_name != 'workflow_dispatch' || inputs.cache) &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) &&
+          steps.cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          started=$SECONDS
+          sudo tar --xattrs --xattrs-include='*' --acls --numeric-owner --sparse \
+            -I 'zstd -1 -T2' -cf "$RUNNER_TEMP/dagger-cache/engine.tar.zst" -C "$RUNNER_TEMP/dagger-state" .
+          echo "Snapshot creation: $((SECONDS - started)) seconds" >> "$GITHUB_STEP_SUMMARY"
+          echo "Snapshot bytes: $(stat -c %s "$RUNNER_TEMP/dagger-cache/engine.tar.zst")" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload engine snapshot
+        if: success() && steps.archive.outcome == 'success'
+        continue-on-error: true
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/dagger-cache/engine.tar.zst
+          key: ${{ steps.engine.outputs.prefix }}${{ github.sha }}
+
+      - name: Upload check and engine logs
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dagger-checks
+          path: |
+            ${{ runner.temp }}/dagger-check.log
+            ${{ runner.temp }}/dagger-engine.log
+          retention-days: 3
+
+  # Preserve required status names until the repository rules use Dagger checks.
+  # The commands run once above; these jobs only report the aggregate result.
+  required-status:
+    name: ${{ matrix.name }}
+    needs: Dagger
+    if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 1
+    strategy:
+      matrix:
+        name: [Vitest, Vite Plus, Dprint]
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./.github/actions/setup
-      - run: pnpm run check:fmt
+      - name: Require Dagger checks to pass
+        env:
+          DAGGER_RESULT: ${{ needs.Dagger.result }}
+        run: test "$DAGGER_RESULT" = success

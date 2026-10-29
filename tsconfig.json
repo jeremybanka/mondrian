@@ -38,6 +38,7 @@
 		"*.d.ts"
 	],
 	"exclude": [
+		".dagger",
 		"packages/mondrian/app"
 	]
 }

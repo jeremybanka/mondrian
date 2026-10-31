@@ -81,7 +81,7 @@
 		"@vitejs/plugin-react": "6.1.2",
 		"atom.io": "0.54.3",
 		"breakage": "0.10.1",
-		"eslint": "10.13.0",
+		"eslint": "10.14.0",
 		"eslint-plugin-import-x": "4.17.1",
 		"eslint-plugin-simple-import-sort": "14.0.0",
 		"jiti": "2.7.0",

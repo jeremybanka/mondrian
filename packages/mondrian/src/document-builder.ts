@@ -1,5 +1,18 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { selectPdfOptionalContent } from "./optional-content-select.ts"
+import type {
+	PdfOptionalContentGroup,
+	PdfOptionalContentGroupOptions,
+	PdfOptionalContentConfiguration,
+} from "./optional-content.ts"
+import {
+	createOptionalContentGroup,
+	getOptionalContentGroup,
+	registerOptionalContentGroups,
+} from "./optional-content.ts"
+import { assertStructuralContent } from "./processing-step-validation.ts"
+
 import type {
 	PdfContent,
 	PdfFont,
@@ -16,6 +29,8 @@ import {
 	createRgbImageHandle,
 	createTextContent,
 	getContentRecord,
+	createContainerContent,
+	contentUsesFont,
 	getFontRecord,
 	getImageRecord,
 } from "./content.ts"
@@ -113,6 +128,26 @@ export interface PdfDocumentBuilderOptions {
 }
 
 export interface PdfDocumentBuilder {
+	/** A q/cm/Q content scope; reusable Form content keeps its XObject identity. */
+	transform(
+		matrix: readonly [number, number, number, number, number, number],
+		content: readonly PdfContent[],
+	): PdfContent
+	optionalContentGroup(
+		options: PdfOptionalContentGroupOptions,
+	): PdfOptionalContentGroup
+	optionalContent(
+		group: PdfOptionalContentGroup,
+		content: readonly PdfContent[],
+	): PdfContent
+	setOptionalContentConfiguration(
+		configuration: PdfOptionalContentConfiguration,
+	): PdfDocumentBuilder
+	form(options: {
+		readonly bbox: PdfRectangle
+		readonly content: readonly PdfContent[]
+		readonly matrix?: readonly [number, number, number, number, number, number]
+	}): PdfContent
 	standardFont(baseFont: StandardFontName): PdfFont
 	jpeg(bytes: Uint8Array): PdfImage
 	image(data: PdfCmykImageData): PdfImage
@@ -177,6 +212,8 @@ export function createPdfDocument(
 
 class DocumentBuilder implements PdfDocumentBuilder {
 	readonly #owner = Symbol("PdfDocumentBuilder")
+	readonly #groups: PdfOptionalContentGroup[] = []
+	#optionalConfiguration: PdfOptionalContentConfiguration = { baseState: "ON" }
 	readonly #version: PdfVersion
 	readonly #metadata: PdfMetadata | undefined
 	readonly #id: readonly [Uint8Array, Uint8Array] | undefined
@@ -217,6 +254,93 @@ class DocumentBuilder implements PdfDocumentBuilder {
 			options.id === undefined
 				? undefined
 				: Object.freeze([options.id[0].slice(), options.id[1].slice()])
+	}
+
+	transform(
+		matrix: readonly [number, number, number, number, number, number],
+		content: readonly PdfContent[],
+	): PdfContent {
+		if (matrix.length !== 6 || matrix.some((value) => !Number.isFinite(value)))
+			throw new TypeError("Content matrix must contain six finite numbers")
+		return createContainerContent({
+			owner: this.#owner,
+			kind: "transform",
+			content,
+			matrix: Object.freeze([...matrix]) as typeof matrix,
+		})
+	}
+
+	optionalContentGroup(
+		options: PdfOptionalContentGroupOptions,
+	): PdfOptionalContentGroup {
+		if (Number(this.#version) < 1.5)
+			throw new TypeError("Optional content requires PDF 1.5 or later")
+		const group = createOptionalContentGroup(this.#owner, options)
+		this.#groups.push(group)
+		return group
+	}
+	optionalContent(
+		group: PdfOptionalContentGroup,
+		content: readonly PdfContent[],
+	): PdfContent {
+		const record = getOptionalContentGroup(group, this.#owner)
+		if (record.processingStep)
+			assertStructuralContent(content, record.processingStep)
+		return createContainerContent({
+			owner: this.#owner,
+			kind: "optional-content",
+			group,
+			content,
+		})
+	}
+	setOptionalContentConfiguration(
+		configuration: PdfOptionalContentConfiguration,
+	): PdfDocumentBuilder {
+		if (!["ON", "OFF"].includes(configuration?.baseState))
+			throw new TypeError("Optional content baseState must be ON or OFF")
+		for (const group of [
+			...(configuration.on ?? []),
+			...(configuration.off ?? []),
+			...(configuration.order ?? []),
+		])
+			getOptionalContentGroup(group, this.#owner)
+		if (
+			(configuration.on ?? []).some((group) =>
+				configuration.off?.includes(group),
+			)
+		)
+			throw new TypeError("An optional content group cannot be both ON and OFF")
+		for (const list of [
+			configuration.on,
+			configuration.off,
+			configuration.order,
+		])
+			if (list && new Set(list).size !== list.length)
+				throw new TypeError("Duplicate optional content group in configuration")
+		this.#optionalConfiguration = {
+			baseState: configuration.baseState,
+			on: [...(configuration.on ?? [])],
+			off: [...(configuration.off ?? [])],
+			order: [...(configuration.order ?? this.#groups)],
+		}
+		return this
+	}
+	form(options: {
+		readonly bbox: PdfRectangle
+		readonly content: readonly PdfContent[]
+		readonly matrix?: readonly [number, number, number, number, number, number]
+	}): PdfContent {
+		assertRectangle(options.bbox)
+		const matrix = options.matrix ?? [1, 0, 0, 1, 0, 0]
+		if (matrix.length !== 6 || matrix.some((value) => !Number.isFinite(value)))
+			throw new TypeError("Form matrix must contain six finite numbers")
+		return createContainerContent({
+			owner: this.#owner,
+			kind: "form",
+			content: options.content,
+			bbox: options.bbox,
+			matrix: Object.freeze([...matrix]) as typeof matrix,
+		})
 	}
 
 	standardFont(baseFont: StandardFontName): PdfFont {
@@ -314,6 +438,27 @@ class DocumentBuilder implements PdfDocumentBuilder {
 
 		const objects = createPdfObjectBuilder()
 		const catalog = objects.reserve<PdfCatalogDictionary>()
+		const groupReferences = new Map<PdfOptionalContentGroup, PdfReference>()
+		for (const group of this.#groups) {
+			const record = getOptionalContentGroup(group, this.#owner)
+			groupReferences.set(
+				group,
+				objects.add(
+					dictionary({
+						Type: name("OCG"),
+						Name: textString(record.name),
+						...(record.processingStep === undefined
+							? {}
+							: {
+									GTS_Metadata: dictionary({
+										GTS_ProcStepsGroup: name(record.processingStep.group),
+										GTS_ProcStepsType: name(record.processingStep.type),
+									}),
+								}),
+					}),
+				),
+			)
+		}
 		const fontReferences = new Map<PdfFont, PdfReference<PdfDictionary>>()
 		const imageReferences = new Map<PdfImage, PdfReference<PdfStream>>()
 
@@ -409,14 +554,19 @@ class DocumentBuilder implements PdfDocumentBuilder {
 			return result
 		}
 
-		const lowerPage = (
-			node: PdfPage,
-			parent: PdfReference<PdfPagesDictionary>,
-		): PdfReference<PdfPageDictionary> => {
-			const record = requirePageRecord(node)
-			const page = objects.reserve<PdfPageDictionary>()
-			const encoded = encodePageContent(this.#owner, record.content, objects)
-			const contents = objects.add(stream({}, encoded.bytes))
+		const formReferences = new Map<PdfContent, PdfReference>()
+		const lowerContent = (
+			content: readonly PdfContent[],
+			pageStream = false,
+		): {
+			bytes: Uint8Array
+			resources: PdfDictionary
+			contents: PdfReference<PdfStream> | undefined
+		} => {
+			const encoded = encodePageContent(this.#owner, content, objects)
+			const contents = pageStream
+				? objects.add(stream({}, encoded.bytes))
+				: undefined
 			const resourceEntries: Record<string, PdfValue | undefined> = {
 				...encoded.colorResources.entries,
 			}
@@ -456,6 +606,58 @@ class DocumentBuilder implements PdfDocumentBuilder {
 				resourceEntries.ProcSet = array(...procSet)
 			}
 
+			if (encoded.groups.size)
+				resourceEntries.Properties = dictionary(
+					Object.fromEntries(
+						[...encoded.groups].map(([group, alias]) => [
+							alias,
+							groupReferences.get(group)!,
+						]),
+					),
+				)
+			const xobjects: Record<string, PdfValue | undefined> = {
+				...(resourceEntries.XObject as PdfDictionary | undefined)?.entries,
+			}
+			for (const [form, alias] of encoded.forms) {
+				let ref = formReferences.get(form)
+				if (!ref) {
+					const record = getContentRecord(form)
+					if (record.kind !== "form") throw new Error("Expected Form content")
+					const nested = lowerContent(record.content)
+					ref = objects.add(
+						stream(
+							{
+								Type: name("XObject"),
+								Subtype: name("Form"),
+								BBox: array(...record.bbox),
+								Matrix: array(...record.matrix),
+								Resources: nested.resources,
+							},
+							nested.bytes,
+						),
+					)
+					formReferences.set(form, ref)
+				}
+				xobjects[alias] = ref
+			}
+			if (Object.keys(xobjects).length)
+				resourceEntries.XObject = dictionary(xobjects)
+			return {
+				bytes: encoded.bytes,
+				resources: dictionary(resourceEntries),
+				contents,
+			}
+		}
+
+		const lowerPage = (
+			node: PdfPage,
+			parent: PdfReference<PdfPagesDictionary>,
+		): PdfReference<PdfPageDictionary> => {
+			const record = requirePageRecord(node)
+			const page = objects.reserve<PdfPageDictionary>()
+			const encoded = lowerContent(record.content, true)
+			const contents = encoded.contents!
+
 			page.set(
 				dictionary({
 					Type: name("Page"),
@@ -466,7 +668,7 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						record.mediaBox[2],
 						record.mediaBox[3],
 					),
-					Resources: dictionary(resourceEntries),
+					Resources: encoded.resources,
 					...(this.#blendingSpace === undefined
 						? {}
 						: {
@@ -554,6 +756,31 @@ class DocumentBuilder implements PdfDocumentBuilder {
 		catalog.set(
 			dictionary({
 				Type: name("Catalog"),
+				...(groupReferences.size === 0
+					? {}
+					: {
+							OCProperties: dictionary({
+								OCGs: array(...groupReferences.values()),
+								D: dictionary({
+									BaseState: name(this.#optionalConfiguration.baseState),
+									ON: array(
+										...(this.#optionalConfiguration.on ?? []).map((group) =>
+											groupReferences.get(group)!,
+										),
+									),
+									OFF: array(
+										...(this.#optionalConfiguration.off ?? []).map((group) =>
+											groupReferences.get(group)!,
+										),
+									),
+									Order: array(
+										...(this.#optionalConfiguration.order ?? this.#groups).map(
+											(group) => groupReferences.get(group)!,
+										),
+									),
+								}),
+							}),
+						}),
 				Pages: pages.ref,
 				...(outputIntents === undefined
 					? {}
@@ -562,7 +789,7 @@ class DocumentBuilder implements PdfDocumentBuilder {
 		)
 
 		const info = this.#lowerInfo(objects)
-		return objects.build({
+		const document = objects.build({
 			version: this.#version,
 			root: catalog.ref,
 			...(info === undefined ? {} : { info }),
@@ -572,6 +799,10 @@ class DocumentBuilder implements PdfDocumentBuilder {
 						id: [hexString(this.#id[0]), hexString(this.#id[1])] as const,
 					}),
 		})
+		registerOptionalContentGroups(document, groupReferences)
+		if (groupReferences.size)
+			selectPdfOptionalContent(document, { baseState: "ON" })
+		return document
 	}
 
 	serialize(): Uint8Array {
@@ -664,11 +895,7 @@ class DocumentBuilder implements PdfDocumentBuilder {
 
 				if (
 					this.#version === "2.0" &&
-					record.content.some((content) =>
-						getContentRecord(content).operations.some(
-							(operation) => operation.op === "font",
-						),
-					)
+					record.content.some((content) => contentUsesFont(content))
 				) {
 					diagnostics.push({
 						severity: "error",

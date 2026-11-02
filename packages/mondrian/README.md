@@ -109,6 +109,8 @@ annotation rendering, and artifact roots explicitly.
 
 For individual ink proofs, `previewPdfPlates(pdf.compile())` returns a colored `PdfDocument` for each CMYK and named spot plate, preserving knockout and overprint. See [print plate previews](docs/print-plates.md) for options, supported painting, and examples.
 
+For cutting and creasing paths, use typed optional-content groups with separate proof visibility and explicit ink-output selection. See [processing-step layers](docs/processing-steps.md) for the supported ISO 19593-1:2026 subset, reusable Forms, and output guarantees.
+
 For PNG cut-outs and JPEG photographs, `prepareCmykImage()` from `mondrian.pdf/print` converts source pixels using the chosen ICC printing profile while preserving alpha. Embed the prepared data with `pdf.image()`; plate previews then use the same CMYK samples as the delivered PDF. See [images for print](docs/print-images.md) for the complete workflow and rendered proofs. For tagged RGB handoff with process/spot paint, use `rgbImage()` and `prepareRgbImage()`; `preparePdfForPrint()` provides explicit CMYK preparation of parsed mixed-color documents. See [mixed-color printing](docs/mixed-color-print.md) for printing policies and extraction boundaries.
 
 The runner-neutral `mondrian.pdf/testing` submodule exports `renderPdf()`,

@@ -250,7 +250,46 @@ export interface PdfGraphicsContentRecord {
 	readonly operations: readonly PdfGraphicsOperation[]
 }
 
-export type PdfContentRecord = PdfTextContentRecord | PdfGraphicsContentRecord
+export type PdfContainerContentRecord = {
+	readonly owner: symbol
+	readonly content: readonly PdfContent[]
+} & (
+	| {
+			readonly kind: "optional-content"
+			readonly group: import("./optional-content.ts").PdfOptionalContentGroup
+	  }
+	| {
+			readonly kind: "transform"
+			readonly matrix: readonly [number, number, number, number, number, number]
+	  }
+	| {
+			readonly kind: "form"
+			readonly bbox: readonly [number, number, number, number]
+			readonly matrix: readonly [number, number, number, number, number, number]
+	  }
+)
+
+export type PdfContentRecord =
+	| PdfTextContentRecord
+	| PdfGraphicsContentRecord
+	| PdfContainerContentRecord
+
+export function createContainerContent(
+	record: PdfContainerContentRecord,
+): PdfContent {
+	for (const child of record.content)
+		assertOwnedBy(getContentRecord(child).owner, record.owner, "content")
+	return createContentHandle(
+		Object.freeze({ ...record, content: Object.freeze([...record.content]) }),
+	)
+}
+
+export function contentUsesFont(content: PdfContent): boolean {
+	const record = getContentRecord(content)
+	return "operations" in record
+		? record.operations.some((op) => op.op === "font")
+		: record.content.some(contentUsesFont)
+}
 
 const standardFontNames: ReadonlySet<string> = new Set([
 	"Times-Roman",

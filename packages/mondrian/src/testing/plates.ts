@@ -1,5 +1,8 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import type { PdfInkOutputPolicy } from "../optional-content.ts"
+import { selectPdfInkContent } from "../optional-content-select.ts"
+
 import { throwForPdfErrors } from "../diagnostics.ts"
 import type {
 	PdfDictionary,
@@ -33,6 +36,8 @@ import type { PlateImage, PlateRaster } from "./plate-image.ts"
 import { zlibSync } from "fflate"
 
 export interface PdfPlateOptions {
+	/** Explicit selection of processing-step content, independent of proof visibility. */
+	readonly inkOutput?: PdfInkOutputPolicy
 	/** Allowed source paint spaces. Defaults to ["cmyk", "spot"]. No color conversion is performed. */
 	readonly permitColors?: readonly PlateColorSpace[]
 	/** Explicitly interpret DeviceGray paint, including implicit black, as K-only ink. */
@@ -67,6 +72,7 @@ export function projectPdfPlates(
 	options: PdfPlateOptions,
 	appearance: "ink" | "coverage",
 ): readonly PdfPlatePreview[] {
+	document = selectPdfInkContent(document, options.inkOutput)
 	const permitted = options.permitColors ?? ["cmyk", "spot"]
 	if (
 		!Array.isArray(permitted) ||

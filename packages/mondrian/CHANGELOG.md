@@ -1,5 +1,11 @@
 # mondrian.pdf
 
+## 0.1.16
+
+### Patch Changes
+
+- e45481e: Skip diagnostic canvas allocation and PNG encoding for PDF artifact pages with identical dimensions and decoded RGBA pixels, reducing CPU and memory use during successful comparisons while preserving exact pixel matching and mismatch diagnostics.
+
 ## 0.1.15
 
 ### Patch Changes

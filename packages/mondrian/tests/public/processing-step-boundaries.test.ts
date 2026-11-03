@@ -29,7 +29,11 @@ import type {
 	PdfStream,
 	PdfValue,
 } from "mondrian.pdf"
-import { previewPdfPlates, renderPdf } from "mondrian.pdf/testing"
+import {
+	previewPdfPlates,
+	renderPdf,
+	renderPdfPlateCoverage,
+} from "mondrian.pdf/testing"
 
 const inkOutput: PdfInkOutputPolicy = {
 	processingSteps: {
@@ -716,3 +720,172 @@ it("rejects raster content during semantic structural membership assignment", ()
 		/cannot contain images/,
 	)
 })
+
+function textClippingDocument(
+	prefix: string,
+	suffix = optionalPath,
+): PdfDocument {
+	const { document } = fixture({
+		source: `${prefix}\n${suffix}`,
+		resources: ({ objects, resources }) =>
+			dictionary({
+				...resources.entries,
+				Font: dictionary({
+					F: objects.add(
+						dictionary({
+							Type: name("Font"),
+							Subtype: name("Type1"),
+							BaseFont: name("Helvetica"),
+						}),
+					),
+				}),
+			}),
+	})
+	return parsePdf(serializePdf(document))
+}
+const includeTechnical: PdfInkOutputPolicy = {
+	processingSteps: {
+		default: "error",
+		rules: inkOutput.processingSteps.rules.map((rule) => ({
+			...rule,
+			action: "include",
+		})),
+	},
+}
+
+it.each([4, 5, 6, 7])(
+	"rejects persistent text clipping from rendering mode %i before proof or ink selection",
+	async (mode) => {
+		const document = textClippingDocument(
+			`q 0 0 0 1 k 0 0 0 1 K BT /F 12 Tf ${mode} Tr 2 2 Td (H) Tj ET`,
+			`${optionalPath} Q`,
+		)
+		for (const baseState of ["ON", "OFF"] as const)
+			expect(() => selectPdfOptionalContent(document, { baseState })).toThrow(
+				/clipping/,
+			)
+		for (const policy of [inkOutput, includeTechnical]) {
+			expect(() => previewPdfPlates(document, { inkOutput: policy })).toThrow(
+				/clipping/,
+			)
+			await expect(
+				renderPdfPlateCoverage(document, { inkOutput: policy, resolution: 72 }),
+			).rejects.toThrow(/clipping/)
+		}
+	},
+)
+
+it.each(["(H) Tj", "[(H) -20 <>] TJ", "(H) '", '0 0 (H) "'])(
+	"retains pending text clipping across a rendering-mode change after %s",
+	(showText) => {
+		const document = textClippingDocument(
+			`q 7 Tr BT /F 12 Tf 2 2 Td ${showText} 3 Tr ET`,
+			`${optionalPath} Q`,
+		)
+		expect(() => selectPdfOptionalContent(document, show)).toThrow(/clipping/)
+	},
+)
+
+it("rejects a clipped structural Form invocation using the inherited text clipping state", () => {
+	const document = fixture({
+		source: "q BT /F 12 Tf 7 Tr 2 2 Td (H) Tj ET /Form Do Q",
+		resources: ({ objects, resources, cut }) =>
+			dictionary({
+				...resources.entries,
+				Font: dictionary({
+					F: objects.add(
+						dictionary({
+							Type: name("Font"),
+							Subtype: name("Type1"),
+							BaseFont: name("Helvetica"),
+						}),
+					),
+				}),
+				XObject: dictionary({
+					Form: objects.add(
+						stream(
+							{
+								Type: name("XObject"),
+								Subtype: name("Form"),
+								BBox: array(0, 0, 20, 20),
+								Resources: resources,
+								OC: cut,
+							},
+							ascii(`q ${technicalPath} Q`),
+						),
+					),
+				}),
+			}),
+	}).document
+	expect(() =>
+		selectPdfOptionalContent(parsePdf(serializePdf(document)), show),
+	).toThrow(/clipping/)
+})
+
+it("restores text clipping with Q before structural painting, preserving exact proof pixels and plate coverage", async () => {
+	const document = textClippingDocument("q BT /F 12 Tf 7 Tr 2 2 Td (H) Tj ET Q")
+	const baseline = fixture({ source: optionalPath }).document
+	const shown = selectPdfOptionalContent(document, show)
+	const expected = selectPdfOptionalContent(baseline, show)
+	const proof = await renderPdf(serializePdf(shown), { resolution: 72 })
+	const control = await renderPdf(serializePdf(expected), { resolution: 72 })
+	expect(proof.pages[0]!.pixels).toEqual(control.pages[0]!.pixels)
+	const actualPlates = await renderPdfPlateCoverage(document, {
+		inkOutput: includeTechnical,
+		resolution: 72,
+	})
+	const expectedPlates = await renderPdfPlateCoverage(baseline, {
+		inkOutput: includeTechnical,
+		resolution: 72,
+	})
+	expect(actualPlates.plates.map((plate) => plate.name)).toEqual(
+		expectedPlates.plates.map((plate) => plate.name),
+	)
+	for (const [index, plate] of actualPlates.plates.entries())
+		expect(plate.pages[0]!.samples).toEqual(
+			expectedPlates.plates[index]!.pages[0]!.samples,
+		)
+	expect(
+		actualPlates.plates
+			.find((plate) => plate.name === "CutContour")!
+			.pages[0]!.samples.some((sample) => sample < 255),
+	).toBe(true)
+})
+
+it.each(["() Tj", "[100 () -20 <>] TJ", "() '", '0 0 () "'])(
+	"does not establish text clipping for empty text shown with %s",
+	(showText) => {
+		const document = textClippingDocument(
+			`q BT /F 12 Tf 7 Tr 2 2 Td ${showText} ET`,
+			`${optionalPath} Q`,
+		)
+		expect(() => selectPdfOptionalContent(document, show)).not.toThrow()
+	},
+)
+
+it("retains the text rendering mode across BT/ET and restores it with q/Q", () => {
+	const persistent = textClippingDocument(
+		"7 Tr BT /F 12 Tf () Tj ET BT /F 12 Tf 2 2 Td (H) Tj ET",
+	)
+	expect(() => selectPdfOptionalContent(persistent, show)).toThrow(/clipping/)
+	const restored = textClippingDocument(
+		"q 7 Tr Q BT /F 12 Tf 0 0 0 1 k 2 2 Td (H) Tj ET",
+	)
+	expect(() => selectPdfOptionalContent(restored, show)).not.toThrow()
+})
+
+it.each([
+	["BT BT", /Nested BT/],
+	["ET", /ET without BT/],
+	["BT", /Unbalanced.*text object/],
+	["(H) Tj", /requires a BT\/ET/],
+	["8 Tr", /integer from 0 to 7/],
+	["0.5 Tr", /integer from 0 to 7/],
+] as const)(
+	"rejects malformed text state while resolving optional content: %s",
+	(source, diagnostic) => {
+		expect(() =>
+			selectPdfOptionalContent(textClippingDocument(source), show),
+		).toThrow(diagnostic)
+	},
+)

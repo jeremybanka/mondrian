@@ -9,7 +9,7 @@ import type {
 } from "./objects.ts"
 import { dictionary, name, nameBytes, stream } from "./objects.ts"
 import type { PdfProcessingStep } from "./optional-content.ts"
-import { parsePlateContent } from "./content-syntax.ts"
+import { parsePlateContent, textHasGlyphs } from "./content-syntax.ts"
 import type { ContentInstruction } from "./content-syntax.ts"
 import { pdfName, tokenName, nameTokenBytes } from "./pdf-names.ts"
 import { replaceEntries } from "./dictionary-replace.ts"
@@ -25,6 +25,7 @@ interface PaintState {
 	normal: boolean
 	masked: boolean
 	clipped: boolean
+	textRenderingMode: number
 	unsupportedState: boolean
 	matrix: Matrix
 }
@@ -39,6 +40,7 @@ export const initialPaint = (): PaintState => ({
 	normal: true,
 	masked: false,
 	clipped: false,
+	textRenderingMode: 0,
 	unsupportedState: false,
 	matrix: identity,
 })
@@ -107,6 +109,7 @@ export function createOptionalContentTransformer({
 		const used = new Map<string, Set<string>>()
 		const xobjects = new Map<string, PdfValue>()
 		let path = false
+		let textObject: { clipping: boolean } | undefined
 		const resource = (
 			category: string,
 			token: string,
@@ -197,7 +200,30 @@ export function createOptionalContentTransformer({
 				throw new TypeError(
 					"Optional content must isolate graphics state in q/Q fragments",
 				)
-			if (op === "q") stack.push({ ...state })
+			if (op === "BT") {
+				if (textObject !== undefined)
+					throw new TypeError("Nested BT in optional-content selection")
+				textObject = { clipping: false }
+			} else if (op === "ET") {
+				if (textObject === undefined)
+					throw new TypeError("ET without BT in optional-content selection")
+				// Glyph outlines accumulate during the text object; they become a clip at ET.
+				// Tr belongs to the graphics state, while this accumulation survives mode changes.
+				state.clipped ||= textObject.clipping
+				textObject = undefined
+			} else if (op === "Tr") {
+				const mode = numbers(operands, 1)[0]!
+				if (!Number.isInteger(mode) || mode < 0 || mode > 7)
+					throw new TypeError(
+						"Text rendering mode must be an integer from 0 to 7",
+					)
+				state.textRenderingMode = mode
+			} else if (["Tj", "TJ", "'", '"'].includes(op)) {
+				if (textObject === undefined)
+					throw new TypeError("Text showing requires a BT/ET text object")
+				if (state.textRenderingMode >= 4 && textHasGlyphs(instruction))
+					textObject.clipping = true
+			} else if (op === "q") stack.push({ ...state })
 			else if (op === "Q") {
 				if (path)
 					throw new TypeError(
@@ -465,9 +491,9 @@ export function createOptionalContentTransformer({
 				use("Properties", operands[1])
 			output.push(emit(instruction))
 		}
-		if (stack.length || marked.length || path)
+		if (stack.length || marked.length || path || textObject !== undefined)
 			throw new TypeError(
-				"Unbalanced graphics, path, or optional-content scope",
+				"Unbalanced graphics, path, text object, or optional-content scope",
 			)
 		const changes: Record<string, PdfValue | undefined> = {}
 		for (const category of [

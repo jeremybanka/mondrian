@@ -12,6 +12,7 @@ import type {
 	PdfTextOperation,
 } from "./content.ts"
 import { getContentRecord } from "./content.ts"
+import type { PdfOptionalContentGroup } from "./optional-content.ts"
 import { ascii } from "./objects.ts"
 import {
 	encodePdfLiteralString,
@@ -24,6 +25,8 @@ export interface EncodedPageContent {
 	readonly bytes: Uint8Array
 	readonly fonts: ReadonlyMap<PdfFont, string>
 	readonly images: ReadonlyMap<PdfImage, string>
+	readonly groups: ReadonlyMap<PdfOptionalContentGroup, string>
+	readonly forms: ReadonlyMap<PdfContent, string>
 }
 
 export function encodePageContent(
@@ -34,12 +37,21 @@ export function encodePageContent(
 	const records = contents.map((content) => getContentRecord(content))
 	const fonts = new Map<PdfFont, string>()
 	const images = new Map<PdfImage, string>()
+	const groups = new Map<PdfOptionalContentGroup, string>()
+	const forms = new Map<PdfContent, string>()
 
-	for (const record of records) {
+	const collect = (record: PdfContentRecord): void => {
 		if (record.owner !== owner) {
 			throw new TypeError("PDF content belongs to another document builder")
 		}
 
+		if (record.kind === "optional-content" || record.kind === "transform") {
+			if (record.kind === "optional-content" && !groups.has(record.group))
+				groups.set(record.group, `OC${groups.size}`)
+			record.content.forEach((child) => collect(getContentRecord(child)))
+			return
+		}
+		if (record.kind === "form") return
 		for (const operation of record.operations) {
 			if (operation.op === "font" && !fonts.has(operation.font)) {
 				fonts.set(operation.font, `F${fonts.size}`)
@@ -48,14 +60,41 @@ export function encodePageContent(
 			}
 		}
 	}
-
+	records.forEach(collect)
+	for (const content of contents) collectForms(content)
+	function collectForms(content: PdfContent): void {
+		const record = getContentRecord(content)
+		if (record.kind === "form") {
+			if (!forms.has(content)) forms.set(content, `Fm${forms.size}`)
+		} else if (
+			record.kind === "optional-content" ||
+			record.kind === "transform"
+		)
+			record.content.forEach(collectForms)
+	}
 	const colors = new ColorScope(objects)
-	const bytes = ascii(encodeRecords(records, fonts, images, colors))
+	const bytes = ascii(
+		encodeRecords(
+			records,
+			fonts,
+			images,
+			colors,
+			groups,
+			new Map(
+				[...forms].map(([content, alias]) => [
+					getContentRecord(content),
+					alias,
+				]),
+			),
+		),
+	)
 	return {
 		bytes,
 		colorResources: colors.resources(),
 		fonts,
 		images,
+		groups,
+		forms,
 	}
 }
 
@@ -64,10 +103,44 @@ function encodeRecords(
 	fonts: ReadonlyMap<PdfFont, string>,
 	images: ReadonlyMap<PdfImage, string>,
 	colors: ColorScope,
+	groups: ReadonlyMap<PdfOptionalContentGroup, string>,
+	forms: ReadonlyMap<PdfContentRecord, string>,
 ): string {
 	let result = ""
 
 	for (const record of records) {
+		if (record.kind === "optional-content") {
+			result += `/OC /${groups.get(record.group)} BDC\nq\n`
+			result += encodeRecords(
+				record.content.map(getContentRecord),
+				fonts,
+				images,
+				colors,
+				groups,
+				forms,
+			)
+			result += "Q\nEMC\n"
+			continue
+		}
+		if (record.kind === "transform") {
+			result += `q\n${record.matrix.map(number).join(" ")} cm\n`
+			result += encodeRecords(
+				record.content.map(getContentRecord),
+				fonts,
+				images,
+				colors,
+				groups,
+				forms,
+			)
+			result += "Q\n"
+			continue
+		}
+
+		if (record.kind === "form") {
+			const handle = forms.get(record)!
+			result += `q\n/${handle} Do\nQ\n`
+			continue
+		}
 		if (record.kind === "text") {
 			const layout = new Map<string, string>()
 			result += "q\nBT\n"

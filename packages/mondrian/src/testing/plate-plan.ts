@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MPL-2.0
 
+import { replaceEntries } from "../dictionary-replace.ts"
 import { unzlibSync } from "fflate"
 import { dictionaryValue } from "../dictionary-lookup.ts"
 import type {
@@ -825,16 +826,4 @@ function inheritedPaintKey(state: State): string {
 }
 
 /** Replace logical keys, including byte-name entries, without duplicate PDF keys. */
-export function replaceEntries(
-	value: Pick<PdfDictionary, "entries" | "byteEntries">,
-	changes: Record<string, PdfValue | undefined>,
-): PdfDictionary {
-	const entries = { ...value.entries, ...changes }
-	const replaced = new Set(Object.keys(changes).map(encodePdfName))
-	return dictionary(
-		entries,
-		...(value.byteEntries ?? []).filter(
-			([key]) => !replaced.has(pdfName(key)!),
-		),
-	)
-}
+export { replaceEntries } from "../dictionary-replace.ts"

@@ -109,6 +109,26 @@ it("decrypts AES-256 PDFs in a browser bundle without Node globals", async () =>
 	expect(output).toEqual([{ title: "Encrypted fixture", reparsed: true }])
 })
 
+it("authors and selects processing-step layers without Node globals", async () => {
+	const bundle = await browserBundle(`
+  import { cmyk, createPdfDocument, rectangle, separation, selectPdfOptionalContent, serializePdf } from "mondrian.pdf"
+  const pdf = createPdfDocument()
+  const group = pdf.optionalContentGroup({ name: "Cut", processingStep: { group: "Structural", type: "Cutting" } })
+  const ink = separation("Cut", { type: "exponential", zero: cmyk(0,0,0,0), full: cmyk(0,1,0,0), exponent: 1 })
+  const path = pdf.graphics(g => g.paintState({fillOverprint:true,strokeOverprint:true,overprintMode:1}).spotStroke(ink,1).moveTo(0,0).lineTo(10,10).stroke())
+  pdf.setPages(pdf.page({mediaBox:rectangle(0,0,20,20),content:[pdf.optionalContent(group,[path])]}))
+  const document = pdf.compile()
+  console.log(serializePdf(selectPdfOptionalContent(document,{baseState:"OFF"})).length > 0)
+ `)
+	const output: unknown[] = []
+	runInNewContext(bundle, {
+		TextEncoder,
+		TextDecoder,
+		console: { log: (value: unknown) => output.push(value) },
+	})
+	expect(output).toEqual([true])
+})
+
 async function browserBundle(source: string): Promise<string> {
 	// Keep the entry inside the package so Bun resolves its published export map.
 	const directory = await mkdtemp(

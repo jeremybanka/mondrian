@@ -125,3 +125,13 @@ export {
 	compressColorContent,
 	formColorContent,
 } from "./color-content.ts"
+
+export type {
+	PdfProcessingStep,
+	PdfOptionalContentGroup,
+	PdfOptionalContentGroupOptions,
+	PdfOptionalContentConfiguration,
+	PdfOptionalContentSelection,
+	PdfInkOutputPolicy,
+} from "./optional-content.ts"
+export { selectPdfOptionalContent } from "./optional-content-select.ts"

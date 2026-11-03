@@ -311,7 +311,7 @@ async function comparePages(
 			const diff = makePageDiff(expectedImage, actualPage)
 			outputs.push({
 				difference: Object.freeze({ file, ...diff.difference }),
-				png: diff.png,
+				...(diff.png === undefined ? {} : { png: diff.png }),
 			})
 		} catch (error) {
 			outputs.push({
@@ -335,13 +335,43 @@ async function comparePages(
 	return outputs
 }
 
-function makePageDiff(
+/** @internal */
+export function makePageDiff(
 	expected: DecodedPng | undefined,
 	actual: RenderedPdfPage | undefined,
 ): {
 	readonly difference: Omit<PdfPageDifference, "file">
-	readonly png: Uint8Array
+	readonly png?: Uint8Array
 } {
+	if (
+		expected !== undefined &&
+		actual !== undefined &&
+		expected.width === actual.width &&
+		expected.height === actual.height &&
+		Buffer.compare(
+			Buffer.from(
+				expected.pixels.buffer,
+				expected.pixels.byteOffset,
+				expected.pixels.byteLength,
+			),
+			Buffer.from(
+				actual.pixels.buffer,
+				actual.pixels.byteOffset,
+				actual.pixels.byteLength,
+			),
+		) === 0
+	) {
+		return {
+			difference: {
+				differingPixels: 0,
+				expectedWidth: expected.width,
+				expectedHeight: expected.height,
+				actualWidth: actual.width,
+				actualHeight: actual.height,
+			},
+		}
+	}
+
 	const width = Math.max(expected?.width ?? 0, actual?.width ?? 0)
 	const height = Math.max(expected?.height ?? 0, actual?.height ?? 0)
 	const canvas = createCanvas(Math.max(1, width), Math.max(1, height))

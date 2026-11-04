@@ -1,0 +1,3 @@
+.dagger/modules/*/clients/** linguist-generated=true
+.dagger/modules/*/entrypoint/** linguist-generated=true
+.dagger/modules/*/__dagger.dispatch.ts linguist-generated=true

@@ -45,7 +45,7 @@ export type StandardFontName =
 	| "Symbol"
 	| "ZapfDingbats"
 
-export type PdfImageBitsPerComponent = 8
+type PdfImageBitsPerComponent = 8
 
 export interface PdfTextBuilder extends PdfColorBuilder<PdfTextBuilder> {
 	/** PDF text rendering mode: 0 fill, 1 stroke, 2 both, 3 invisible. Clipping is unsupported. */
@@ -150,7 +150,7 @@ export type PdfTextOperation =
 			value: number
 	  }>
 
-export type PdfGraphicsOperation =
+type PdfGraphicsOperation =
 	| PdfColorOperation
 	| Readonly<{
 			op: "concatMatrix"
@@ -238,13 +238,13 @@ type JpegMetadata = Pick<
 	"width" | "height" | "bitsPerComponent" | "colorSpace"
 >
 
-export interface PdfTextContentRecord {
+interface PdfTextContentRecord {
 	readonly owner: symbol
 	readonly kind: "text"
 	readonly operations: readonly PdfTextOperation[]
 }
 
-export interface PdfGraphicsContentRecord {
+interface PdfGraphicsContentRecord {
 	readonly owner: symbol
 	readonly kind: "graphics"
 	readonly operations: readonly PdfGraphicsOperation[]

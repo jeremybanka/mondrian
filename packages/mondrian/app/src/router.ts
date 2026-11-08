@@ -2,7 +2,7 @@ import { atom, selector, setState } from "atom.io"
 import type { Tree, TreePath } from "treetrunks"
 import { isTreePath, optional } from "treetrunks"
 
-export const routes = optional({
+const routes = optional({
 	anatomy: null,
 	objects: null,
 	pages: null,
@@ -10,9 +10,10 @@ export const routes = optional({
 	mondrian: null,
 	inspect: null,
 }) satisfies Tree
-export type Route = TreePath<typeof routes>
+type Route = TreePath<typeof routes>
 export type ChapterId = "overview" | Exclude<Route[0], undefined | "inspect">
 
+/** @internal Exported for focused implementation tests. */
 export function resolveChapter(pathname: string): ChapterId | null {
 	const segments = pathname.split("?")[0]!.split("/").filter(Boolean)
 	return isTreePath(routes, segments) && segments[0] !== "inspect"

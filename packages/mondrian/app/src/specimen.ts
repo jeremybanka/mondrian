@@ -18,6 +18,7 @@ import {
 } from "mondrian.pdf"
 
 // A deliberately uncompressed, one-page PDF: the lesson inspects these exact bytes.
+/** @internal Exported for focused implementation tests. */
 export function createSpecimen(x = 48): PdfDocument {
 	return {
 		version: "1.7",
@@ -79,6 +80,7 @@ export function drawingCommands(x: number): string[] {
 	]
 }
 
+/** @internal Exported for focused implementation tests. */
 export function byteText(bytes: Uint8Array): string {
 	// One code unit per byte keeps displayed positions equal to PDF byte offsets.
 	return Array.from(bytes, (byte) => String.fromCharCode(byte)).join("")

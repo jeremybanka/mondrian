@@ -223,6 +223,9 @@ importers:
       knip:
         specifier: 6.44.1
         version: 6.44.1
+      mondrian.pdf:
+        specifier: workspace:*
+        version: link:packages/mondrian
       typescript:
         specifier: 7.0.2
         version: 7.0.2

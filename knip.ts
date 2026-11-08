@@ -15,6 +15,8 @@ export default {
 				"@dprint/toml",
 				"dprint-plugin-malva",
 				"dprint-plugin-yaml",
+				// Keep workspace CLIs available for manual contributor use.
+				"mondrian.pdf",
 			],
 		},
 		"packages/mondrian": {

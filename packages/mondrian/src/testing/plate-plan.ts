@@ -78,6 +78,7 @@ type PathPaint =
 	| { readonly fill: PlatePaint; readonly stroke: PlatePaint | undefined }
 	| { readonly fill: undefined; readonly stroke: PlatePaint }
 
+/** @internal Exported for focused implementation tests. */
 export type PlateInstruction =
 	| {
 			readonly kind: "image"

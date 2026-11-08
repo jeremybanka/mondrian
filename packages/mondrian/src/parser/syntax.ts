@@ -33,7 +33,7 @@ export function binaryText(bytes: Uint8Array): string {
 	return result
 }
 
-export function binaryBytes(text: string): Uint8Array {
+function binaryBytes(text: string): Uint8Array {
 	return Uint8Array.from(text, (character) => character.charCodeAt(0))
 }
 

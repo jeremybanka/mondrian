@@ -78,7 +78,7 @@
 		"@typescript-eslint/utils": "8.72.1",
 		"@visx/scale": "4.0.0",
 		"@visx/shape": "4.0.0",
-		"@vitejs/plugin-react": "6.2.1",
+		"@vitejs/plugin-react": "6.3.0",
 		"atom.io": "0.54.8",
 		"breakage": "0.10.2",
 		"eslint": "10.14.0",

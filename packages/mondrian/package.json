@@ -72,7 +72,7 @@
 		"@atom.io/react": "0.2.1",
 		"@breakage/changesets": "0.1.0",
 		"@types/pngjs": "6.0.5",
-		"@types/react": "19.3.2",
+		"@types/react": "19.3.3",
 		"@types/react-dom": "19.3.0",
 		"@typescript-eslint/parser": "8.74.0",
 		"@typescript-eslint/utils": "8.74.0",

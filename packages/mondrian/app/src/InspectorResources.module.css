@@ -15,13 +15,13 @@ inspector-resources.class {
 		line-height: 1.85;
 		color: var(--muted);
 	}
-	> [data-warning] {
+	> :where(p)[data-warning] {
 		padding: 12px;
 		background: #f3e8cd;
 		color: #8a7241;
 		border-radius: 5px;
 	}
-	> [data-success] {
+	> :where(p)[data-success] {
 		padding: 12px;
 		background: #e7eee4;
 		color: #647a5b;

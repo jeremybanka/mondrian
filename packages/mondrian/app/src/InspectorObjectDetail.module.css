@@ -87,7 +87,7 @@ inspector-object-detail.class {
 		white-space: pre-wrap;
 		overflow-wrap: anywhere;
 	}
-	> [data-note] {
+	> :where(p)[data-note] {
 		font-size: 9px;
 		line-height: 1.8;
 		color: #948b7c;

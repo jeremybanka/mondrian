@@ -24,7 +24,7 @@ lesson-page.class {
 				}
 			}
 		}
-		> [data-introduction] {
+		> :where(section)[data-introduction] {
 			> intro-layout {
 				display: grid;
 				grid-template-columns: 1fr;
@@ -62,7 +62,7 @@ lesson-page.class {
 						max-width: 640px;
 						margin: 22px 0;
 					}
-					> [data-primary] {
+					> :where(a)[data-primary] {
 						display: inline-flex;
 						align-items: center;
 						gap: 30px;
@@ -211,7 +211,7 @@ lesson-page.class {
 				}
 			}
 		}
-		> [data-exploration] {
+		> :where(section)[data-exploration] {
 			padding: 36px 0;
 			> section-heading {
 				display: flex;
@@ -247,7 +247,7 @@ lesson-page.class {
 					color: #766383;
 				}
 			}
-			> [data-example] {
+			> :where(pre)[data-example] {
 				background: var(--ink);
 				color: #e0daf2;
 				padding: 28px;
@@ -334,7 +334,7 @@ lesson-page.class {
 				}
 			}
 		}
-		> [data-takeaway] {
+		> :where(section)[data-takeaway] {
 			background: #ece9df;
 			border-radius: 5px;
 			padding: 25px 30px;
@@ -371,7 +371,7 @@ lesson-page.class {
 				}
 			}
 		}
-		> [data-pagination] {
+		> :where(nav)[data-pagination] {
 			display: flex;
 			justify-content: space-between;
 			gap: 20px;
@@ -389,16 +389,16 @@ lesson-page.class {
 					font-weight: 500;
 					display: block;
 					margin-top: 9px;
-					> span {
-						margin-left: 30px;
-						font-size: 18px;
-					}
 				}
+			}
+			> a > strong > span {
+				margin-left: 30px;
+				font-size: 18px;
 			}
 			> a:hover {
 				color: #8a6ca3;
 			}
-			> [data-next] {
+			> :where(a)[data-next] {
 				text-align: right;
 			}
 		}
@@ -425,7 +425,9 @@ lesson-page.class {
 			text-decoration: none;
 		}
 	}
-	&[data-chapter="overview"] > article > [data-introduction] > intro-layout {
+	&[data-chapter="overview"]
+		> article > :where(section)[data-introduction]
+		> intro-layout {
 		grid-template-columns: 1fr 1fr;
 		align-items: center;
 		gap: 0;
@@ -442,7 +444,9 @@ lesson-page.class {
 		}
 	}
 	@media (max-width: 1050px) {
-		&[data-chapter="overview"] > article > [data-introduction] > intro-layout {
+		&[data-chapter="overview"]
+			> article > :where(section)[data-introduction]
+			> intro-layout {
 			gap: 10px;
 			> intro-copy > h1 {
 				font-size: 61px;
@@ -450,7 +454,9 @@ lesson-page.class {
 		}
 	}
 	@media (max-width: 900px) {
-		&[data-chapter="overview"] > article > [data-introduction] > intro-layout {
+		&[data-chapter="overview"]
+			> article > :where(section)[data-introduction]
+			> intro-layout {
 			grid-template-columns: 1fr;
 			> intro-copy {
 				> h1 {
@@ -461,7 +467,7 @@ lesson-page.class {
 				}
 			}
 		}
-		> article > [data-introduction] {
+		> article > :where(section)[data-introduction] {
 			> intro-layout > intro-copy > h1 {
 				font-size: 56px;
 			}
@@ -482,7 +488,7 @@ lesson-page.class {
 				font-size: 8px;
 				letter-spacing: 1px;
 			}
-			> [data-introduction] {
+			> :where(section)[data-introduction] {
 				> intro-layout {
 					padding-top: 30px;
 					> intro-copy > h1 {
@@ -523,7 +529,7 @@ lesson-page.class {
 					}
 				}
 			}
-			> [data-exploration] {
+			> :where(section)[data-exploration] {
 				> section-heading > heading-copy > h2 {
 					font-size: 30px;
 				}
@@ -541,22 +547,22 @@ lesson-page.class {
 						font-size: 7px;
 					}
 				}
-				> [data-example] {
+				> :where(pre)[data-example] {
 					padding: 20px;
 					font-size: 10px;
 				}
 			}
-			> [data-takeaway] {
+			> :where(section)[data-takeaway] {
 				padding: 22px;
 			}
-			> [data-pagination] {
+			> :where(nav)[data-pagination] {
 				> a, > nav-introduction {
 					> strong {
 						font-size: 11px;
-						> span {
-							margin-left: 8px;
-						}
 					}
+				}
+				> a > strong > span {
+					margin-left: 8px;
 				}
 			}
 		}

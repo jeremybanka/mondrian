@@ -67,13 +67,13 @@ inspector-page.class {
 			}
 		}
 	}
-	> [data-status] {
+	> :where(p)[data-status] {
 		padding: 18px;
 		font-size: 13px;
 		background: #eae5f4;
 		border-radius: 6px;
 	}
-	> [data-error] {
+	> :where(section)[data-error] {
 		padding: 25px;
 		border: 1px solid #dac1b5;
 		background: #f3e8df;
@@ -110,7 +110,7 @@ inspector-page.class {
 			font-size: 12px;
 		}
 	}
-	> [data-empty] {
+	> :where(section)[data-empty] {
 		display: flex;
 		flex-direction: column;
 		justify-content: center;
@@ -198,7 +198,7 @@ inspector-page.class {
 		border-radius: 7px;
 		overflow: hidden;
 		> aside {
-			> [data-walkthrough] {
+			> :where(details)[data-walkthrough] {
 				font-size: 11px;
 				line-height: 1.7;
 				> summary {
@@ -317,12 +317,12 @@ inspector-page.class {
 			}
 		}
 	}
-	> inspector-workspace > [data-preview] {
+	> inspector-workspace > :where(section)[data-preview] {
 		min-width: 0;
 		overflow: auto;
 		background: #f0ede7;
 		border-left: 1px solid var(--line);
-		> [data-page] {
+		> :where(label)[data-page] {
 			padding: 16px 20px;
 			display: flex;
 			justify-content: space-between;
@@ -340,7 +340,7 @@ inspector-page.class {
 		}
 	}
 
-	> [data-footnote] {
+	> :where(p)[data-footnote] {
 		font-size: 8px;
 		line-height: 1.7;
 		color: #9a9184;
@@ -355,7 +355,7 @@ inspector-page.class {
 			> aside {
 				grid-column: 1 / -1;
 				padding: 10px 14px;
-				> :not([data-walkthrough]) {
+				> *:not([data-walkthrough]) {
 					display: none;
 				}
 			}
@@ -403,7 +403,7 @@ inspector-page.class {
 					order: 1;
 					height: auto;
 				}
-				> [data-preview] {
+				> :where(section)[data-preview] {
 					order: 2;
 				}
 			}
@@ -411,7 +411,7 @@ inspector-page.class {
 				order: 3;
 				height: 55svh;
 			}
-			> [data-preview] {
+			> :where(section)[data-preview] {
 				order: 1;
 				border-left: 0;
 				max-height: 65svh;
@@ -423,7 +423,7 @@ inspector-page.class {
 				max-height: 80svh;
 			}
 		}
-		> [data-empty] {
+		> :where(section)[data-empty] {
 			padding: 35px 20px;
 			> h2 {
 				font-size: 36px;
